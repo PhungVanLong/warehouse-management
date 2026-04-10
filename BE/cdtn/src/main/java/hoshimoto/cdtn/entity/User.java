@@ -1,14 +1,20 @@
 package hoshimoto.cdtn.entity;
 
-import hoshimoto.cdtn.entity.Enum.Role;
-import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.springdoc.ui.SpringDocUIException;
-
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+
+import hoshimoto.cdtn.entity.Enum.Role;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
 @Entity
-@Table(name = "user")
+@Table(name = "users")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -73,7 +79,7 @@ public class User {
     private LocalDateTime lastlogin;
 
     @Column(name = "failedloginattempts")
-    private Integer failedLoginAttempts;
+    private Integer failedLoginAttempts =0;
 
 
 
