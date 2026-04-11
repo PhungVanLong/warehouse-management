@@ -12,10 +12,14 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "inventorybalance")
+
 public class InventoryBalance {
     @Id
+    @Column(name = "itemid")
+    private Long itemId;
+
     @OneToOne
-    @JoinColumn(name = "itemid")
+    @JoinColumn(name = "itemid", insertable = false, updatable = false)
     private Item item;
 
     @Column(precision = 18, scale = 4)
