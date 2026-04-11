@@ -1,3 +1,192 @@
+## 9. Danh mục đối tượng (Customer)
+### Tạo mới đối tượng
+**Endpoint:** `POST /api/customers`
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization.
+  - **Request body:**
+    ```json
+    {
+      "customercode": "CUST001",
+      "customername": "Công ty ABC",
+      "address": "123 Đường A, Quận B, TP.C",
+      "email": "abc@company.com",
+      "mobile": "0901234567",
+      "partnername": "Nguyễn Văn A",
+      "partnermobile": "0912345678",
+      "ownername": "Trần Thị B",
+      "taxcode": "123456789",
+      "itemcatg": "Khách hàng",
+      "bankaccount": "1234567890",
+      "bankname": "Vietcombank",
+      "issupplier": false,
+      "iscustomer": true,
+      "createdAt": "2026-04-12T10:00:00",
+      "modifiedAt": null,
+      "modifiedBy": "admin",
+      "isActive": true
+    }
+    ```
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Tạo mới đối tượng thành công",
+      "data": {
+        "id": 1,
+        "customercode": "CUST001",
+        "customername": "Công ty ABC",
+        "address": "123 Đường A, Quận B, TP.C",
+        "email": "abc@company.com",
+        "mobile": "0901234567",
+        "partnername": "Nguyễn Văn A",
+        "partnermobile": "0912345678",
+        "ownername": "Trần Thị B",
+        "taxcode": "123456789",
+        "itemcatg": "Khách hàng",
+        "bankaccount": "1234567890",
+        "bankname": "Vietcombank",
+        "issupplier": false,
+        "iscustomer": true,
+        "createdAt": "2026-04-12T10:00:00",
+        "modifiedAt": null,
+        "modifiedBy": "admin",
+        "isActive": true
+      }
+    }
+    ```
+  - **Response thất bại (ví dụ):**
+    ```json
+    {
+      "success": false,
+      "message": "Dữ liệu không hợp lệ hoặc lỗi hệ thống",
+      "data": null
+    }
+    ```
+### Lấy danh sách đối tượng
+**Endpoint:** `GET /api/customers`
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization.
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Lấy danh sách đối tượng thành công",
+      "data": [
+        {
+          "id": 1,
+          "customercode": "CUST001",
+          "customername": "Công ty ABC",
+          "address": "123 Đường A, Quận B, TP.C",
+          "email": "abc@company.com",
+          "mobile": "0901234567",
+          "partnername": "Nguyễn Văn A",
+          "partnermobile": "0912345678",
+          "ownername": "Trần Thị B",
+          "taxcode": "123456789",
+          "itemcatg": "Khách hàng",
+          "bankaccount": "1234567890",
+          "bankname": "Vietcombank",
+          "issupplier": false,
+          "iscustomer": true,
+          "createdAt": "2026-04-12T10:00:00",
+          "modifiedAt": null,
+          "modifiedBy": "admin",
+          "isActive": true
+        }
+        // ...
+      ]
+    }
+    ```
+### Xem chi tiết đối tượng
+**Endpoint:** `GET /api/customers/{id}`
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization.
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Lấy chi tiết đối tượng thành công",
+      "data": {
+        "id": 1,
+        "customercode": "CUST001",
+        "customername": "Công ty ABC",
+        "address": "123 Đường A, Quận B, TP.C",
+        "email": "abc@company.com",
+        "mobile": "0901234567",
+        "partnername": "Nguyễn Văn A",
+        "partnermobile": "0912345678",
+        "ownername": "Trần Thị B",
+        "taxcode": "123456789",
+        "itemcatg": "Khách hàng",
+        "bankaccount": "1234567890",
+        "bankname": "Vietcombank",
+        "issupplier": false,
+        "iscustomer": true,
+        "createdAt": "2026-04-12T10:00:00",
+        "modifiedAt": null,
+        "modifiedBy": "admin",
+        "isActive": true
+      }
+    }
+    ```
+### Cập nhật đối tượng
+**Endpoint:** `PUT /api/customers/{id}`
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization.
+  - **Request body:**
+    ```json
+    {
+      "customercode": "CUST001",
+      "customername": "Công ty ABC",
+      "address": "123 Đường A, Quận B, TP.C",
+      "email": "abc@company.com",
+      "mobile": "0901234567",
+      "partnername": "Nguyễn Văn A",
+      "partnermobile": "0912345678",
+      "ownername": "Trần Thị B",
+      "taxcode": "123456789",
+      "itemcatg": "Khách hàng",
+      "bankaccount": "1234567890",
+      "bankname": "Vietcombank",
+      "issupplier": false,
+      "iscustomer": true,
+      "modifiedAt": "2026-04-12T12:00:00",
+      "modifiedBy": "admin",
+      "isActive": true
+    }
+    ```
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Cập nhật đối tượng thành công",
+      "data": {
+        "id": 1,
+        "customercode": "CUST001",
+        "customername": "Công ty ABC",
+        "address": "123 Đường A, Quận B, TP.C",
+        "email": "abc@company.com",
+        "mobile": "0901234567",
+        "partnername": "Nguyễn Văn A",
+        "partnermobile": "0912345678",
+        "ownername": "Trần Thị B",
+        "taxcode": "123456789",
+        "itemcatg": "Khách hàng",
+        "bankaccount": "1234567890",
+        "bankname": "Vietcombank",
+        "issupplier": false,
+        "iscustomer": true,
+        "createdAt": "2026-04-12T10:00:00",
+        "modifiedAt": "2026-04-12T12:00:00",
+        "modifiedBy": "admin",
+        "isActive": true
+      }
+    }
+    ```
+  - **Response thất bại (ví dụ):**
+    ```json
+    {
+      "success": false,
+      "message": "Không tìm thấy đối tượng hoặc dữ liệu không hợp lệ",
+      "data": null
+    }
+    ```
 # API DOC CHUẨN CHO UI FRONTEND (FE)
 port: http://localhost:8080
 
@@ -327,5 +516,153 @@ port: http://localhost:8080
 **FE cần kiểm tra trường này để hiển thị/ẩn chức năng phù hợp.**
 
 ---
+
+## 10. Danh mục vị trí (Location)
+### Tạo mới vị trí
+**Endpoint:** `POST /api/locations`
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization.
+  - **Request body:**
+    ```json
+    {
+      "locationcode": "A1-01",
+      "locationname": "Kệ A1, tầng 1, cột 1",
+      "rackno": "A1",
+      "floorno": "1",
+      "columnno": "1",
+      "capacity": 100,
+      "description": "Kệ tầng 1, sức chứa 100",
+      "isActive": true,
+      "createdAt": "2026-04-12T10:00:00",
+      "modifiedAt": null,
+      "modifiedBy": "admin"
+    }
+    ```
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Tạo mới vị trí thành công",
+      "data": {
+        "id": 1,
+        "locationcode": "A1-01",
+        "locationname": "Kệ A1, tầng 1, cột 1",
+        "rackno": "A1",
+        "floorno": "1",
+        "columnno": "1",
+        "capacity": 100,
+        "description": "Kệ tầng 1, sức chứa 100",
+        "isActive": true,
+        "createdAt": "2026-04-12T10:00:00",
+        "modifiedAt": null,
+        "modifiedBy": "admin"
+      }
+    }
+    ```
+  - **Response thất bại (ví dụ):**
+    ```json
+    {
+      "success": false,
+      "message": "Dữ liệu không hợp lệ hoặc lỗi hệ thống",
+      "data": null
+    }
+    ```
+### Lấy danh sách vị trí
+**Endpoint:** `GET /api/locations`
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization.
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Lấy danh sách vị trí thành công",
+      "data": [
+        {
+          "id": 1,
+          "locationcode": "A1-01",
+          "locationname": "Kệ A1, tầng 1, cột 1",
+          "rackno": "A1",
+          "floorno": "1",
+          "columnno": "1",
+          "capacity": 100,
+          "description": "Kệ tầng 1, sức chứa 100",
+          "isActive": true,
+          "createdAt": "2026-04-12T10:00:00",
+          "modifiedAt": null,
+          "modifiedBy": "admin"
+        }
+        // ...
+      ]
+    }
+    ```
+### Xem chi tiết vị trí
+**Endpoint:** `GET /api/locations/{id}`
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization.
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Lấy chi tiết vị trí thành công",
+      "data": {
+        "id": 1,
+        "locationcode": "A1-01",
+        "locationname": "Kệ A1, tầng 1, cột 1",
+        "rackno": "A1",
+        "floorno": "1",
+        "columnno": "1",
+        "capacity": 100,
+        "description": "Kệ tầng 1, sức chứa 100",
+        "isActive": true,
+        "createdAt": "2026-04-12T10:00:00",
+        "modifiedAt": null,
+        "modifiedBy": "admin"
+      }
+    }
+    ```
+### Cập nhật vị trí
+**Endpoint:** `PUT /api/locations/{id}`
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization.
+  - **Request body:**
+    ```json
+    {
+      "locationcode": "A1-01",
+      "locationname": "Kệ A1, tầng 1, cột 1",
+      "rackno": "A1",
+      "floorno": "1",
+      "columnno": "1",
+      "capacity": 100,
+      "description": "Kệ tầng 1, sức chứa 100",
+      "isActive": true,
+      "modifiedAt": "2026-04-12T12:00:00",
+      "modifiedBy": "admin"
+    }
+    ```
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Cập nhật vị trí thành công",
+      "data": {
+        "id": 1,
+        "locationcode": "A1-01",
+        "locationname": "Kệ A1, tầng 1, cột 1",
+        "rackno": "A1",
+        "floorno": "1",
+        "columnno": "1",
+        "capacity": 100,
+        "description": "Kệ tầng 1, sức chứa 100",
+        "isActive": true,
+        "createdAt": "2026-04-12T10:00:00",
+        "modifiedAt": "2026-04-12T12:00:00",
+        "modifiedBy": "admin"
+      }
+    }
+    ```
+  - **Response thất bại (ví dụ):**
+    ```json
+    {
+      "success": false,
+      "message": "Không tìm thấy vị trí hoặc dữ liệu không hợp lệ",
+      "data": null
+    }
+    ```
 
 
