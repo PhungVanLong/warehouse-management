@@ -13,4 +13,5 @@ public class UserResponse {
     private String department;
     private Role role;
     private Boolean isActive;
+    private String token; // JWT token trả về khi đăng nhập
 }

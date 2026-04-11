@@ -13,9 +13,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Data;
 
 @Entity
 @Table(name = "location")
+@Data
 public class Location {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -59,5 +61,5 @@ public class Location {
     @JoinColumn(name = "userid")
     private User user;
 
-    // Getters, setters, constructors (có thể sinh tự động bằng Lombok hoặc IDE)
+    // Lombok @Data đã sinh getter/setter
 }

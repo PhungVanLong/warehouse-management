@@ -1,9 +1,8 @@
 package hoshimoto.cdtn.entity;
 
+import lombok.Data;
 import java.time.LocalDateTime;
-
 import org.hibernate.annotations.CreationTimestamp;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -16,6 +15,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "item")
+@Data
 public class Item {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -64,6 +64,4 @@ public class Item {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "userid")
     private User user;
-
-    // Getters, setters, constructors (có thể sinh tự động bằng Lombok hoặc IDE)
 }
