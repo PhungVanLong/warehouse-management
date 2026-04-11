@@ -1,0 +1,197 @@
+.supplies-layout {
+    display: flex;
+    min-height: 100vh;
+    background: #f6fcf8;
+}
+
+.sidebar {
+    width: 240px;
+    background: #fff;
+    border-right: 1px solid #e0e6e3;
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 24px 0;
+}
+
+.logo-area {
+    /* Layout tổng thể */
+    text-align: center;
+}
+
+.sidebar-logo {
+    width: 140px;
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: 0 16px;
+}
+
+.sidebar-section {
+    margin: 18px 0 6px 0;
+    font-weight: 700;
+    color: #277d4b;
+    font-size: 1rem;
+}
+
+.sidebar-nav ul {
+
+    /* Header trên cùng */
+    .top-header {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 8px 0;
+    }
+
+    .sidebar-nav li {
+        padding: 7px 12px;
+        border-radius: 6px;
+
+        .header-left {
+            color: #243427;
+            cursor: pointer;
+            font-size: 0.98rem;
+        }
+
+        .header-logo {
+
+            .sidebar-nav li.active,
+            .header-company {
+                .sidebar-nav li:hover {
+                    background: #eaf7f0;
+                    color: #277d4b;
+                    font-weight: 600;
+
+                    .header-right {}
+
+                    .supplies-main {
+                        flex: 1;
+
+                        .header-avatar {
+                            display: flex;
+                            flex-direction: column;
+                            background: #f6fcf8;
+                        }
+
+                        .supplies-header {
+                            .header-icon-btn {
+                                padding: 24px 32px 0 32px;
+                            }
+
+                            .supplies-breadcrumb {
+                                color: #8ba392;
+                                font-size: 1.05rem;
+                                margin-bottom: 4px;
+                            }
+
+                            .supplies-title {
+                                font-size: 2rem;
+                                font-weight: 700;
+                                color: #243427;
+                                margin-bottom: 18px;
+                            }
+
+                            .supplies-content {
+                                padding: 0 32px 32px 32px;
+                            }
+
+                            .supplies-toolbar {
+                                display: flex;
+                                align-items: center;
+                                gap: 12px;
+                                margin-bottom: 18px;
+                            }
+
+                            .supplies-search {
+                                flex: 1;
+                                padding: 8px 14px;
+                                border: 1px solid #abd7b8;
+                                border-radius: 8px;
+                                font-size: 1rem;
+                            }
+
+                            .supplies-btn {
+                                padding: 8px 18px;
+                                border: none;
+                                border-radius: 8px;
+                                background: #eaf7f0;
+                                color: #277d4b;
+                                font-weight: 600;
+                                cursor: pointer;
+                                font-size: 1rem;
+                                transition: background 0.2s;
+                            }
+
+                            .supplies-btn-green {
+                                background: linear-gradient(135deg, #3cc26e 0%, #2f9f5b 100%);
+                                color: #fff;
+                            }
+
+                            .supplies-btn:hover {
+                                background: #d2f0e0;
+                            }
+
+                            .supplies-table-wrapper {
+                                background: #fff;
+                                border-radius: 12px;
+                                box-shadow: 0 2px 12px rgba(34, 84, 47, 0.06);
+                                overflow-x: auto;
+                            }
+
+                            .supplies-table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                font-size: 1rem;
+                            }
+
+                            .supplies-table th,
+                            .supplies-table td {
+                                padding: 10px 12px;
+                                border-bottom: 1px solid #e0e6e3;
+                                text-align: left;
+                            }
+
+                            .supplies-table th {
+                                background: #eaf7f0;
+                                color: #277d4b;
+                                font-weight: 700;
+                            }
+
+                            .supplies-table tr:last-child td {
+                                border-bottom: none;
+                            }
+
+                            .supplies-action-btn {
+                                background: none;
+                                border: none;
+                                color: #277d4b;
+                                font-size: 1.2rem;
+                                cursor: pointer;
+                            }
+
+                            .supplies-pagination {
+                                margin-top: 18px;
+                                color: #4c6152;
+                                display: flex;
+                                align-items: center;
+                                justify-content: flex-end;
+                                gap: 6px;
+                                font-size: 1rem;
+                            }
+
+                            .page-btn {
+                                background: none;
+                                border: none;
+                                color: #277d4b;
+                                font-size: 1rem;
+                                padding: 4px 10px;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                transition: background 0.2s;
+                            }
+
+                            .page-btn.page-active,
+                            .page-btn:hover {
+                                background: #eaf7f0;
+                                font-weight: 700;
+                            }
