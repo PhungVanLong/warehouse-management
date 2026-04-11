@@ -1,12 +1,13 @@
 package hoshimoto.cdtn.service;
 
-import hoshimoto.cdtn.entity.Item;
-import hoshimoto.cdtn.repository.ItemRepository;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
+import hoshimoto.cdtn.entity.Item;
+import hoshimoto.cdtn.repository.ItemRepository;
 
 @Service
 public class ItemService {
@@ -36,5 +37,9 @@ public class ItemService {
             item.setModifiedBy(updatedItem.getModifiedBy());
             return itemRepository.save(item);
         }).orElseThrow(() -> new RuntimeException("Item not found"));
+    }
+
+    public Item createItem(Item item) {
+        return itemRepository.save(item);
     }
 }

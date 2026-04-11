@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,6 +45,12 @@ public class ItemController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(new ApiResponse<>(false, e.getMessage(), null));
         }
+    }
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<ItemResponse>> createItem(@RequestBody Item item) {
+        Item created = itemService.createItem(item);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Tạo mới hàng hóa thành công", toDto(created)));
     }
 
     private static ItemResponse toDto(Item item) {

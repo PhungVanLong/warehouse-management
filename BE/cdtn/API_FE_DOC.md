@@ -148,9 +148,66 @@ port: http://localhost:8080
 ---
 
 ## 7. Danh mục hàng hóa (Item)
+### Tạo mới hàng hóa
+**Endpoint:** `POST /api/items`
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization như các API khác.
+  - **Request body:**
+    ```json
+    {
+      "itemcode": "SP002",
+      "barcode": "8938505970022",
+      "itemname": "Sản phẩm B",
+      "invoicename": "Sản phẩm B hóa đơn",
+      "description": "Mô tả sản phẩm B",
+      "itemtype": "Vật tư",
+      "unitof": "Cái",
+      "itemcatg": "Thiết bị",
+      "minstocklevel": 5,
+      "createdAt": "2026-04-12T10:00:00",
+      "modifiedAt": null,
+      "modifiedBy": "admin"
+    }
+    ```
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Tạo mới hàng hóa thành công",
+      "data": {
+        "id": 2,
+        "itemcode": "SP002",
+        "barcode": "8938505970022",
+        "itemname": "Sản phẩm B",
+        "invoicename": "Sản phẩm B hóa đơn",
+        "description": "Mô tả sản phẩm B",
+        "itemtype": "Vật tư",
+        "unitof": "Cái",
+        "itemcatg": "Thiết bị",
+        "minstocklevel": 5,
+        "createdAt": "2026-04-12T10:00:00",
+        "modifiedAt": null,
+        "modifiedBy": "admin"
+      }
+    }
+    ```
+  - **Response thất bại (ví dụ):**
+    ```json
+    {
+      "success": false,
+      "message": "Dữ liệu không hợp lệ hoặc lỗi hệ thống",
+      "data": null
+    }
+    ```
 ### Lấy danh sách hàng hóa
 **Endpoint:** `GET /api/items`
   - Hỗ trợ phân trang: Nếu có, truyền thêm query param `?page=1&size=20` (mặc định trả về toàn bộ nếu không truyền).
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization.
+  - **Cách lấy token:** Đăng nhập thành công sẽ nhận được trường `data.token` trong response. FE lưu lại token này để sử dụng cho các request tiếp theo.
+  - **Ví dụ header:**
+    ```
+    Authorization: Bearer <token>
+    ```
+  - **Lưu ý:** Response trả về là danh sách DTO (ItemResponse), không trả entity trực tiếp. FE chỉ sử dụng các trường đã định nghĩa dưới đây.
 **Response thành công:**
 ```json
 {
@@ -159,9 +216,9 @@ port: http://localhost:8080
   "data": [
     {
       "id": 1,
-      "itemcode": "SP001", // mã hàng hóa (bắt buộc)
+      "itemcode": "SP001",
       "barcode": "8938505970012",
-      "itemname": "Sản phẩm A", // tên hàng hóa (bắt buộc)
+      "itemname": "Sản phẩm A",
       "invoicename": "Sản phẩm A hóa đơn",
       "description": "Mô tả sản phẩm A",
       "itemtype": "Vật tư",
@@ -179,6 +236,8 @@ port: http://localhost:8080
 
 ### Xem chi tiết hàng hóa
 **Endpoint:** `GET /api/items/{id}`
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization như trên.
+  - **Lưu ý:** Response trả về là DTO (ItemResponse), không trả entity trực tiếp. FE chỉ sử dụng các trường đã định nghĩa dưới đây.
 **Response thành công:**
 ```json
 {
@@ -186,9 +245,9 @@ port: http://localhost:8080
   "message": "Lấy chi tiết hàng hóa thành công",
   "data": {
     "id": 1,
-    "itemcode": "SP001", // mã hàng hóa (bắt buộc)
+    "itemcode": "SP001",
     "barcode": "8938505970012",
-    "itemname": "Sản phẩm A", // tên hàng hóa (bắt buộc)
+    "itemname": "Sản phẩm A",
     "invoicename": "Sản phẩm A hóa đơn",
     "description": "Mô tả sản phẩm A",
     "itemtype": "Vật tư",
@@ -213,6 +272,7 @@ port: http://localhost:8080
 ### Cập nhật hàng hóa
 **Endpoint:** `PUT /api/items/{id}`
   - Trường bắt buộc: `itemcode`, `itemname`, `modifiedBy`
+  - **Yêu cầu xác thực:** Bắt buộc gửi token JWT trong header Authorization như trên.
 **Request body:**
 ```json
 {
