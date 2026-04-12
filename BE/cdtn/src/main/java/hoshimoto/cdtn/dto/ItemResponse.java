@@ -17,4 +17,5 @@ public class ItemResponse {
     private String createdAt;
     private String modifiedAt;
     private String modifiedBy;
+    private Boolean isActive;
 }

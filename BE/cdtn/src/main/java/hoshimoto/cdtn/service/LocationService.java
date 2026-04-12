@@ -1,11 +1,13 @@
 package hoshimoto.cdtn.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import hoshimoto.cdtn.dto.request.LocationRequest;
 import hoshimoto.cdtn.entity.Location;
 import hoshimoto.cdtn.repository.LocationRepository;
 
@@ -22,23 +24,37 @@ public class LocationService {
         return locationRepository.findById(id);
     }
 
-    public Location createLocation(Location location) {
+    public Location createLocation(LocationRequest request) {
+        Location location = new Location();
+        applyRequest(location, request);
         return locationRepository.save(location);
     }
 
-    public Location updateLocation(Long id, Location updated) {
+    public Location updateLocation(Long id, LocationRequest request) {
         return locationRepository.findById(id).map(l -> {
-            l.setLocationcode(updated.getLocationcode());
-            l.setLocationname(updated.getLocationname());
-            l.setRackno(updated.getRackno());
-            l.setFloorno(updated.getFloorno());
-            l.setColumnno(updated.getColumnno());
-            l.setCapacity(updated.getCapacity());
-            l.setDescription(updated.getDescription());
-            l.setIsActive(updated.getIsActive());
-            l.setModifiedAt(updated.getModifiedAt());
-            l.setModifiedBy(updated.getModifiedBy());
+            applyRequest(l, request);
+            l.setModifiedAt(LocalDateTime.now());
             return locationRepository.save(l);
-        }).orElseThrow(() -> new RuntimeException("Location not found"));
+        }).orElseThrow(() -> new RuntimeException("Không tìm thấy vị trí với id: " + id));
+    }
+
+    public void deleteLocation(Long id) {
+        locationRepository.findById(id).map(l -> {
+            l.setIsActive(false);
+            l.setModifiedAt(LocalDateTime.now());
+            return locationRepository.save(l);
+        }).orElseThrow(() -> new RuntimeException("Không tìm thấy vị trí với id: " + id));
+    }
+
+    private void applyRequest(Location l, LocationRequest request) {
+        if (request.getLocationcode() != null) l.setLocationcode(request.getLocationcode());
+        if (request.getLocationname() != null) l.setLocationname(request.getLocationname());
+        if (request.getRackno() != null) l.setRackno(request.getRackno());
+        if (request.getFloorno() != null) l.setFloorno(request.getFloorno());
+        if (request.getColumnno() != null) l.setColumnno(request.getColumnno());
+        if (request.getCapacity() != null) l.setCapacity(request.getCapacity());
+        if (request.getDescription() != null) l.setDescription(request.getDescription());
+        if (request.getIsActive() != null) l.setIsActive(request.getIsActive());
+        if (request.getModifiedBy() != null) l.setModifiedBy(request.getModifiedBy());
     }
 }
