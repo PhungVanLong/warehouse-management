@@ -1,31 +1,31 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "../pages/SuppliesPage.css";
+import logo from "../assets/logo.png";
 
 export default function SidebarLayout({ children }) {
     const [openGroups, setOpenGroups] = useState({ danhmuc: true, chungtu: true, baocao: true });
-    const toggleGroup = (key) => setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+    const toggleGroup = (key) => {
+        console.log(`[Sidebar] Toggle group: ${key}`);
+        setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+    };
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const navTo = (label, path) => {
+        console.log(`[Sidebar] Navigate: ${label} → ${path}`);
+        navigate(path);
+    };
 
     return (
         <div className="sp-layout">
             <aside className="sp-sidebar">
                 <div className="sp-sidebar-logo">
-                    <div className="sp-logo-icon">
-                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2DBE60" strokeWidth="2.2" strokeLinecap="round">
-                            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                            <path d="M2 17l10 5 10-5" />
-                            <path d="M2 12l10 5 10-5" />
-                        </svg>
-                    </div>
-                    <div>
-                        <div className="sp-logo-name">Hoshimoto</div>
-                        <div className="sp-logo-sub">VIETNAM</div>
-                    </div>
+                    <img src={logo} alt="Logo" className="sp-logo-img" />
                 </div>
 
                 <nav className="sp-nav">
-                    <div className="sp-nav-standalone">
+                    <div className="sp-nav-standalone" onClick={() => console.log('[Sidebar] Click: Tổng quan')}>
                         <span className="sp-nav-icon">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
@@ -49,10 +49,10 @@ export default function SidebarLayout({ children }) {
                     </div>
                     {openGroups.danhmuc && (
                         <div className="sp-nav-children">
-                            <div className="sp-nav-child sp-child-active" onClick={() => navigate("/supplies")}>Danh mục vật tư hàng hóa</div>
-                            <div className="sp-nav-child">Danh mục nhân viên</div>
-                            <div className="sp-nav-child">Danh mục vị trí</div>
-                            <div className="sp-nav-child">Danh mục đối tượng</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/supplies") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục vật tư hàng hóa", "/supplies")}>Danh mục vật tư hàng hóa</div>
+                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Danh mục nhân viên')}>Danh mục nhân viên</div>
+                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Danh mục vị trí')}>Danh mục vị trí</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/partners") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục đối tượng", "/partners")}>Danh mục đối tượng</div>
                         </div>
                     )}
 
@@ -70,10 +70,10 @@ export default function SidebarLayout({ children }) {
                     </div>
                     {openGroups.chungtu && (
                         <div className="sp-nav-children">
-                            <div className="sp-nav-child">Phiếu nhập kho</div>
-                            <div className="sp-nav-child">Phiếu xuất kho</div>
-                            <div className="sp-nav-child">Kiểm kê hàng tồn kho</div>
-                            <div className="sp-nav-child">Phiếu xuất/ nhập điều chỉnh</div>
+                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Phiếu nhập kho')}>Phiếu nhập kho</div>
+                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Phiếu xuất kho')}>Phiếu xuất kho</div>
+                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Kiểm kê hàng tồn kho')}>Kiểm kê hàng tồn kho</div>
+                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Phiếu xuất/ nhập điều chỉnh')}>Phiếu xuất/ nhập điều chỉnh</div>
                         </div>
                     )}
 
@@ -91,17 +91,17 @@ export default function SidebarLayout({ children }) {
                     </div>
                     {openGroups.baocao && (
                         <div className="sp-nav-children">
-                            <div className="sp-nav-child">Bảng kê chứng từ Phiếu nhập</div>
-                            <div className="sp-nav-child">Bảng kê chứng từ Phiếu xuất</div>
-                            <div className="sp-nav-child">Báo cáo Nhập - Xuất - Tồn</div>
-                            <div className="sp-nav-child">Thẻ kho</div>
-                            <div className="sp-nav-child">Báo cáo Cảnh báo Tồn kho an toàn</div>
+                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Bảng kê chứng từ Phiếu nhập')}>Bảng kê chứng từ Phiếu nhập</div>
+                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Bảng kê chứng từ Phiếu xuất')}>Bảng kê chứng từ Phiếu xuất</div>
+                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Báo cáo Nhập - Xuất - Tồn')}>Báo cáo Nhập - Xuất - Tồn</div>
+                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Thẻ kho')}>Thẻ kho</div>
+                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Báo cáo Cảnh báo Tồn kho an toàn')}>Báo cáo Cảnh báo Tồn kho an toàn</div>
                         </div>
                     )}
                 </nav>
 
                 <div className="sp-sidebar-bottom">
-                    <div className="sp-nav-standalone">
+                    <div className="sp-nav-standalone" onClick={() => console.log('[Sidebar] Click: Tài khoản')}>
                         <span className="sp-nav-icon">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
@@ -109,7 +109,7 @@ export default function SidebarLayout({ children }) {
                         </span>
                         <span>Tài khoản</span>
                     </div>
-                    <div className="sp-nav-standalone">
+                    <div className="sp-nav-standalone" onClick={() => console.log('[Sidebar] Click: Đăng xuất')}>
                         <span className="sp-nav-icon">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />

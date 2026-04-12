@@ -19,6 +19,7 @@ export default function SuppliesCreatePage() {
     const [form, setForm] = useState({ ...EMPTY_FORM });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(false);
 
     const handleChange = (field, value) =>
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -37,7 +38,8 @@ export default function SuppliesCreatePage() {
                 itemtype: form.itemtype,
                 modifiedBy: "user",
             });
-            navigate("/supplies");
+            setSuccess(true);
+            setTimeout(() => navigate("/supplies"), 2000);
         } catch {
             setError("Tạo mới thất bại. Vui lòng thử lại.");
             setSaving(false);
@@ -46,6 +48,15 @@ export default function SuppliesCreatePage() {
 
     return (
         <SidebarLayout>
+            {success && (
+                <div className="sp-toast sp-toast-success">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="9 12 11 14 15 10" />
+                    </svg>
+                    Bạn đã thêm mới thành công vật tư hàng hóa
+                </div>
+            )}
             <div className="sp-main">
                 {/* Topbar */}
                 <div className="sp-topbar">

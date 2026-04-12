@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login } from "../api/authApi";
 import "./LoginForm.css";
+import logo from "../assets/logo.png";
 
 export default function LoginForm() {
     const [username, setUsername] = useState("");
@@ -31,7 +32,7 @@ export default function LoginForm() {
     return (
         <div className="center-page">
             <div className="login-panel">
-                <img className="login-logo" src="/src/assets/logo.png" alt="Logo" />
+                <img className="login-logo" src={logo} alt="Logo" />
                 <div className="login-copy">
                     <h1>Đăng nhập hệ thống</h1>
                     <p className="supporting-text">

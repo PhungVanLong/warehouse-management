@@ -2,7 +2,10 @@
 .sp-layout {
     display: flex;
     height: 100vh;
-    background: #f6fcf8;
+    background:
+        radial-gradient(circle at top left, rgba(70, 185, 115, 0.18), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(11, 46, 22, 0.12), transparent 30%),
+        linear-gradient(180deg, #f6fcf8 0%, #eff7f1 100%);
     font-family: "Inter", "Segoe UI", sans-serif;
     overflow: hidden;
 }
@@ -11,60 +14,44 @@
 .sp-sidebar {
     width: 220px;
     min-width: 220px;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.82);
     border-right: 1px solid #e0ece5;
     display: flex;
     flex-direction: column;
     height: 100vh;
-    overflow-y: auto;
+    overflow: hidden;
+    box-shadow: 2px 0 16px rgba(34, 84, 47, 0.07);
 }
 
 .sp-sidebar-logo {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 18px 16px 16px;
-    border-bottom: 1px solid #e8f2ec;
-}
-
-.sp-logo-icon {
-    display: flex;
-    align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: #eaf7f0;
+    padding: 10px 16px 8px;
+    border-bottom: 1px solid #e8f2ec;
     flex-shrink: 0;
 }
 
-.sp-logo-name {
-    font-weight: 700;
-    color: #2DBE60;
-    font-size: 1.05rem;
-    line-height: 1.2;
-}
-
-.sp-logo-sub {
-    font-size: 0.72rem;
-    color: #8ba392;
-    letter-spacing: 0.12em;
-    font-weight: 600;
+.sp-logo-img {
+    width: 130px;
+    max-width: 100%;
+    display: block;
 }
 
 .sp-nav {
     flex: 1;
-    padding: 8px 0;
+    padding: 4px 0;
+    overflow: hidden;
 }
 
 .sp-nav-standalone {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 9px 18px;
+    gap: 8px;
+    padding: 6px 14px;
     cursor: pointer;
     color: #4c6152;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     transition: background 0.15s;
 }
 
@@ -76,11 +63,11 @@
 .sp-nav-group-hd {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 9px 18px;
+    gap: 8px;
+    padding: 6px 14px;
     cursor: pointer;
     color: #243427;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 600;
     transition: background 0.15s;
     user-select: none;
@@ -116,12 +103,12 @@
 }
 
 .sp-nav-children {
-    padding: 2px 0 4px 0;
+    padding: 0;
 }
 
 .sp-nav-child {
-    padding: 7px 18px 7px 46px;
-    font-size: 0.87rem;
+    padding: 4px 14px 4px 38px;
+    font-size: 0.82rem;
     color: #4c6152;
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
@@ -139,7 +126,8 @@
 
 .sp-sidebar-bottom {
     border-top: 1px solid #e8f2ec;
-    padding: 6px 0;
+    padding: 2px 0;
+    flex-shrink: 0;
 }
 
 /* ── Main Area ───────────────────────────────────────── */
@@ -324,6 +312,44 @@
     overflow: hidden;
 }
 
+.sp-table-wrap.sp-scrollable {
+    overflow-x: auto;
+    overflow-y: visible;
+}
+
+.sp-table-wrap.sp-scrollable .sp-table {
+    min-width: max-content;
+}
+
+/* Sticky checkbox column */
+.sp-table-wrap.sp-scrollable .sp-table th.sp-th-cb,
+.sp-table-wrap.sp-scrollable .sp-table td.sp-td-cb {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: inherit;
+}
+
+.sp-table-wrap.sp-scrollable .sp-table thead th.sp-th-cb {
+    background: #1E854A;
+    z-index: 3;
+}
+
+/* Sticky Mã column (2nd col) */
+.sp-table-wrap.sp-scrollable .sp-table th.sp-th-sticky,
+.sp-table-wrap.sp-scrollable .sp-table td.sp-td-sticky {
+    position: sticky;
+    left: 42px;
+    z-index: 2;
+    background: #fff;
+    box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.08);
+}
+
+.sp-table-wrap.sp-scrollable .sp-table thead th.sp-th-sticky {
+    background: #1E854A;
+    z-index: 3;
+}
+
 .sp-table {
     width: 100%;
     border-collapse: collapse;
@@ -331,7 +357,7 @@
 }
 
 .sp-table thead tr {
-    background: #1C4831;
+    background: #1E854A;
     color: #fff;
 }
 
@@ -374,7 +400,16 @@
     background: #eef8f2;
 }
 
+/* Sticky column hover/selected states */
+.sp-table tbody tr.sp-row-clickable:hover td.sp-td-sticky {
+    background: #eef8f2;
+}
+
 .sp-row-selected td {
+    background: #f0fbf5;
+}
+
+.sp-row-selected td.sp-td-sticky {
     background: #f0fbf5;
 }
 
@@ -387,6 +422,41 @@
 
 .sp-status-error {
     color: #c0392b;
+}
+
+.sp-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+    animation: sp-toast-in 0.25s ease;
+}
+
+.sp-toast-success {
+    background: #eafaf1;
+    color: #1a7f4b;
+    border: 1px solid #a8e6c3;
+}
+
+@keyframes sp-toast-in {
+    from {
+        opacity: 0;
+        top: 8px;
+    }
+
+    to {
+        opacity: 1;
+        top: 20px;
+    }
 }
 
 .sp-td-cb {
@@ -669,4 +739,56 @@
 
 .sd-btn-edit:hover {
     opacity: 0.9;
+}
+
+/* ── Partners multi-section detail / create ───────────── */
+.sd-two-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sd-section-hd-chevron {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+.sd-input-sm {
+    max-width: 220px;
+    flex: none;
+}
+
+.sd-input-name {
+    flex: 0 1 320px;
+}
+
+.sd-checkboxes {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding-left: 12px;
+    flex-shrink: 0;
+}
+
+.sd-check-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.88rem;
+    color: #4c6152;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.sd-check-label input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    accent-color: #2DBE60;
+}
+
+.sd-check-label input[type="checkbox"]:disabled {
+    cursor: default;
 }
