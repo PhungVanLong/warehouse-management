@@ -28,18 +28,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserResponse>> login(@RequestBody LoginRequest request) {
         return authService.login(request.getUsername(), request.getPassword())
                 .map(user -> {
-                    UserResponse res = new UserResponse();
-                    res.setId(user.getId());
-                    res.setUsercode(user.getUsercode());
-                    res.setFullname(user.getFullname());
-                    res.setUsername(user.getUsername());
-                    res.setEmail(user.getEmail());
-                    res.setDepartment(user.getDepartment());
-                    res.setRole(user.getRole());
-                    res.setIsActive(user.getIsActive());
+                    UserResponse res = UserResponse.fromEntity(user);
                     // Sinh JWT token
                     String token = jwtUtil.generateToken(user.getUsername());
-                    // Gắn token vào response data
                     res.setToken(token);
                     return ResponseEntity.ok(new ApiResponse<>(true, "Đăng nhập thành công", res));
                 })
