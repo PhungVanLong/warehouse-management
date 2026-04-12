@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
-import "./partners.css";
-import { getAllCustomers } from "../../api/customerApi";
+import { getAllLocations } from "../../api/locationApi";
 import logo from "../../assets/logo.png";
 
 const ROWS_OPTIONS = [10, 15, 20, 50];
@@ -15,7 +14,6 @@ function SortIcon() {
         </svg>
     );
 }
-
 function IconGrid() {
     return (
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -67,7 +65,7 @@ function IconChevronDown() {
     );
 }
 
-export default function PartnersPage() {
+export default function LocationsPage() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -84,10 +82,10 @@ export default function PartnersPage() {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllCustomers();
+            const data = await getAllLocations();
             setItems(data);
         } catch {
-            setError("Không thể tải danh sách đối tượng. Vui lòng thử lại.");
+            setError("Không thể tải danh sách vị trí. Vui lòng thử lại.");
         } finally {
             setLoading(false);
         }
@@ -99,8 +97,9 @@ export default function PartnersPage() {
         if (!search.trim()) return items;
         const q = search.toLowerCase();
         return items.filter((r) =>
-            r.customercode?.toLowerCase().includes(q) ||
-            r.customername?.toLowerCase().includes(q)
+            r.locationcode?.toLowerCase().includes(q) ||
+            r.locationname?.toLowerCase().includes(q) ||
+            r.description?.toLowerCase().includes(q)
         );
     }, [search, items]);
 
@@ -151,10 +150,7 @@ export default function PartnersPage() {
                         <span>Tổng quan</span>
                     </div>
 
-                    <div
-                        className={`sp-nav-group-hd${openGroups.danhmuc ? " sp-group-active" : ""}`}
-                        onClick={() => toggleGroup("danhmuc")}
-                    >
+                    <div className={`sp-nav-group-hd${openGroups.danhmuc ? " sp-group-active" : ""}`} onClick={() => toggleGroup("danhmuc")}>
                         <span className="sp-nav-icon"><IconList /></span>
                         <span>Danh mục</span>
                         <span className={`sp-chevron${openGroups.danhmuc ? " open" : ""}`}><IconChevronDown /></span>
@@ -163,15 +159,12 @@ export default function PartnersPage() {
                         <div className="sp-nav-children">
                             <div className="sp-nav-child" onClick={() => navigate("/supplies")}>Danh mục vật tư hàng hóa</div>
                             <div className="sp-nav-child" onClick={() => navigate("/employees")}>Danh mục nhân viên</div>
-                            <div className="sp-nav-child" onClick={() => navigate("/locations")}>Danh mục vị trí</div>
-                            <div className="sp-nav-child sp-child-active" onClick={() => navigate("/partners")}>Danh mục đối tượng</div>
+                            <div className="sp-nav-child sp-child-active">Danh mục vị trí</div>
+                            <div className="sp-nav-child" onClick={() => navigate("/partners")}>Danh mục đối tượng</div>
                         </div>
                     )}
 
-                    <div
-                        className={`sp-nav-group-hd${openGroups.chungtu ? " sp-group-active" : ""}`}
-                        onClick={() => toggleGroup("chungtu")}
-                    >
+                    <div className={`sp-nav-group-hd${openGroups.chungtu ? " sp-group-active" : ""}`} onClick={() => toggleGroup("chungtu")}>
                         <span className="sp-nav-icon"><IconDoc /></span>
                         <span>Chứng từ</span>
                         <span className={`sp-chevron${openGroups.chungtu ? " open" : ""}`}><IconChevronDown /></span>
@@ -185,10 +178,7 @@ export default function PartnersPage() {
                         </div>
                     )}
 
-                    <div
-                        className={`sp-nav-group-hd${openGroups.baocao ? " sp-group-active" : ""}`}
-                        onClick={() => toggleGroup("baocao")}
-                    >
+                    <div className={`sp-nav-group-hd${openGroups.baocao ? " sp-group-active" : ""}`} onClick={() => toggleGroup("baocao")}>
                         <span className="sp-nav-icon"><IconChart /></span>
                         <span>Báo cáo</span>
                         <span className={`sp-chevron${openGroups.baocao ? " open" : ""}`}><IconChevronDown /></span>
@@ -221,9 +211,9 @@ export default function PartnersPage() {
                 <div className="sp-topbar">
                     <div>
                         <div className="sp-breadcrumb">
-                            Danh mục &rsaquo; <span className="sp-breadcrumb-active">Danh mục đối tượng</span>
+                            Danh mục &rsaquo; <span className="sp-breadcrumb-active">Danh mục vị trí</span>
                         </div>
-                        <div className="sp-breadcrumb-sub">Partners</div>
+                        <div className="sp-breadcrumb-sub">Vị trí</div>
                     </div>
                     <div className="sp-topbar-right">
                         <button className="sp-icon-btn">
@@ -238,8 +228,6 @@ export default function PartnersPage() {
                 </div>
 
                 <div className="sp-content">
-                    <h1 className="sp-title">Đối tượng</h1>
-
                     <div className="sp-toolbar">
                         <div className="sp-search-wrap">
                             <svg className="sp-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -254,7 +242,7 @@ export default function PartnersPage() {
                             />
                         </div>
                         <div className="sp-toolbar-spacer" />
-                        <button className="sp-btn-primary" onClick={() => navigate("/partners/create")}>
+                        <button className="sp-btn-primary" onClick={() => navigate("/locations/create")}>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                             </svg>
@@ -268,7 +256,7 @@ export default function PartnersPage() {
                         </button>
                         <button className="sp-btn-outline">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                             </svg>
                             Export
                         </button>
@@ -286,29 +274,28 @@ export default function PartnersPage() {
                                             onChange={(e) => toggleAll(e.target.checked)}
                                         />
                                     </th>
-                                    <th>Mã <SortIcon /></th>
-                                    <th>Tên doanh nghiệp <SortIcon /></th>
-                                    <th>SDT đối tác <SortIcon /></th>
-                                    <th>Đại diện pháp luật <SortIcon /></th>
-                                    <th>Mã số thuế <SortIcon /></th>
-                                    <th>Địa chỉ liên hệ <SortIcon /></th>
-                                    <th>Số điện thoại <SortIcon /></th>
-                                    <th>Email <SortIcon /></th>
+                                    <th>Mã vị trí <SortIcon /></th>
+                                    <th>Tên <SortIcon /></th>
+                                    <th>Dãy <SortIcon /></th>
+                                    <th>Kệ <SortIcon /></th>
+                                    <th>Tầng <SortIcon /></th>
+                                    <th>Sức chứa <SortIcon /></th>
+                                    <th>Diễn giải <SortIcon /></th>
                                     <th className="sp-th-action">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan={10} className="sp-status-row">Đang tải...</td></tr>
+                                    <tr><td colSpan={9} className="sp-status-row">Đang tải...</td></tr>
                                 ) : error ? (
-                                    <tr><td colSpan={10} className="sp-status-row sp-status-error">{error}</td></tr>
+                                    <tr><td colSpan={9} className="sp-status-row sp-status-error">{error}</td></tr>
                                 ) : rows.length === 0 ? (
-                                    <tr><td colSpan={10} className="sp-status-row">Không có dữ liệu</td></tr>
+                                    <tr><td colSpan={9} className="sp-status-row">Không có dữ liệu</td></tr>
                                 ) : rows.map((r) => (
                                     <tr
                                         key={r.id}
                                         className={`sp-row-clickable${selected.has(r.id) ? " sp-row-selected" : ""}`}
-                                        onClick={() => navigate(`/partners/${r.id}`)}
+                                        onClick={() => navigate(`/locations/${r.id}`)}
                                     >
                                         <td className="sp-td-cb" onClick={(e) => e.stopPropagation()}>
                                             <input
@@ -317,16 +304,15 @@ export default function PartnersPage() {
                                                 onChange={() => toggleRow(r.id)}
                                             />
                                         </td>
-                                        <td className="sp-td-id">{r.customercode}</td>
-                                        <td>{r.customername}</td>
-                                        <td>{r.partnermobile}</td>
-                                        <td>{r.partnername}</td>
-                                        <td>{r.taxcode}</td>
-                                        <td>{r.address}</td>
-                                        <td>{r.mobile}</td>
-                                        <td>{r.email}</td>
+                                        <td className="sp-td-id">{r.locationcode}</td>
+                                        <td>{r.locationname}</td>
+                                        <td>{r.rackno}</td>
+                                        <td>{r.floorno}</td>
+                                        <td>{r.columnno}</td>
+                                        <td>{r.capacity}</td>
+                                        <td>{r.description}</td>
                                         <td className="sp-td-action" onClick={(e) => e.stopPropagation()}>
-                                            <button className="sp-edit-btn" title="Chỉnh sửa" onClick={() => navigate(`/partners/${r.id}`)}>
+                                            <button className="sp-edit-btn" title="Chỉnh sửa" onClick={() => navigate(`/locations/${r.id}`)}>
                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -337,32 +323,35 @@ export default function PartnersPage() {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
 
-                        <div className="sp-pagination">
-                            <span className="sp-rows-info">
-                                Rows per page
-                                <select
-                                    className="sp-rows-select"
-                                    value={rowsPerPage}
-                                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
-                                >
-                                    {ROWS_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                                </select>
-                                <span className="sp-total-label">of {totalRows} rows</span>
-                            </span>
-                            <button className="sp-page-btn" disabled={page === 1} onClick={() => setPage(1)}>«</button>
-                            <button className="sp-page-btn" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>‹</button>
-                            {getPages().map((p, idx) =>
-                                p === "…"
-                                    ? <span key={`e${idx}`} className="sp-page-ellipsis">…</span>
-                                    : <button
+                    {/* ── PAGINATION ── */}
+                    <div className="sp-pagination">
+                        <span className="sp-rows-label">Rows per page</span>
+                        <select
+                            className="sp-rows-select"
+                            value={rowsPerPage}
+                            onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
+                        >
+                            {ROWS_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                        <span className="sp-rows-info">of {totalRows} rows</span>
+                        <div className="sp-page-btns">
+                            <button className="sp-page-btn" onClick={() => setPage(1)} disabled={page === 1}>«</button>
+                            <button className="sp-page-btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>‹</button>
+                            {getPages().map((p, i) =>
+                                p === "…" ? (
+                                    <span key={`ellipsis-${i}`} className="sp-page-ellipsis">…</span>
+                                ) : (
+                                    <button
                                         key={p}
                                         className={`sp-page-btn${p === page ? " sp-page-active" : ""}`}
                                         onClick={() => setPage(p)}
                                     >{p}</button>
+                                )
                             )}
-                            <button className="sp-page-btn" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>›</button>
-                            <button className="sp-page-btn" disabled={page === totalPages} onClick={() => setPage(totalPages)}>»</button>
+                            <button className="sp-page-btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>›</button>
+                            <button className="sp-page-btn" onClick={() => setPage(totalPages)} disabled={page === totalPages}>»</button>
                         </div>
                     </div>
                 </div>

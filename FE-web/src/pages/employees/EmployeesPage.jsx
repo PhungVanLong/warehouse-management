@@ -163,7 +163,7 @@ export default function EmployeesPage() {
                         <div className="sp-nav-children">
                             <div className="sp-nav-child" onClick={() => navigate("/supplies")}>Danh mục vật tư hàng hóa</div>
                             <div className="sp-nav-child sp-child-active">Danh mục nhân viên</div>
-                            <div className="sp-nav-child">Danh mục vị trí</div>
+                            <div className="sp-nav-child" onClick={() => navigate("/locations")}>Danh mục vị trí</div>
                             <div className="sp-nav-child" onClick={() => navigate("/partners")}>Danh mục đối tượng</div>
                         </div>
                     )}
@@ -205,11 +205,11 @@ export default function EmployeesPage() {
                 </nav>
 
                 <div className="sp-sidebar-bottom">
-                    <div className="sp-nav-standalone">
+                    <div className="sp-nav-standalone" onClick={() => navigate("/account")}>
                         <span className="sp-nav-icon"><IconUser /></span>
                         <span>Tài khoản</span>
                     </div>
-                    <div className="sp-nav-standalone">
+                    <div className="sp-nav-standalone" onClick={() => { localStorage.removeItem("user"); localStorage.removeItem("token"); navigate("/login"); }}>
                         <span className="sp-nav-icon"><IconLogout /></span>
                         <span>Đăng xuất</span>
                     </div>

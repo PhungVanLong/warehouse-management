@@ -13,6 +13,10 @@ import PartnersCreatePage from "./pages/partners/PartnersCreatePage";
 import EmployeesPage from "./pages/employees/EmployeesPage";
 import EmployeesDetailPage from "./pages/employees/EmployeesDetailPage";
 import EmployeesCreatePage from "./pages/employees/EmployeesCreatePage";
+import AccountPage from "./pages/account/AccountPage";
+import LocationsPage from "./pages/locations/LocationsPage";
+import LocationsDetailPage from "./pages/locations/LocationsDetailPage";
+import LocationsCreatePage from "./pages/locations/LocationsCreatePage";
 
 export default function AppRouter() {
     return (
@@ -31,6 +35,10 @@ export default function AppRouter() {
                 <Route path="/employees" element={<EmployeesPage />} />
                 <Route path="/employees/create" element={<EmployeesCreatePage />} />
                 <Route path="/employees/:id" element={<EmployeesDetailPage />} />
+                <Route path="/account" element={<AccountPage />} />
+                <Route path="/locations" element={<LocationsPage />} />
+                <Route path="/locations/create" element={<LocationsCreatePage />} />
+                <Route path="/locations/:id" element={<LocationsDetailPage />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         </Router>

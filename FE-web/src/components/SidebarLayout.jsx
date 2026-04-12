@@ -17,6 +17,12 @@ export default function SidebarLayout({ children, activeKey }) {
         navigate(path);
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+        navigate("/login");
+    };
+
     return (
         <div className="sp-layout">
             <aside className="sp-sidebar">
@@ -51,7 +57,7 @@ export default function SidebarLayout({ children, activeKey }) {
                         <div className="sp-nav-children">
                             <div className={`sp-nav-child${location.pathname.startsWith("/supplies") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục vật tư hàng hóa", "/supplies")}>Danh mục vật tư hàng hóa</div>
                             <div className={`sp-nav-child${location.pathname.startsWith("/employees") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục nhân viên", "/employees")}>Danh mục nhân viên</div>
-                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Danh mục vị trí')}>Danh mục vị trí</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/locations") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục vị trí", "/locations")}>Danh mục vị trí</div>
                             <div className={`sp-nav-child${location.pathname.startsWith("/partners") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục đối tượng", "/partners")}>Danh mục đối tượng</div>
                         </div>
                     )}
@@ -101,7 +107,7 @@ export default function SidebarLayout({ children, activeKey }) {
                 </nav>
 
                 <div className="sp-sidebar-bottom">
-                    <div className="sp-nav-standalone" onClick={() => console.log('[Sidebar] Click: Tài khoản')}>
+                    <div className={`sp-nav-standalone${location.pathname.startsWith("/account") ? " sp-nav-active" : ""}`} onClick={() => navTo("Tài khoản", "/account")}>
                         <span className="sp-nav-icon">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
@@ -109,7 +115,7 @@ export default function SidebarLayout({ children, activeKey }) {
                         </span>
                         <span>Tài khoản</span>
                     </div>
-                    <div className="sp-nav-standalone" onClick={() => console.log('[Sidebar] Click: Đăng xuất')}>
+                    <div className="sp-nav-standalone" onClick={handleLogout}>
                         <span className="sp-nav-icon">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
