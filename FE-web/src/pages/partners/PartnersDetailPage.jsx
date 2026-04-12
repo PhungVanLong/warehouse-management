@@ -43,6 +43,7 @@ export default function PartnersDetailPage() {
     const [fieldErrors, setFieldErrors] = useState({});
     const [openBasic, setOpenBasic] = useState(true);
     const [openDetail, setOpenDetail] = useState(true);
+    const [success, setSuccess] = useState(false);
 
     useEffect(() => {
         setLoading(true);
@@ -97,6 +98,8 @@ export default function PartnersDetailPage() {
             setOriginal(f);
             setForm(f);
             setIsEditing(false);
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 2000);
         } catch {
             setError("Lưu thất bại. Vui lòng thử lại.");
         } finally {
@@ -106,6 +109,17 @@ export default function PartnersDetailPage() {
 
     return (
         <SidebarLayout>
+            {success && (
+                <div className="sp-toast sp-toast-success">
+                    <IconCheck />
+                    Bạn đã cập nhật thành công đối tượng
+                </div>
+            )}
+            {error && saving && (
+                <div className="sp-toast sp-toast-error">
+                    {error}
+                </div>
+            )}
             <div className="sp-main">
                 {/* Topbar */}
                 <div className="sp-topbar">

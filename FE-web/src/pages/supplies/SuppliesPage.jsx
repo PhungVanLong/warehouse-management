@@ -100,9 +100,10 @@ export default function SuppliesPage() {
     useEffect(() => { fetchItems(); }, [fetchItems]);
 
     const filtered = useMemo(() => {
-        if (!search.trim()) return items;
+        const sorted = [...items].sort((a, b) => (a.id || 0) - (b.id || 0));
+        if (!search.trim()) return sorted;
         const q = search.toLowerCase();
-        return items.filter((r) =>
+        return sorted.filter((r) =>
             r.itemcode?.toLowerCase().includes(q) ||
             r.itemname?.toLowerCase().includes(q)
         );

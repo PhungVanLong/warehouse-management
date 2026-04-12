@@ -95,9 +95,10 @@ export default function EmployeesPage() {
     useEffect(() => { fetchItems(); }, [fetchItems]);
 
     const filtered = useMemo(() => {
-        if (!search.trim()) return items;
+        const sorted = [...items].sort((a, b) => (a.id || 0) - (b.id || 0));
+        if (!search.trim()) return sorted;
         const q = search.toLowerCase();
-        return items.filter((r) =>
+        return sorted.filter((r) =>
             r.usercode?.toLowerCase().includes(q) ||
             r.fullname?.toLowerCase().includes(q) ||
             r.username?.toLowerCase().includes(q)

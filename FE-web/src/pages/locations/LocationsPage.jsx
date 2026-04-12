@@ -94,9 +94,10 @@ export default function LocationsPage() {
     useEffect(() => { fetchItems(); }, [fetchItems]);
 
     const filtered = useMemo(() => {
-        if (!search.trim()) return items;
+        const sorted = [...items].sort((a, b) => (a.id || 0) - (b.id || 0));
+        if (!search.trim()) return sorted;
         const q = search.toLowerCase();
-        return items.filter((r) =>
+        return sorted.filter((r) =>
             r.locationcode?.toLowerCase().includes(q) ||
             r.locationname?.toLowerCase().includes(q) ||
             r.description?.toLowerCase().includes(q)

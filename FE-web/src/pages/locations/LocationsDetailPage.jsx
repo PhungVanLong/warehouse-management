@@ -28,6 +28,7 @@ export default function LocationsDetailPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [fieldErrors, setFieldErrors] = useState({});
+    const [success, setSuccess] = useState(false);
 
     useEffect(() => {
         setLoading(true);
@@ -78,6 +79,8 @@ export default function LocationsDetailPage() {
             setOriginal(f);
             setForm(f);
             setIsEditing(false);
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 2000);
         } catch {
             setError("Lưu thất bại. Vui lòng thử lại.");
         } finally {
@@ -93,6 +96,12 @@ export default function LocationsDetailPage() {
 
     return (
         <SidebarLayout activeKey="locations">
+            {success && (
+                <div className="sp-toast sp-toast-success">
+                    <IconCheck />
+                    Bạn đã cập nhật thành công vị trí
+                </div>
+            )}
             <div className="sp-main">
                 <div className="sp-topbar">
                     <div>
