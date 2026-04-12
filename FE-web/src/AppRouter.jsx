@@ -5,6 +5,8 @@ import RegisterForm from "./components/RegisterForm";
 import ForgotPasswordForm from "./components/ForgotPasswordForm";
 import UpdatePasswordForm from "./components/UpdatePasswordForm";
 import SuppliesPage from "./pages/SuppliesPage";
+import SuppliesDetailPage from "./pages/SuppliesDetailPage";
+import SuppliesCreatePage from "./pages/SuppliesCreatePage";
 
 export default function AppRouter() {
     return (
@@ -15,6 +17,8 @@ export default function AppRouter() {
                 <Route path="/forgot-password" element={<ForgotPasswordForm />} />
                 <Route path="/update-password" element={<UpdatePasswordForm />} />
                 <Route path="/supplies" element={<SuppliesPage />} />
+                <Route path="/supplies/create" element={<SuppliesCreatePage />} />
+                <Route path="/supplies/:id" element={<SuppliesDetailPage />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         </Router>

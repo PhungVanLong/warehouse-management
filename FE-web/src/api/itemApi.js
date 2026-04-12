@@ -5,41 +5,28 @@ const API_URL = '/api/items';
 
 // Lấy danh sách hàng hóa, hỗ trợ phân trang
 export const getAllItems = async (page, size) => {
-    try {
-        let url = API_URL;
-        if (page && size) url += `?page=${page}&size=${size}`;
-        const res = await axiosInstance.get(url);
-        console.log('getAllItems response:', res.data);
-        // Chuẩn API: trả về res.data.data (mảng vật tư)
-        return res.data.data || [];
-    } catch (err) {
-        console.error('getAllItems error:', err);
-        throw err;
-    }
+    let url = API_URL;
+    if (page !== undefined && size !== undefined) url += `?page=${page}&size=${size}`;
+    const res = await axiosInstance.get(url);
+    return res.data.data || [];
 };
 
-// Lấy chi tiết hàng hóa
+// Lấy chi tiết hàng hóa theo id
 export const getItemById = async (id) => {
-    try {
-        const res = await axios.get(`${API_URL}/${id}`);
-        console.log('getItemById response:', res.data);
-        return res.data;
-    } catch (err) {
-        console.error('getItemById error:', err);
-        throw err;
-    }
+    const res = await axiosInstance.get(`${API_URL}/${id}`);
+    return res.data.data;
+};
+
+// Tạo mới hàng hóa
+// body: { itemcode, barcode, itemname, invoicename, description, itemtype, unitof, itemcatg, minstocklevel, modifiedBy }
+export const createItem = async (body) => {
+    const res = await axiosInstance.post(API_URL, body);
+    return res.data.data;
 };
 
 // Cập nhật hàng hóa
-export const updateItem = async (id, data) => {
-    try {
-        const res = await axios.put(`${API_URL}/${id}`, data);
-        console.log('updateItem response:', res.data);
-        return res.data;
-    } catch (err) {
-        console.error('updateItem error:', err);
-        throw err;
-    }
+// body: { itemcode*, itemname*, barcode, invoicename, description, itemtype, unitof, itemcatg, minstocklevel, modifiedBy* }
+export const updateItem = async (id, body) => {
+    const res = await axiosInstance.put(`${API_URL}/${id}`, body);
+    return res.data.data;
 };
-
-// (Có thể bổ sung thêm createItem, deleteItem nếu backend hỗ trợ)
