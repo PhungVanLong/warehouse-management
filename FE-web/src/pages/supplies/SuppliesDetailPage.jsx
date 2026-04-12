@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import "./SuppliesPage.css";
-import SidebarLayout from "../components/SidebarLayout";
-import { getItemById, updateItem } from "../api/itemApi";
+import "../../styles/shared.css";
+import "./supplies.css";
+import SidebarLayout from "../../components/SidebarLayout";
+import { getItemById, updateItem } from "../../api/itemApi";
 
 const EMPTY_FORM = {
     itemcode: "", itemname: "", invoicename: "",
@@ -19,6 +20,7 @@ export default function SuppliesDetailPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
+    const [fieldErrors, setFieldErrors] = useState({});
 
     useEffect(() => {
         setLoading(true);
@@ -32,10 +34,23 @@ export default function SuppliesDetailPage() {
             .finally(() => setLoading(false));
     }, [id]);
 
-    const handleChange = (field, value) =>
+    const handleChange = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
+        if (fieldErrors[field]) setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+    };
+
+    const validate = () => {
+        const errs = {};
+        if (!form.itemcode.trim()) errs.itemcode = "Bắt buộc";
+        if (!form.itemname.trim()) errs.itemname = "Bắt buộc";
+        if (!form.unitof.trim()) errs.unitof = "Bắt buộc";
+        if (!form.itemtype.trim()) errs.itemtype = "Bắt buộc";
+        return errs;
+    };
 
     const handleSave = async () => {
+        const errs = validate();
+        if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
         setSaving(true);
         setError(null);
         try {
@@ -109,23 +124,29 @@ export default function SuppliesDetailPage() {
                             {/* Form */}
                             <div className="sd-form">
                                 <div className="sd-field">
-                                    <label className="sd-label">Mã vật tư</label>
-                                    <input
-                                        className="sd-input"
-                                        value={form.itemcode}
-                                        disabled={!isEditing}
-                                        onChange={(e) => handleChange("itemcode", e.target.value)}
-                                    />
+                                    <label className="sd-label">Mã vật tư <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.itemcode ? " sd-input-error" : ""}`}
+                                            value={form.itemcode}
+                                            disabled={!isEditing}
+                                            onChange={(e) => handleChange("itemcode", e.target.value)}
+                                        />
+                                        {fieldErrors.itemcode && <span className="sd-error-msg">{fieldErrors.itemcode}</span>}
+                                    </div>
                                 </div>
 
                                 <div className="sd-field">
-                                    <label className="sd-label">Tên vật tư hàng hóa</label>
-                                    <input
-                                        className="sd-input"
-                                        value={form.itemname}
-                                        disabled={!isEditing}
-                                        onChange={(e) => handleChange("itemname", e.target.value)}
-                                    />
+                                    <label className="sd-label">Tên vật tư hàng hóa <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.itemname ? " sd-input-error" : ""}`}
+                                            value={form.itemname}
+                                            disabled={!isEditing}
+                                            onChange={(e) => handleChange("itemname", e.target.value)}
+                                        />
+                                        {fieldErrors.itemname && <span className="sd-error-msg">{fieldErrors.itemname}</span>}
+                                    </div>
                                 </div>
 
                                 <div className="sd-field">
@@ -160,22 +181,28 @@ export default function SuppliesDetailPage() {
 
                                 <div className="sd-field sd-field-row">
                                     <div className="sd-field-half">
-                                        <label className="sd-label">Đơn vị tính</label>
-                                        <input
-                                            className="sd-input"
-                                            value={form.unitof}
-                                            disabled={!isEditing}
-                                            onChange={(e) => handleChange("unitof", e.target.value)}
-                                        />
+                                        <label className="sd-label">Đơn vị tính <span className="sd-required">*</span></label>
+                                        <div className="sd-input-wrap">
+                                            <input
+                                                className={`sd-input${fieldErrors.unitof ? " sd-input-error" : ""}`}
+                                                value={form.unitof}
+                                                disabled={!isEditing}
+                                                onChange={(e) => handleChange("unitof", e.target.value)}
+                                            />
+                                            {fieldErrors.unitof && <span className="sd-error-msg">{fieldErrors.unitof}</span>}
+                                        </div>
                                     </div>
                                     <div className="sd-field-half">
-                                        <label className="sd-label">Loại vật tư</label>
-                                        <input
-                                            className="sd-input"
-                                            value={form.itemtype}
-                                            disabled={!isEditing}
-                                            onChange={(e) => handleChange("itemtype", e.target.value)}
-                                        />
+                                        <label className="sd-label">Loại vật tư <span className="sd-required">*</span></label>
+                                        <div className="sd-input-wrap">
+                                            <input
+                                                className={`sd-input${fieldErrors.itemtype ? " sd-input-error" : ""}`}
+                                                value={form.itemtype}
+                                                disabled={!isEditing}
+                                                onChange={(e) => handleChange("itemtype", e.target.value)}
+                                            />
+                                            {fieldErrors.itemtype && <span className="sd-error-msg">{fieldErrors.itemtype}</span>}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -184,7 +211,7 @@ export default function SuppliesDetailPage() {
                             <div className="sd-footer">
                                 {isEditing ? (
                                     <>
-                                        <button className="sd-btn-back" disabled={saving} onClick={() => { setForm({ ...original }); setIsEditing(false); }}>
+                                        <button className="sd-btn-back" disabled={saving} onClick={() => { setForm({ ...original }); setIsEditing(false); setFieldErrors({}); }}>
                                             Hủy
                                         </button>
                                         <button className="sd-btn-edit" disabled={saving} onClick={handleSave}>

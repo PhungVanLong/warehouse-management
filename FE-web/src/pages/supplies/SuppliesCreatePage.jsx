@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./SuppliesPage.css";
-import SidebarLayout from "../components/SidebarLayout";
-import { createItem } from "../api/itemApi";
+import "../../styles/shared.css";
+import "./supplies.css";
+import SidebarLayout from "../../components/SidebarLayout";
+import { createItem } from "../../api/itemApi";
 
 const EMPTY_FORM = {
     itemcode: "",
@@ -20,11 +21,25 @@ export default function SuppliesCreatePage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState({});
 
-    const handleChange = (field, value) =>
+    const handleChange = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
+        if (fieldErrors[field]) setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+    };
+
+    const validate = () => {
+        const errs = {};
+        if (!form.itemcode.trim()) errs.itemcode = "Bắt buộc";
+        if (!form.itemname.trim()) errs.itemname = "Bắt buộc";
+        if (!form.unitof.trim()) errs.unitof = "Bắt buộc";
+        if (!form.itemtype.trim()) errs.itemtype = "Bắt buộc";
+        return errs;
+    };
 
     const handleSave = async () => {
+        const errs = validate();
+        if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
         setSaving(true);
         setError(null);
         try {
@@ -104,23 +119,29 @@ export default function SuppliesCreatePage() {
                         {/* Form */}
                         <div className="sd-form">
                             <div className="sd-field">
-                                <label className="sd-label">Mã vật tư</label>
-                                <input
-                                    className="sd-input"
-                                    placeholder="Nhập mã vật tư"
-                                    value={form.itemcode}
-                                    onChange={(e) => handleChange("itemcode", e.target.value)}
-                                />
+                                <label className="sd-label">Mã vật tư <span className="sd-required">*</span></label>
+                                <div className="sd-input-wrap">
+                                    <input
+                                        className={`sd-input${fieldErrors.itemcode ? " sd-input-error" : ""}`}
+                                        placeholder="Nhập mã vật tư"
+                                        value={form.itemcode}
+                                        onChange={(e) => handleChange("itemcode", e.target.value)}
+                                    />
+                                    {fieldErrors.itemcode && <span className="sd-error-msg">{fieldErrors.itemcode}</span>}
+                                </div>
                             </div>
 
                             <div className="sd-field">
-                                <label className="sd-label">Tên vật tư hàng hóa</label>
-                                <input
-                                    className="sd-input"
-                                    placeholder="Nhập tên vật tư hàng hóa"
-                                    value={form.itemname}
-                                    onChange={(e) => handleChange("itemname", e.target.value)}
-                                />
+                                <label className="sd-label">Tên vật tư hàng hóa <span className="sd-required">*</span></label>
+                                <div className="sd-input-wrap">
+                                    <input
+                                        className={`sd-input${fieldErrors.itemname ? " sd-input-error" : ""}`}
+                                        placeholder="Nhập tên vật tư hàng hóa"
+                                        value={form.itemname}
+                                        onChange={(e) => handleChange("itemname", e.target.value)}
+                                    />
+                                    {fieldErrors.itemname && <span className="sd-error-msg">{fieldErrors.itemname}</span>}
+                                </div>
                             </div>
 
                             <div className="sd-field">
@@ -155,22 +176,28 @@ export default function SuppliesCreatePage() {
 
                             <div className="sd-field sd-field-row">
                                 <div className="sd-field-half">
-                                    <label className="sd-label">Đơn vị tính</label>
-                                    <input
-                                        className="sd-input"
-                                        placeholder="Nhập đơn vị tính"
-                                        value={form.unitof}
-                                        onChange={(e) => handleChange("unitof", e.target.value)}
-                                    />
+                                    <label className="sd-label">Đơn vị tính <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.unitof ? " sd-input-error" : ""}`}
+                                            placeholder="Nhập đơn vị tính"
+                                            value={form.unitof}
+                                            onChange={(e) => handleChange("unitof", e.target.value)}
+                                        />
+                                        {fieldErrors.unitof && <span className="sd-error-msg">{fieldErrors.unitof}</span>}
+                                    </div>
                                 </div>
                                 <div className="sd-field-half">
-                                    <label className="sd-label">Loại vật tư</label>
-                                    <input
-                                        className="sd-input"
-                                        placeholder="Nhập loại vật tư"
-                                        value={form.itemtype}
-                                        onChange={(e) => handleChange("itemtype", e.target.value)}
-                                    />
+                                    <label className="sd-label">Loại vật tư <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.itemtype ? " sd-input-error" : ""}`}
+                                            placeholder="Nhập loại vật tư"
+                                            value={form.itemtype}
+                                            onChange={(e) => handleChange("itemtype", e.target.value)}
+                                        />
+                                        {fieldErrors.itemtype && <span className="sd-error-msg">{fieldErrors.itemtype}</span>}
+                                    </div>
                                 </div>
                             </div>
                         </div>

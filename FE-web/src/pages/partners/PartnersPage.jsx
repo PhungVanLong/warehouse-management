@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import "./SuppliesPage.css";
-import { getAllCustomers } from "../api/customerApi";
-import logo from "../assets/logo.png";
+import "../../styles/shared.css";
+import "./partners.css";
+import { getAllCustomers } from "../../api/customerApi";
+import logo from "../../assets/logo.png";
 
 const ROWS_OPTIONS = [10, 15, 20, 50];
 
@@ -161,7 +162,7 @@ export default function PartnersPage() {
                     {openGroups.danhmuc && (
                         <div className="sp-nav-children">
                             <div className="sp-nav-child" onClick={() => navigate("/supplies")}>Danh mục vật tư hàng hóa</div>
-                            <div className="sp-nav-child">Danh mục nhân viên</div>
+                            <div className="sp-nav-child" onClick={() => navigate("/employees")}>Danh mục nhân viên</div>
                             <div className="sp-nav-child">Danh mục vị trí</div>
                             <div className="sp-nav-child sp-child-active" onClick={() => navigate("/partners")}>Danh mục đối tượng</div>
                         </div>
@@ -285,7 +286,7 @@ export default function PartnersPage() {
                                             onChange={(e) => toggleAll(e.target.checked)}
                                         />
                                     </th>
-                                    <th className="sp-th-sticky">Mã <SortIcon /></th>
+                                    <th>Mã <SortIcon /></th>
                                     <th>Tên doanh nghiệp <SortIcon /></th>
                                     <th>SDT đối tác <SortIcon /></th>
                                     <th>Đại diện pháp luật <SortIcon /></th>
@@ -316,7 +317,7 @@ export default function PartnersPage() {
                                                 onChange={() => toggleRow(r.id)}
                                             />
                                         </td>
-                                        <td className="sp-td-id sp-td-sticky">{r.customercode}</td>
+                                        <td className="sp-td-id">{r.customercode}</td>
                                         <td>{r.customername}</td>
                                         <td>{r.partnermobile}</td>
                                         <td>{r.partnername}</td>

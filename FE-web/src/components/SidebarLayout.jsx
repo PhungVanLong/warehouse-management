@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import "../pages/SuppliesPage.css";
+import "../styles/shared.css";
 import logo from "../assets/logo.png";
 
-export default function SidebarLayout({ children }) {
+export default function SidebarLayout({ children, activeKey }) {
     const [openGroups, setOpenGroups] = useState({ danhmuc: true, chungtu: true, baocao: true });
     const toggleGroup = (key) => {
         console.log(`[Sidebar] Toggle group: ${key}`);
@@ -50,7 +50,7 @@ export default function SidebarLayout({ children }) {
                     {openGroups.danhmuc && (
                         <div className="sp-nav-children">
                             <div className={`sp-nav-child${location.pathname.startsWith("/supplies") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục vật tư hàng hóa", "/supplies")}>Danh mục vật tư hàng hóa</div>
-                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Danh mục nhân viên')}>Danh mục nhân viên</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/employees") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục nhân viên", "/employees")}>Danh mục nhân viên</div>
                             <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Danh mục vị trí')}>Danh mục vị trí</div>
                             <div className={`sp-nav-child${location.pathname.startsWith("/partners") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục đối tượng", "/partners")}>Danh mục đối tượng</div>
                         </div>

@@ -1,11 +1,8 @@
-
-
-
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import "./SuppliesPage.css";
-import { getAllItems } from "../api/itemApi";
-import logo from "../assets/logo.png";
+import { useNavigate } from "react-router-dom";
+import "../../styles/shared.css";
+import { getAllEmployees } from "../../api/employeeApi";
+import logo from "../../assets/logo.png";
 
 const ROWS_OPTIONS = [10, 15, 20, 50];
 
@@ -69,7 +66,7 @@ function IconChevronDown() {
     );
 }
 
-export default function SuppliesPage() {
+export default function EmployeesPage() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -79,7 +76,6 @@ export default function SuppliesPage() {
     const [selected, setSelected] = useState(new Set());
     const [openGroups, setOpenGroups] = useState({ danhmuc: true, chungtu: true, baocao: true });
     const navigate = useNavigate();
-    const location = useLocation();
 
     const toggleGroup = (key) => setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
@@ -87,10 +83,10 @@ export default function SuppliesPage() {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllItems();
+            const data = await getAllEmployees();
             setItems(data);
-        } catch (err) {
-            setError("Không thể tải danh sách vật tư. Vui lòng thử lại.");
+        } catch {
+            setError("Không thể tải danh sách nhân viên. Vui lòng thử lại.");
         } finally {
             setLoading(false);
         }
@@ -102,8 +98,9 @@ export default function SuppliesPage() {
         if (!search.trim()) return items;
         const q = search.toLowerCase();
         return items.filter((r) =>
-            r.itemcode?.toLowerCase().includes(q) ||
-            r.itemname?.toLowerCase().includes(q)
+            r.usercode?.toLowerCase().includes(q) ||
+            r.fullname?.toLowerCase().includes(q) ||
+            r.username?.toLowerCase().includes(q)
         );
     }, [search, items]);
 
@@ -144,20 +141,16 @@ export default function SuppliesPage() {
         <div className="sp-layout">
             {/* ── SIDEBAR ── */}
             <aside className="sp-sidebar">
-                {/* Logo */}
                 <div className="sp-sidebar-logo">
                     <img src={logo} alt="Logo" className="sp-logo-img" />
                 </div>
 
-                {/* Nav */}
                 <nav className="sp-nav">
-                    {/* Tổng quan */}
                     <div className="sp-nav-standalone">
                         <span className="sp-nav-icon"><IconGrid /></span>
                         <span>Tổng quan</span>
                     </div>
 
-                    {/* Danh mục */}
                     <div
                         className={`sp-nav-group-hd${openGroups.danhmuc ? " sp-group-active" : ""}`}
                         onClick={() => toggleGroup("danhmuc")}
@@ -168,14 +161,13 @@ export default function SuppliesPage() {
                     </div>
                     {openGroups.danhmuc && (
                         <div className="sp-nav-children">
-                            <div className={`sp-nav-child${location.pathname.startsWith("/supplies") ? " sp-child-active" : ""}`} onClick={() => { console.log('[Sidebar] Navigate: Danh mục vật tư hàng hóa → /supplies'); navigate('/supplies'); }}>Danh mục vật tư hàng hóa</div>
-                            <div className="sp-nav-child">Danh mục nhân viên</div>
+                            <div className="sp-nav-child" onClick={() => navigate("/supplies")}>Danh mục vật tư hàng hóa</div>
+                            <div className="sp-nav-child sp-child-active">Danh mục nhân viên</div>
                             <div className="sp-nav-child">Danh mục vị trí</div>
-                            <div className={`sp-nav-child${location.pathname.startsWith("/partners") ? " sp-child-active" : ""}`} onClick={() => { console.log('[Sidebar] Navigate: Danh mục đối tượng → /partners'); navigate('/partners'); }}>Danh mục đối tượng</div>
+                            <div className="sp-nav-child" onClick={() => navigate("/partners")}>Danh mục đối tượng</div>
                         </div>
                     )}
 
-                    {/* Chứng từ */}
                     <div
                         className={`sp-nav-group-hd${openGroups.chungtu ? " sp-group-active" : ""}`}
                         onClick={() => toggleGroup("chungtu")}
@@ -193,7 +185,6 @@ export default function SuppliesPage() {
                         </div>
                     )}
 
-                    {/* Báo cáo */}
                     <div
                         className={`sp-nav-group-hd${openGroups.baocao ? " sp-group-active" : ""}`}
                         onClick={() => toggleGroup("baocao")}
@@ -213,7 +204,6 @@ export default function SuppliesPage() {
                     )}
                 </nav>
 
-                {/* Bottom */}
                 <div className="sp-sidebar-bottom">
                     <div className="sp-nav-standalone">
                         <span className="sp-nav-icon"><IconUser /></span>
@@ -228,13 +218,12 @@ export default function SuppliesPage() {
 
             {/* ── MAIN ── */}
             <div className="sp-main">
-                {/* Topbar */}
                 <div className="sp-topbar">
                     <div>
                         <div className="sp-breadcrumb">
-                            Danh mục &rsaquo; <span className="sp-breadcrumb-active">Danh mục vật tư hàng hóa</span>
+                            Danh mục &rsaquo; <span className="sp-breadcrumb-active">Danh mục nhân viên</span>
                         </div>
-                        <div className="sp-breadcrumb-sub">Supplies</div>
+                        <div className="sp-breadcrumb-sub">Nhân viên</div>
                     </div>
                     <div className="sp-topbar-right">
                         <button className="sp-icon-btn">
@@ -248,11 +237,9 @@ export default function SuppliesPage() {
                     </div>
                 </div>
 
-                {/* Content */}
                 <div className="sp-content">
-                    <h1 className="sp-title">Vật tư hàng hóa</h1>
+                    <h1 className="sp-title">Nhân viên</h1>
 
-                    {/* Toolbar */}
                     <div className="sp-toolbar">
                         <div className="sp-search-wrap">
                             <svg className="sp-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -267,7 +254,7 @@ export default function SuppliesPage() {
                             />
                         </div>
                         <div className="sp-toolbar-spacer" />
-                        <button className="sp-btn-primary" onClick={() => navigate("/supplies/create")}>
+                        <button className="sp-btn-primary" onClick={() => navigate("/employees/create")}>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                             </svg>
@@ -283,12 +270,17 @@ export default function SuppliesPage() {
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
                             </svg>
+                            Mẫu in
+                        </button>
+                        <button className="sp-btn-outline">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
                             Export
                         </button>
                     </div>
 
-                    {/* Table */}
-                    <div className="sp-table-wrap">
+                    <div className="sp-table-wrap sp-scrollable">
                         <table className="sp-table">
                             <thead>
                                 <tr>
@@ -300,26 +292,31 @@ export default function SuppliesPage() {
                                             onChange={(e) => toggleAll(e.target.checked)}
                                         />
                                     </th>
-                                    <th>Mã VT <SortIcon /></th>
-                                    <th>Tên vật tư / hàng hóa <SortIcon /></th>
-                                    <th>Đơn vị tính <SortIcon /></th>
-                                    <th>Loại vật tư <SortIcon /></th>
-                                    <th>Mô tả / Thông số kỹ thuật <SortIcon /></th>
+                                    <th>Mã nhân viên <SortIcon /></th>
+                                    <th>Họ và tên <SortIcon /></th>
+                                    <th>Tên đăng nhập <SortIcon /></th>
+                                    <th>Giới tính <SortIcon /></th>
+                                    <th>Ngày sinh <SortIcon /></th>
+                                    <th>Địa chỉ <SortIcon /></th>
+                                    <th>Số điện thoại <SortIcon /></th>
+                                    <th>Email <SortIcon /></th>
+                                    <th>Trạng thái <SortIcon /></th>
+                                    <th>Ngày vào làm <SortIcon /></th>
                                     <th className="sp-th-action">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan={7} className="sp-status-row">Đang tải...</td></tr>
+                                    <tr><td colSpan={12} className="sp-status-row">Đang tải...</td></tr>
                                 ) : error ? (
-                                    <tr><td colSpan={7} className="sp-status-row sp-status-error">{error}</td></tr>
+                                    <tr><td colSpan={12} className="sp-status-row sp-status-error">{error}</td></tr>
                                 ) : rows.length === 0 ? (
-                                    <tr><td colSpan={7} className="sp-status-row">Không có dữ liệu</td></tr>
+                                    <tr><td colSpan={12} className="sp-status-row">Không có dữ liệu</td></tr>
                                 ) : rows.map((r) => (
                                     <tr
                                         key={r.id}
                                         className={`sp-row-clickable${selected.has(r.id) ? " sp-row-selected" : ""}`}
-                                        onClick={() => navigate(`/supplies/${r.id}`)}
+                                        onClick={() => navigate(`/employees/${r.id}`)}
                                     >
                                         <td className="sp-td-cb" onClick={(e) => e.stopPropagation()}>
                                             <input
@@ -328,17 +325,18 @@ export default function SuppliesPage() {
                                                 onChange={() => toggleRow(r.id)}
                                             />
                                         </td>
-                                        <td className="sp-td-id">{r.itemcode}</td>
-                                        <td>{r.itemname}</td>
-                                        <td>{r.unitof}</td>
-                                        <td>
-                                            <span className={r.itemtype === "Thành phẩm" ? "sp-badge-tp" : "sp-badge-vt"}>
-                                                {r.itemtype}
-                                            </span>
-                                        </td>
-                                        <td className="sp-td-desc">{r.description}</td>
+                                        <td className="sp-td-id">{r.usercode}</td>
+                                        <td>{r.fullname}</td>
+                                        <td>{r.username}</td>
+                                        <td>{r.gender}</td>
+                                        <td>{r.birthdate ? r.birthdate.slice(0, 10) : ""}</td>
+                                        <td>{r.address}</td>
+                                        <td>{r.phoneNumber}</td>
+                                        <td>{r.email}</td>
+                                        <td>{r.isActive ? "Đang làm" : "Nghỉ việc"}</td>
+                                        <td>{r.firstworkingdate ? r.firstworkingdate.slice(0, 10) : ""}</td>
                                         <td className="sp-td-action" onClick={(e) => e.stopPropagation()}>
-                                            <button className="sp-edit-btn" title="Chỉnh sửa" onClick={() => navigate(`/supplies/${r.id}`)}>
+                                            <button className="sp-edit-btn" title="Chỉnh sửa" onClick={() => navigate(`/employees/${r.id}`)}>
                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -350,7 +348,6 @@ export default function SuppliesPage() {
                             </tbody>
                         </table>
 
-                        {/* Pagination */}
                         <div className="sp-pagination">
                             <span className="sp-rows-info">
                                 Rows per page
@@ -383,4 +380,3 @@ export default function SuppliesPage() {
         </div>
     );
 }
-

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import "./SuppliesPage.css";
-import SidebarLayout from "../components/SidebarLayout";
-import { getCustomerById, updateCustomer } from "../api/customerApi";
+import "../../styles/shared.css";
+import "./partners.css";
+import SidebarLayout from "../../components/SidebarLayout";
+import { getCustomerById, updateCustomer } from "../../api/customerApi";
 
 const EMPTY_FORM = {
     customercode: "", customername: "", address: "",
@@ -39,6 +40,7 @@ export default function PartnersDetailPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
+    const [fieldErrors, setFieldErrors] = useState({});
     const [openBasic, setOpenBasic] = useState(true);
     const [openDetail, setOpenDetail] = useState(true);
 
@@ -55,9 +57,22 @@ export default function PartnersDetailPage() {
             .finally(() => setLoading(false));
     }, [id]);
 
-    const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+    const set = (field, value) => {
+        setForm((prev) => ({ ...prev, [field]: value }));
+        if (fieldErrors[field]) setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+    };
+
+    const validate = () => {
+        const errs = {};
+        if (!form.customercode.trim()) errs.customercode = "Bắt buộc";
+        if (!form.customername.trim()) errs.customername = "Bắt buộc";
+        if (!form.iscustomer && !form.issupplier) errs.role = "Ít nhất phải chọn 1: Là khách hàng hoặc Là nhà cung cấp";
+        return errs;
+    };
 
     const handleSave = async () => {
+        const errs = validate();
+        if (Object.keys(errs).length > 0) { setFieldErrors(errs); if (!form.iscustomer && !form.issupplier) setOpenBasic(true); return; }
         setSaving(true);
         setError(null);
         try {
@@ -136,42 +151,51 @@ export default function PartnersDetailPage() {
                                 {openBasic && (
                                     <div className="sd-form">
                                         <div className="sd-field">
-                                            <label className="sd-label">Mã đối tượng</label>
-                                            <input
-                                                className="sd-input sd-input-sm"
-                                                value={form.customercode}
-                                                disabled={!isEditing}
-                                                onChange={(e) => set("customercode", e.target.value)}
-                                            />
+                                            <label className="sd-label">Mã đối tượng <span className="sd-required">*</span></label>
+                                            <div className="sd-input-wrap">
+                                                <input
+                                                    className={`sd-input sd-input-sm${fieldErrors.customercode ? " sd-input-error" : ""}`}
+                                                    value={form.customercode}
+                                                    disabled={!isEditing}
+                                                    onChange={(e) => set("customercode", e.target.value)}
+                                                />
+                                                {fieldErrors.customercode && <span className="sd-error-msg">{fieldErrors.customercode}</span>}
+                                            </div>
                                         </div>
 
                                         <div className="sd-field">
-                                            <label className="sd-label">Tên doanh nghiệp</label>
-                                            <input
-                                                className="sd-input sd-input-name"
-                                                value={form.customername}
-                                                disabled={!isEditing}
-                                                onChange={(e) => set("customername", e.target.value)}
-                                            />
-                                            <div className="sd-checkboxes">
-                                                <label className="sd-check-label">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={form.iscustomer}
-                                                        disabled={!isEditing}
-                                                        onChange={(e) => set("iscustomer", e.target.checked)}
-                                                    />
-                                                    Là khách hàng
-                                                </label>
-                                                <label className="sd-check-label">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={form.issupplier}
-                                                        disabled={!isEditing}
-                                                        onChange={(e) => set("issupplier", e.target.checked)}
-                                                    />
-                                                    Là nhà cung cấp
-                                                </label>
+                                            <label className="sd-label">Tên doanh nghiệp <span className="sd-required">*</span></label>
+                                            <div className="sd-input-wrap">
+                                                <input
+                                                    className={`sd-input sd-input-name${fieldErrors.customername ? " sd-input-error" : ""}`}
+                                                    value={form.customername}
+                                                    disabled={!isEditing}
+                                                    onChange={(e) => set("customername", e.target.value)}
+                                                />
+                                                {fieldErrors.customername && <span className="sd-error-msg">{fieldErrors.customername}</span>}
+                                            </div>
+                                            <div className="sd-checkboxes" style={{ flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+                                                <div style={{ display: "flex", gap: 16 }}>
+                                                    <label className="sd-check-label">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={form.iscustomer}
+                                                            disabled={!isEditing}
+                                                            onChange={(e) => { set("iscustomer", e.target.checked); if (fieldErrors.role) setFieldErrors((prev) => { const n = { ...prev }; delete n.role; return n; }); }}
+                                                        />
+                                                        Là khách hàng
+                                                    </label>
+                                                    <label className="sd-check-label">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={form.issupplier}
+                                                            disabled={!isEditing}
+                                                            onChange={(e) => { set("issupplier", e.target.checked); if (fieldErrors.role) setFieldErrors((prev) => { const n = { ...prev }; delete n.role; return n; }); }}
+                                                        />
+                                                        Là nhà cung cấp
+                                                    </label>
+                                                </div>
+                                                {fieldErrors.role && <span className="sd-error-msg" style={{ paddingLeft: 0 }}>{fieldErrors.role}</span>}
                                             </div>
                                         </div>
 
@@ -301,7 +325,7 @@ export default function PartnersDetailPage() {
                             <div className="sd-footer">
                                 {isEditing ? (
                                     <>
-                                        <button className="sd-btn-back" disabled={saving} onClick={() => { setForm({ ...original }); setIsEditing(false); }}>
+                                        <button className="sd-btn-back" disabled={saving} onClick={() => { setForm({ ...original }); setIsEditing(false); setFieldErrors({}); }}>
                                             Hủy
                                         </button>
                                         <button className="sd-btn-edit" disabled={saving} onClick={handleSave}>

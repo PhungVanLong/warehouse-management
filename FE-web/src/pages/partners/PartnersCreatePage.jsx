@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./SuppliesPage.css";
-import SidebarLayout from "../components/SidebarLayout";
-import { createCustomer } from "../api/customerApi";
+import "../../styles/shared.css";
+import "./partners.css";
+import SidebarLayout from "../../components/SidebarLayout";
+import { createCustomer } from "../../api/customerApi";
 
 const EMPTY_FORM = {
     customercode: "", customername: "", address: "",
@@ -36,12 +37,26 @@ export default function PartnersCreatePage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [showToast, setShowToast] = useState(false);
+    const [fieldErrors, setFieldErrors] = useState({});
     const [openBasic, setOpenBasic] = useState(true);
     const [openDetail, setOpenDetail] = useState(true);
 
-    const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+    const set = (field, value) => {
+        setForm((prev) => ({ ...prev, [field]: value }));
+        if (fieldErrors[field]) setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+    };
+
+    const validate = () => {
+        const errs = {};
+        if (!form.customercode.trim()) errs.customercode = "Bắt buộc";
+        if (!form.customername.trim()) errs.customername = "Bắt buộc";
+        if (!form.iscustomer && !form.issupplier) errs.role = "Ít nhất phải chọn 1: Là khách hàng hoặc Là nhà cung cấp";
+        return errs;
+    };
 
     const handleSave = async () => {
+        const errs = validate();
+        if (Object.keys(errs).length > 0) { setFieldErrors(errs); if (!form.iscustomer && !form.issupplier) setOpenBasic(true); return; }
         setSaving(true);
         setError(null);
         try {
@@ -121,40 +136,49 @@ export default function PartnersCreatePage() {
                             {openBasic && (
                                 <div className="sd-form">
                                     <div className="sd-field">
-                                        <label className="sd-label">Mã đối tượng</label>
-                                        <input
-                                            className="sd-input sd-input-sm"
-                                            placeholder="Nhập mã đối tượng"
-                                            value={form.customercode}
-                                            onChange={(e) => set("customercode", e.target.value)}
-                                        />
+                                        <label className="sd-label">Mã đối tượng <span className="sd-required">*</span></label>
+                                        <div className="sd-input-wrap">
+                                            <input
+                                                className={`sd-input sd-input-sm${fieldErrors.customercode ? " sd-input-error" : ""}`}
+                                                placeholder="Nhập mã đối tượng"
+                                                value={form.customercode}
+                                                onChange={(e) => set("customercode", e.target.value)}
+                                            />
+                                            {fieldErrors.customercode && <span className="sd-error-msg">{fieldErrors.customercode}</span>}
+                                        </div>
                                     </div>
 
                                     <div className="sd-field">
-                                        <label className="sd-label">Tên doanh nghiệp</label>
-                                        <input
-                                            className="sd-input sd-input-name"
-                                            placeholder="Nhập tên doanh nghiệp"
-                                            value={form.customername}
-                                            onChange={(e) => set("customername", e.target.value)}
-                                        />
-                                        <div className="sd-checkboxes">
-                                            <label className="sd-check-label">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={form.iscustomer}
-                                                    onChange={(e) => set("iscustomer", e.target.checked)}
-                                                />
-                                                Là khách hàng
-                                            </label>
-                                            <label className="sd-check-label">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={form.issupplier}
-                                                    onChange={(e) => set("issupplier", e.target.checked)}
-                                                />
-                                                Là nhà cung cấp
-                                            </label>
+                                        <label className="sd-label">Tên doanh nghiệp <span className="sd-required">*</span></label>
+                                        <div className="sd-input-wrap">
+                                            <input
+                                                className={`sd-input sd-input-name${fieldErrors.customername ? " sd-input-error" : ""}`}
+                                                placeholder="Nhập tên doanh nghiệp"
+                                                value={form.customername}
+                                                onChange={(e) => set("customername", e.target.value)}
+                                            />
+                                            {fieldErrors.customername && <span className="sd-error-msg">{fieldErrors.customername}</span>}
+                                        </div>
+                                        <div className="sd-checkboxes" style={{ flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+                                            <div style={{ display: "flex", gap: 16 }}>
+                                                <label className="sd-check-label">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={form.iscustomer}
+                                                        onChange={(e) => { set("iscustomer", e.target.checked); if (fieldErrors.role) setFieldErrors((prev) => { const n = { ...prev }; delete n.role; return n; }); }}
+                                                    />
+                                                    Là khách hàng
+                                                </label>
+                                                <label className="sd-check-label">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={form.issupplier}
+                                                        onChange={(e) => { set("issupplier", e.target.checked); if (fieldErrors.role) setFieldErrors((prev) => { const n = { ...prev }; delete n.role; return n; }); }}
+                                                    />
+                                                    Là nhà cung cấp
+                                                </label>
+                                            </div>
+                                            {fieldErrors.role && <span className="sd-error-msg" style={{ paddingLeft: 0 }}>{fieldErrors.role}</span>}
                                         </div>
                                     </div>
 
