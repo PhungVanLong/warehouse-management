@@ -3,8 +3,12 @@ package hoshimoto.cdtn.controller;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,22 +19,27 @@ import org.springframework.web.bind.annotation.RestController;
 
 import hoshimoto.cdtn.dto.ApiResponse;
 import hoshimoto.cdtn.dto.CustomerResponse;
+import hoshimoto.cdtn.dto.request.CustomerRequest;
 import hoshimoto.cdtn.entity.Customer;
 import hoshimoto.cdtn.service.CustomerService;
 
 @RestController
 @RequestMapping("/api/customers")
 public class CustomerController {
+
     @Autowired
     private CustomerService customerService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<List<CustomerResponse>>> getAllCustomers() {
-        List<CustomerResponse> list = customerService.getAllCustomers().stream().map(CustomerController::toDto).collect(Collectors.toList());
+        List<CustomerResponse> list = customerService.getAllCustomers()
+                .stream().map(CustomerController::toDto).collect(Collectors.toList());
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách đối tượng thành công", list));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<CustomerResponse>> getCustomerById(@PathVariable Long id) {
         return customerService.getCustomerById(id)
                 .map(c -> ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết đối tượng thành công", toDto(c))))
@@ -38,16 +47,31 @@ public class CustomerController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<CustomerResponse>> createCustomer(@RequestBody Customer customer) {
-        Customer created = customerService.createCustomer(customer);
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ApiResponse<CustomerResponse>> createCustomer(@Valid @RequestBody CustomerRequest request) {
+        Customer created = customerService.createCustomer(request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Tạo mới đối tượng thành công", toDto(created)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<CustomerResponse>> updateCustomer(@PathVariable Long id, @RequestBody Customer customer) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ApiResponse<CustomerResponse>> updateCustomer(
+            @PathVariable Long id,
+            @Valid @RequestBody CustomerRequest request) {
         try {
-            Customer updated = customerService.updateCustomer(id, customer);
+            Customer updated = customerService.updateCustomer(id, request);
             return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật đối tượng thành công", toDto(updated)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(new ApiResponse<>(false, e.getMessage(), null));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable Long id) {
+        try {
+            customerService.deleteCustomer(id);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Vô hiệu hóa đối tượng thành công", null));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(new ApiResponse<>(false, e.getMessage(), null));
         }

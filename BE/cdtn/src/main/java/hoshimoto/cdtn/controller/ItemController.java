@@ -3,8 +3,12 @@ package hoshimoto.cdtn.controller;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,42 +19,63 @@ import org.springframework.web.bind.annotation.RestController;
 
 import hoshimoto.cdtn.dto.ApiResponse;
 import hoshimoto.cdtn.dto.ItemResponse;
+import hoshimoto.cdtn.dto.request.ItemRequest;
 import hoshimoto.cdtn.entity.Item;
 import hoshimoto.cdtn.service.ItemService;
 
 @RestController
 @RequestMapping("/api/items")
 public class ItemController {
+
     @Autowired
     private ItemService itemService;
 
+    /** Tất cả authenticated user có thể xem danh sách */
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<List<ItemResponse>>> getAllItems() {
-        List<ItemResponse> items = itemService.getAllItems().stream().map(ItemController::toDto).collect(Collectors.toList());
+        List<ItemResponse> items = itemService.getAllItems()
+                .stream().map(ItemController::toDto).collect(Collectors.toList());
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách hàng hóa thành công", items));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<ItemResponse>> getItemById(@PathVariable Long id) {
         return itemService.getItemById(id)
                 .map(item -> ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết hàng hóa thành công", toDto(item))))
                 .orElseGet(() -> ResponseEntity.status(404).body(new ApiResponse<>(false, "Không tìm thấy hàng hóa", null)));
     }
 
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ApiResponse<ItemResponse>> createItem(@Valid @RequestBody ItemRequest request) {
+        Item created = itemService.createItem(request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Tạo mới hàng hóa thành công", toDto(created)));
+    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Item>> updateItem(@PathVariable Long id, @RequestBody Item updatedItem) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ApiResponse<ItemResponse>> updateItem(
+            @PathVariable Long id,
+            @Valid @RequestBody ItemRequest request) {
         try {
-            Item item = itemService.updateItem(id, updatedItem);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật hàng hóa thành công", item));
+            Item updated = itemService.updateItem(id, request);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật hàng hóa thành công", toDto(updated)));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(new ApiResponse<>(false, e.getMessage(), null));
         }
     }
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<ItemResponse>> createItem(@RequestBody Item item) {
-        Item created = itemService.createItem(item);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Tạo mới hàng hóa thành công", toDto(created)));
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteItem(@PathVariable Long id) {
+        try {
+            itemService.deleteItem(id);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Vô hiệu hóa hàng hóa thành công", null));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(new ApiResponse<>(false, e.getMessage(), null));
+        }
     }
 
     private static ItemResponse toDto(Item item) {
@@ -65,6 +90,7 @@ public class ItemController {
         dto.setUnitof(item.getUnitof());
         dto.setItemcatg(item.getItemcatg());
         dto.setMinstocklevel(item.getMinstocklevel());
+        dto.setIsActive(item.getIsActive());
         dto.setCreatedAt(item.getCreatedAt() != null ? item.getCreatedAt().toString() : null);
         dto.setModifiedAt(item.getModifiedAt() != null ? item.getModifiedAt().toString() : null);
         dto.setModifiedBy(item.getModifiedBy());

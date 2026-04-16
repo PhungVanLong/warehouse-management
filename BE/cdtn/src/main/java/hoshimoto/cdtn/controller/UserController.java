@@ -3,9 +3,12 @@ package hoshimoto.cdtn.controller;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import jakarta.validation.Valid;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,24 +19,26 @@ import org.springframework.web.bind.annotation.RestController;
 
 import hoshimoto.cdtn.dto.ApiResponse;
 import hoshimoto.cdtn.dto.UserResponse;
-import hoshimoto.cdtn.entity.User;
+import hoshimoto.cdtn.dto.request.UserRequest;
 import hoshimoto.cdtn.service.UserService;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+
     @Autowired
     private UserService userService;
 
-    // ADMIN & STAFF đều xem được danh sách
+    /** ADMIN & STAFF đều xem được danh sách */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
-        List<UserResponse> list = userService.getAllUsers().stream().map(UserResponse::fromEntity).collect(Collectors.toList());
+        List<UserResponse> list = userService.getAllUsers()
+                .stream().map(UserResponse::fromEntity).collect(Collectors.toList());
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách nhân viên thành công", list));
     }
 
-    // ADMIN xem chi tiết
+    /** Chỉ ADMIN xem chi tiết */
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
@@ -42,22 +47,35 @@ public class UserController {
                 .orElseGet(() -> ResponseEntity.status(404).body(new ApiResponse<>(false, "Không tìm thấy nhân viên", null)));
     }
 
-    // ADMIN tạo mới
+    /** Chỉ ADMIN tạo mới */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<UserResponse>> createUser(@RequestBody UserResponse request) {
-        User user = userService.fromDto(request);
-        User created = userService.createUser(user);
+    public ResponseEntity<ApiResponse<UserResponse>> createUser(@Valid @RequestBody UserRequest request) {
+        var created = userService.createUser(request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Tạo mới nhân viên thành công", UserResponse.fromEntity(created)));
     }
 
-    // ADMIN cập nhật
+    /** Chỉ ADMIN cập nhật */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<UserResponse>> updateUser(@PathVariable Long id, @RequestBody UserResponse request) {
+    public ResponseEntity<ApiResponse<UserResponse>> updateUser(
+            @PathVariable Long id,
+            @Valid @RequestBody UserRequest request) {
         try {
-            User updated = userService.updateUser(id, request);
+            var updated = userService.updateUser(id, request);
             return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật nhân viên thành công", UserResponse.fromEntity(updated)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(new ApiResponse<>(false, e.getMessage(), null));
+        }
+    }
+
+    /** Chỉ ADMIN xóa (soft delete) */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
+        try {
+            userService.deleteUser(id);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Vô hiệu hóa nhân viên thành công", null));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(new ApiResponse<>(false, e.getMessage(), null));
         }

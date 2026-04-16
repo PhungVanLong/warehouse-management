@@ -1,3 +1,27 @@
+# Lưu ý về các trường bắt buộc/ràng buộc
+
+- Các trường **bắt buộc** khi tạo/sửa:
+  - **Customer:** `customercode`, `customername`, `iscustomer` (ít nhất 1 trong issupplier/iscustomer phải true), `isActive`, `email` (nếu có dùng xác thực qua email)
+  - **Item:** `itemcode`, `itemname`, `unitof`, `itemtype`, `isActive`
+  - **Location:** `locationcode`, `locationname`, `isActive`
+  - **User:** `usercode`, `fullname`, `username`, `password` (khi đăng ký/tạo mới), `role`, `isActive`
+- Các trường **unique** (không trùng):
+  - **Customer:** `customercode`, `email`
+  - **Item:** `itemcode`, `barcode`
+  - **Location:** `locationcode`
+  - **User:** `usercode`, `username`, `email`
+- Các trường **ràng buộc logic**:
+  - **Customer:** Nếu `iscustomer=false` thì phải có `issupplier=true` và ngược lại.
+  - **User:** `role` chỉ nhận giá trị `ADMIN` hoặc `STAFF`.
+- Các trường ngày giờ (`createdAt`, `modifiedAt`, ...):
+  - FE không cần gửi khi tạo mới, BE sẽ tự sinh.
+  - Khi cập nhật, chỉ cần gửi `modifiedAt` nếu muốn lưu thời gian chỉnh sửa.
+- Các trường **không bắt buộc** có thể để null hoặc bỏ qua khi gửi request.
+
+**FE cần validate các trường bắt buộc trước khi gửi request!**
+
+---
+
 ## 9. Danh mục đối tượng (Customer)
 ### Tạo mới đối tượng
 **Endpoint:** `POST /api/customers`
@@ -661,6 +685,175 @@ port: http://localhost:8080
     {
       "success": false,
       "message": "Không tìm thấy vị trí hoặc dữ liệu không hợp lệ",
+      "data": null
+    }
+    ```
+
+---
+
+## 11. Danh mục nhân viên (User)
+### Tạo mới nhân viên
+**Endpoint:** `POST /api/users`
+  - **Yêu cầu xác thực:** Chỉ ADMIN được phép tạo mới. Gửi token JWT trong header Authorization.
+  - **Request body:**
+    ```json
+    {
+      "usercode": "NV001",
+      "fullname": "Nguyễn Văn An",
+      "username": "annv",
+      "email": "annguyenvan@gmail.com",
+      "department": "Kho",
+      "phoneNumber": "0985448206",
+      "address": "Quận Hai Bà Trưng, Hà Nội",
+      "birthdate": "1999-01-20T00:00:00",
+      "gender": "Nam",
+      "firstworkingdate": "2024-01-01T00:00:00",
+      "bankaccount": "0985448206",
+      "bankname": "Vietcombank",
+      "isActive": true,
+      "role": "STAFF"
+    }
+    ```
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Tạo mới nhân viên thành công",
+      "data": {
+        "id": 1,
+        "usercode": "NV001",
+        "fullname": "Nguyễn Văn An",
+        "username": "annv",
+        "email": "annguyenvan@gmail.com",
+        "department": "Kho",
+        "phoneNumber": "0985448206",
+        "address": "Quận Hai Bà Trưng, Hà Nội",
+        "birthdate": "1999-01-20T00:00:00",
+        "gender": "Nam",
+        "firstworkingdate": "2024-01-01T00:00:00",
+        "bankaccount": "0985448206",
+        "bankname": "Vietcombank",
+        "isActive": true,
+        "role": "STAFF"
+      }
+    }
+    ```
+  - **Response thất bại (ví dụ):**
+    ```json
+    {
+      "success": false,
+      "message": "Dữ liệu không hợp lệ hoặc lỗi hệ thống",
+      "data": null
+    }
+    ```
+### Lấy danh sách nhân viên
+**Endpoint:** `GET /api/users`
+  - **Yêu cầu xác thực:** ADMIN và STAFF đều xem được. Gửi token JWT trong header Authorization.
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Lấy danh sách nhân viên thành công",
+      "data": [
+        {
+          "id": 1,
+          "usercode": "NV001",
+          "fullname": "Nguyễn Văn An",
+          "username": "annv",
+          "email": "annguyenvan@gmail.com",
+          "department": "Kho",
+          "phoneNumber": "0985448206",
+          "address": "Quận Hai Bà Trưng, Hà Nội",
+          "birthdate": "1999-01-20T00:00:00",
+          "gender": "Nam",
+          "firstworkingdate": "2024-01-01T00:00:00",
+          "bankaccount": "0985448206",
+          "bankname": "Vietcombank",
+          "isActive": true,
+          "role": "STAFF"
+        }
+        // ...
+      ]
+    }
+    ```
+### Xem chi tiết nhân viên
+**Endpoint:** `GET /api/users/{id}`
+  - **Yêu cầu xác thực:** Chỉ ADMIN được phép xem chi tiết. Gửi token JWT trong header Authorization.
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Lấy chi tiết nhân viên thành công",
+      "data": {
+        "id": 1,
+        "usercode": "NV001",
+        "fullname": "Nguyễn Văn An",
+        "username": "annv",
+        "email": "annguyenvan@gmail.com",
+        "department": "Kho",
+        "phoneNumber": "0985448206",
+        "address": "Quận Hai Bà Trưng, Hà Nội",
+        "birthdate": "1999-01-20T00:00:00",
+        "gender": "Nam",
+        "firstworkingdate": "2024-01-01T00:00:00",
+        "bankaccount": "0985448206",
+        "bankname": "Vietcombank",
+        "isActive": true,
+        "role": "STAFF"
+      }
+    }
+    ```
+### Cập nhật nhân viên
+**Endpoint:** `PUT /api/users/{id}`
+  - **Yêu cầu xác thực:** Chỉ ADMIN được phép cập nhật. Gửi token JWT trong header Authorization.
+  - **Request body:**
+    ```json
+    {
+      "usercode": "NV001",
+      "fullname": "Nguyễn Văn An",
+      "username": "annv",
+      "email": "annguyenvan@gmail.com",
+      "department": "Kho",
+      "phoneNumber": "0985448206",
+      "address": "Quận Hai Bà Trưng, Hà Nội",
+      "birthdate": "1999-01-20T00:00:00",
+      "gender": "Nam",
+      "firstworkingdate": "2024-01-01T00:00:00",
+      "bankaccount": "0985448206",
+      "bankname": "Vietcombank",
+      "isActive": true,
+      "role": "STAFF"
+    }
+    ```
+  - **Response thành công:**
+    ```json
+    {
+      "success": true,
+      "message": "Cập nhật nhân viên thành công",
+      "data": {
+        "id": 1,
+        "usercode": "NV001",
+        "fullname": "Nguyễn Văn An",
+        "username": "annv",
+        "email": "annguyenvan@gmail.com",
+        "department": "Kho",
+        "phoneNumber": "0985448206",
+        "address": "Quận Hai Bà Trưng, Hà Nội",
+        "birthdate": "1999-01-20T00:00:00",
+        "gender": "Nam",
+        "firstworkingdate": "2024-01-01T00:00:00",
+        "bankaccount": "0985448206",
+        "bankname": "Vietcombank",
+        "isActive": true,
+        "role": "STAFF"
+      }
+    }
+    ```
+  - **Response thất bại (ví dụ):**
+    ```json
+    {
+      "success": false,
+      "message": "Không tìm thấy nhân viên hoặc dữ liệu không hợp lệ",
       "data": null
     }
     ```

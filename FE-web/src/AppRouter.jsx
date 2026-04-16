@@ -4,7 +4,19 @@ import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
 import ForgotPasswordForm from "./components/ForgotPasswordForm";
 import UpdatePasswordForm from "./components/UpdatePasswordForm";
-import SuppliesPage from "./pages/SuppliesPage";
+import SuppliesPage from "./pages/supplies/SuppliesPage";
+import SuppliesDetailPage from "./pages/supplies/SuppliesDetailPage";
+import SuppliesCreatePage from "./pages/supplies/SuppliesCreatePage";
+import PartnersPage from "./pages/partners/PartnersPage";
+import PartnersDetailPage from "./pages/partners/PartnersDetailPage";
+import PartnersCreatePage from "./pages/partners/PartnersCreatePage";
+import EmployeesPage from "./pages/employees/EmployeesPage";
+import EmployeesDetailPage from "./pages/employees/EmployeesDetailPage";
+import EmployeesCreatePage from "./pages/employees/EmployeesCreatePage";
+import AccountPage from "./pages/account/AccountPage";
+import LocationsPage from "./pages/locations/LocationsPage";
+import LocationsDetailPage from "./pages/locations/LocationsDetailPage";
+import LocationsCreatePage from "./pages/locations/LocationsCreatePage";
 
 export default function AppRouter() {
     return (
@@ -15,6 +27,18 @@ export default function AppRouter() {
                 <Route path="/forgot-password" element={<ForgotPasswordForm />} />
                 <Route path="/update-password" element={<UpdatePasswordForm />} />
                 <Route path="/supplies" element={<SuppliesPage />} />
+                <Route path="/supplies/create" element={<SuppliesCreatePage />} />
+                <Route path="/supplies/:id" element={<SuppliesDetailPage />} />
+                <Route path="/partners" element={<PartnersPage />} />
+                <Route path="/partners/create" element={<PartnersCreatePage />} />
+                <Route path="/partners/:id" element={<PartnersDetailPage />} />
+                <Route path="/employees" element={<EmployeesPage />} />
+                <Route path="/employees/create" element={<EmployeesCreatePage />} />
+                <Route path="/employees/:id" element={<EmployeesDetailPage />} />
+                <Route path="/account" element={<AccountPage />} />
+                <Route path="/locations" element={<LocationsPage />} />
+                <Route path="/locations/create" element={<LocationsCreatePage />} />
+                <Route path="/locations/:id" element={<LocationsDetailPage />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         </Router>
