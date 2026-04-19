@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "./supplies.css";
-import SidebarLayout from "../../components/SidebarLayout";
 import { createItem } from "../../api/itemApi";
 
 const EMPTY_FORM = {
@@ -62,7 +61,7 @@ export default function SuppliesCreatePage() {
     };
 
     return (
-        <SidebarLayout>
+        <>
             {success && (
                 <div className="sp-toast sp-toast-success">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -216,6 +215,6 @@ export default function SuppliesCreatePage() {
                     </div>
                 </div>
             </div>
-        </SidebarLayout>
+        </>
     );
 }

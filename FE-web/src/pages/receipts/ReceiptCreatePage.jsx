@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import SidebarLayout from "../../components/SidebarLayout";
 import "../../styles/shared.css";
 import "./receipts.css";
 import { createReceipt, suggestLocations } from "../../api/receiptApi";
@@ -328,7 +327,7 @@ export default function ReceiptCreatePage() {
     };
 
     return (
-        <SidebarLayout>
+        <>
             {toast && (
                 <div className={`sp-toast ${toast.type === "success" ? "sp-toast-success" : "sp-toast-error"}`}>{toast.msg}</div>
             )}
@@ -538,6 +537,6 @@ export default function ReceiptCreatePage() {
                 quantity={locModal.rowIdx !== null ? rows[locModal.rowIdx]?.quantity || 0 : 0}
                 rowName={locModal.rowIdx !== null ? rows[locModal.rowIdx]?.itemcode || "" : ""}
             />
-        </SidebarLayout>
+        </>
     );
 }

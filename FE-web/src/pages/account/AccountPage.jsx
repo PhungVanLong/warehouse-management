@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
-import SidebarLayout from "../../components/SidebarLayout";
 import DatePicker from "../../components/DatePicker";
 import { getEmployeeById, updateEmployee } from "../../api/employeeApi";
 
@@ -105,189 +104,187 @@ export default function AccountPage() {
     };
 
     return (
-        <SidebarLayout activeKey="account">
-            <div className="sp-main">
-                <div className="sp-topbar">
-                    <div>
-                        <div className="sp-breadcrumb">
-                            Tài khoản &rsaquo;{" "}
-                            <span className="sp-breadcrumb-active">Chi tiết Tài khoản cá nhân</span>
-                        </div>
-                    </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar">{userInitial}</div>
+        <div className="sp-main">
+            <div className="sp-topbar">
+                <div>
+                    <div className="sp-breadcrumb">
+                        Tài khoản &rsaquo;{" "}
+                        <span className="sp-breadcrumb-active">Chi tiết Tài khoản cá nhân</span>
                     </div>
                 </div>
+                <div className="sp-topbar-right">
+                    <button className="sp-icon-btn">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        <span className="sp-notif-dot" />
+                    </button>
+                    <div className="sp-avatar">{userInitial}</div>
+                </div>
+            </div>
 
-                <div className="sp-content">
-                    <h1 className="sp-title">Chi tiết Tài khoản cá nhân</h1>
+            <div className="sp-content">
+                <h1 className="sp-title">Chi tiết Tài khoản cá nhân</h1>
 
-                    {loading ? (
-                        <div className="sp-status-row">Đang tải...</div>
-                    ) : (
-                        <div className="sd-two-sections">
-                            {error && <div className="sd-error-banner" style={{ marginBottom: 12 }}>{error}</div>}
-                            {success && (
-                                <div style={{ background: "#f0fff4", color: "#27ae60", borderRadius: 7, padding: "8px 14px", marginBottom: 12 }}>
-                                    Cập nhật tài khoản thành công!
+                {loading ? (
+                    <div className="sp-status-row">Đang tải...</div>
+                ) : (
+                    <div className="sd-two-sections">
+                        {error && <div className="sd-error-banner" style={{ marginBottom: 12 }}>{error}</div>}
+                        {success && (
+                            <div style={{ background: "#f0fff4", color: "#27ae60", borderRadius: 7, padding: "8px 14px", marginBottom: 12 }}>
+                                Cập nhật tài khoản thành công!
+                            </div>
+                        )}
+
+                        {/* Thông tin chung */}
+                        <div className="sd-card">
+                            <div className="sd-section-hd">
+                                <span className="sd-section-icon"><IconCheck /></span>
+                                Thông tin chung
+                            </div>
+
+                            <div className="sd-form">
+                                {/* Row 1: Mã nhân viên (full width, readonly) */}
+                                <div className="sd-field">
+                                    <label className="sd-label">Mã nhân viên <span className="sd-required">*</span></label>
+                                    <input
+                                        className="sd-input"
+                                        value={form.usercode}
+                                        disabled
+                                    />
                                 </div>
-                            )}
 
-                            {/* Thông tin chung */}
-                            <div className="sd-card">
-                                <div className="sd-section-hd">
-                                    <span className="sd-section-icon"><IconCheck /></span>
-                                    Thông tin chung
+                                {/* Row 2: Họ và tên (full width) */}
+                                <div className="sd-field">
+                                    <label className="sd-label">Họ và tên <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.fullname ? " sd-input-error" : ""}`}
+                                            value={form.fullname}
+                                            onChange={(e) => set("fullname", e.target.value)}
+                                        />
+                                        {fieldErrors.fullname && <span className="sd-error-msg">{fieldErrors.fullname}</span>}
+                                    </div>
                                 </div>
 
-                                <div className="sd-form">
-                                    {/* Row 1: Mã nhân viên (full width, readonly) */}
-                                    <div className="sd-field">
-                                        <label className="sd-label">Mã nhân viên <span className="sd-required">*</span></label>
+                                {/* Row 3: Tên đăng nhập | Email */}
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Tên đăng nhập <span className="sd-required">*</span></label>
                                         <input
                                             className="sd-input"
-                                            value={form.usercode}
+                                            value={form.username}
                                             disabled
                                         />
                                     </div>
-
-                                    {/* Row 2: Họ và tên (full width) */}
-                                    <div className="sd-field">
-                                        <label className="sd-label">Họ và tên <span className="sd-required">*</span></label>
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Email <span className="sd-required">*</span></label>
                                         <div className="sd-input-wrap">
                                             <input
-                                                className={`sd-input${fieldErrors.fullname ? " sd-input-error" : ""}`}
-                                                value={form.fullname}
-                                                onChange={(e) => set("fullname", e.target.value)}
+                                                className={`sd-input${fieldErrors.email ? " sd-input-error" : ""}`}
+                                                value={form.email}
+                                                onChange={(e) => set("email", e.target.value)}
                                             />
-                                            {fieldErrors.fullname && <span className="sd-error-msg">{fieldErrors.fullname}</span>}
-                                        </div>
-                                    </div>
-
-                                    {/* Row 3: Tên đăng nhập | Email */}
-                                    <div className="sd-field sd-field-row">
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Tên đăng nhập <span className="sd-required">*</span></label>
-                                            <input
-                                                className="sd-input"
-                                                value={form.username}
-                                                disabled
-                                            />
-                                        </div>
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Email <span className="sd-required">*</span></label>
-                                            <div className="sd-input-wrap">
-                                                <input
-                                                    className={`sd-input${fieldErrors.email ? " sd-input-error" : ""}`}
-                                                    value={form.email}
-                                                    onChange={(e) => set("email", e.target.value)}
-                                                />
-                                                {fieldErrors.email && <span className="sd-error-msg">{fieldErrors.email}</span>}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Row 4: Địa chỉ | Bộ phận */}
-                                    <div className="sd-field sd-field-row">
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Địa chỉ</label>
-                                            <input
-                                                className="sd-input"
-                                                value={form.address}
-                                                onChange={(e) => set("address", e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Bộ phận <span className="sd-required">*</span></label>
-                                            <input
-                                                className="sd-input"
-                                                value={form.department}
-                                                onChange={(e) => set("department", e.target.value)}
-                                            />
+                                            {fieldErrors.email && <span className="sd-error-msg">{fieldErrors.email}</span>}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Thông tin chi tiết */}
-                            <div className="sd-card">
-                                <div className="sd-section-hd">
-                                    <span className="sd-section-icon"><IconCheck /></span>
-                                    Thông tin chi tiết
-                                </div>
-
-                                <div className="sd-form">
-                                    {/* Row 1: Ngày sinh (left half) */}
-                                    <div className="sd-field sd-field-row">
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Ngày sinh</label>
-                                            <DatePicker
-                                                value={form.birthdate}
-                                                onChange={(v) => set("birthdate", v)}
-                                                placeholder="dd/mm/yyyy"
-                                            />
-                                        </div>
-                                        <div className="sd-field-half" />
-                                    </div>
-
-                                    {/* Row 2: Giới tính (left half) */}
-                                    <div className="sd-field sd-field-row">
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Giới tính</label>
-                                            <select
-                                                className="sd-input sd-select"
-                                                value={form.gender}
-                                                onChange={(e) => set("gender", e.target.value)}
-                                            >
-                                                <option value="">-- Chọn --</option>
-                                                <option value="Nam">Nam</option>
-                                                <option value="Nữ">Nữ</option>
-                                                <option value="Khác">Khác</option>
-                                            </select>
-                                        </div>
-                                        <div className="sd-field-half" />
-                                    </div>
-
-                                    {/* Row 3: Tài khoản NH (full width) */}
-                                    <div className="sd-field">
-                                        <label className="sd-label">Tài khoản NH</label>
+                                {/* Row 4: Địa chỉ | Bộ phận */}
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Địa chỉ</label>
                                         <input
                                             className="sd-input"
-                                            value={form.bankaccount}
-                                            onChange={(e) => set("bankaccount", e.target.value)}
+                                            value={form.address}
+                                            onChange={(e) => set("address", e.target.value)}
                                         />
                                     </div>
-
-                                    {/* Row 4: Tên ngân hàng (full width) */}
-                                    <div className="sd-field">
-                                        <label className="sd-label">Tên ngân hàng</label>
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Bộ phận <span className="sd-required">*</span></label>
                                         <input
                                             className="sd-input"
-                                            value={form.bankname}
-                                            onChange={(e) => set("bankname", e.target.value)}
+                                            value={form.department}
+                                            onChange={(e) => set("department", e.target.value)}
                                         />
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Footer buttons */}
-                            <div className="sd-footer-actions">
-                                <button className="sp-btn-outline" onClick={() => navigate(-1)}>Quay lại</button>
-                                <button className="sp-btn-primary" onClick={handleSave} disabled={saving}>
-                                    {saving ? "Đang lưu..." : "Cập nhật"}
-                                </button>
                             </div>
                         </div>
-                    )}
-                </div>
+
+                        {/* Thông tin chi tiết */}
+                        <div className="sd-card">
+                            <div className="sd-section-hd">
+                                <span className="sd-section-icon"><IconCheck /></span>
+                                Thông tin chi tiết
+                            </div>
+
+                            <div className="sd-form">
+                                {/* Row 1: Ngày sinh (left half) */}
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Ngày sinh</label>
+                                        <DatePicker
+                                            value={form.birthdate}
+                                            onChange={(v) => set("birthdate", v)}
+                                            placeholder="dd/mm/yyyy"
+                                        />
+                                    </div>
+                                    <div className="sd-field-half" />
+                                </div>
+
+                                {/* Row 2: Giới tính (left half) */}
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Giới tính</label>
+                                        <select
+                                            className="sd-input sd-select"
+                                            value={form.gender}
+                                            onChange={(e) => set("gender", e.target.value)}
+                                        >
+                                            <option value="">-- Chọn --</option>
+                                            <option value="Nam">Nam</option>
+                                            <option value="Nữ">Nữ</option>
+                                            <option value="Khác">Khác</option>
+                                        </select>
+                                    </div>
+                                    <div className="sd-field-half" />
+                                </div>
+
+                                {/* Row 3: Tài khoản NH (full width) */}
+                                <div className="sd-field">
+                                    <label className="sd-label">Tài khoản NH</label>
+                                    <input
+                                        className="sd-input"
+                                        value={form.bankaccount}
+                                        onChange={(e) => set("bankaccount", e.target.value)}
+                                    />
+                                </div>
+
+                                {/* Row 4: Tên ngân hàng (full width) */}
+                                <div className="sd-field">
+                                    <label className="sd-label">Tên ngân hàng</label>
+                                    <input
+                                        className="sd-input"
+                                        value={form.bankname}
+                                        onChange={(e) => set("bankname", e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer buttons */}
+                        <div className="sd-footer-actions">
+                            <button className="sp-btn-outline" onClick={() => navigate(-1)}>Quay lại</button>
+                            <button className="sp-btn-primary" onClick={handleSave} disabled={saving}>
+                                {saving ? "Đang lưu..." : "Cập nhật"}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
-        </SidebarLayout>
+        </div>
     );
 }

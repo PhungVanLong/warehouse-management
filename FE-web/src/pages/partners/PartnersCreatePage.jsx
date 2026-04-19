@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "./partners.css";
-import SidebarLayout from "../../components/SidebarLayout";
 import { createCustomer } from "../../api/customerApi";
 
 const EMPTY_FORM = {
@@ -88,234 +87,232 @@ export default function PartnersCreatePage() {
     };
 
     return (
-        <SidebarLayout>
-            <div className="sp-main">
-                {/* Topbar */}
-                <div className="sp-topbar">
-                    <div>
-                        <div className="sp-breadcrumb">
-                            Danh mục &rsaquo;{" "}
-                            <span className="sp-breadcrumb-link" onClick={() => navigate("/partners")}>
-                                Danh mục đối tượng
-                            </span>
-                            {" "}&rsaquo;{" "}
-                            <span className="sp-breadcrumb-active">Thêm mới đối tượng</span>
-                        </div>
-                    </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
+        <div className="sp-main">
+            {/* Topbar */}
+            <div className="sp-topbar">
+                <div>
+                    <div className="sp-breadcrumb">
+                        Danh mục &rsaquo;{" "}
+                        <span className="sp-breadcrumb-link" onClick={() => navigate("/partners")}>
+                            Danh mục đối tượng
+                        </span>
+                        {" "}&rsaquo;{" "}
+                        <span className="sp-breadcrumb-active">Thêm mới đối tượng</span>
                     </div>
                 </div>
+                <div className="sp-topbar-right">
+                    <button className="sp-icon-btn">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        <span className="sp-notif-dot" />
+                    </button>
+                    <div className="sp-avatar" />
+                </div>
+            </div>
 
-                {/* Toast */}
-                {showToast && (
-                    <div className="sp-toast sp-toast-success">
-                        Bạn đã thêm mới thành công đối tượng
-                    </div>
-                )}
+            {/* Toast */}
+            {showToast && (
+                <div className="sp-toast sp-toast-success">
+                    Bạn đã thêm mới thành công đối tượng
+                </div>
+            )}
 
-                {/* Content */}
-                <div className="sp-content">
-                    <h1 className="sp-title">Thêm mới đối tượng</h1>
+            {/* Content */}
+            <div className="sp-content">
+                <h1 className="sp-title">Thêm mới đối tượng</h1>
 
-                    <div className="sd-two-sections">
-                        {/* ── Thông tin chung ── */}
-                        <div className="sd-card">
-                            <div className="sd-section-hd" style={{ cursor: "pointer" }} onClick={() => setOpenBasic((v) => !v)}>
-                                <span className="sd-section-icon"><IconCheck /></span>
-                                Thông tin chung
-                                <span className="sd-section-hd-chevron"><IconChevron open={openBasic} /></span>
-                            </div>
-                            {openBasic && (
-                                <div className="sd-form">
-                                    <div className="sd-field">
-                                        <label className="sd-label">Mã đối tượng <span className="sd-required">*</span></label>
-                                        <div className="sd-input-wrap">
-                                            <input
-                                                className={`sd-input sd-input-sm${fieldErrors.customercode ? " sd-input-error" : ""}`}
-                                                placeholder="Nhập mã đối tượng"
-                                                value={form.customercode}
-                                                onChange={(e) => set("customercode", e.target.value)}
-                                            />
-                                            {fieldErrors.customercode && <span className="sd-error-msg">{fieldErrors.customercode}</span>}
-                                        </div>
-                                    </div>
-
-                                    <div className="sd-field">
-                                        <label className="sd-label">Tên doanh nghiệp <span className="sd-required">*</span></label>
-                                        <div className="sd-input-wrap">
-                                            <input
-                                                className={`sd-input sd-input-name${fieldErrors.customername ? " sd-input-error" : ""}`}
-                                                placeholder="Nhập tên doanh nghiệp"
-                                                value={form.customername}
-                                                onChange={(e) => set("customername", e.target.value)}
-                                            />
-                                            {fieldErrors.customername && <span className="sd-error-msg">{fieldErrors.customername}</span>}
-                                        </div>
-                                        <div className="sd-checkboxes" style={{ flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
-                                            <div style={{ display: "flex", gap: 16 }}>
-                                                <label className="sd-check-label">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={form.iscustomer}
-                                                        onChange={(e) => { set("iscustomer", e.target.checked); if (fieldErrors.role) setFieldErrors((prev) => { const n = { ...prev }; delete n.role; return n; }); }}
-                                                    />
-                                                    Là khách hàng
-                                                </label>
-                                                <label className="sd-check-label">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={form.issupplier}
-                                                        onChange={(e) => { set("issupplier", e.target.checked); if (fieldErrors.role) setFieldErrors((prev) => { const n = { ...prev }; delete n.role; return n; }); }}
-                                                    />
-                                                    Là nhà cung cấp
-                                                </label>
-                                            </div>
-                                            {fieldErrors.role && <span className="sd-error-msg" style={{ paddingLeft: 0 }}>{fieldErrors.role}</span>}
-                                        </div>
-                                    </div>
-
-                                    <div className="sd-field">
-                                        <label className="sd-label">Địa chỉ liên hệ</label>
+                <div className="sd-two-sections">
+                    {/* ── Thông tin chung ── */}
+                    <div className="sd-card">
+                        <div className="sd-section-hd" style={{ cursor: "pointer" }} onClick={() => setOpenBasic((v) => !v)}>
+                            <span className="sd-section-icon"><IconCheck /></span>
+                            Thông tin chung
+                            <span className="sd-section-hd-chevron"><IconChevron open={openBasic} /></span>
+                        </div>
+                        {openBasic && (
+                            <div className="sd-form">
+                                <div className="sd-field">
+                                    <label className="sd-label">Mã đối tượng <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
                                         <input
-                                            className="sd-input"
-                                            placeholder="Nhập địa chỉ"
-                                            value={form.address}
-                                            onChange={(e) => set("address", e.target.value)}
+                                            className={`sd-input sd-input-sm${fieldErrors.customercode ? " sd-input-error" : ""}`}
+                                            placeholder="Nhập mã đối tượng"
+                                            value={form.customercode}
+                                            onChange={(e) => set("customercode", e.target.value)}
                                         />
-                                    </div>
-
-                                    <div className="sd-field sd-field-row">
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Email</label>
-                                            <input
-                                                className="sd-input"
-                                                placeholder="Nhập email"
-                                                value={form.email}
-                                                onChange={(e) => set("email", e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Số điện thoại</label>
-                                            <input
-                                                className="sd-input"
-                                                placeholder="Nhập số điện thoại"
-                                                value={form.mobile}
-                                                onChange={(e) => set("mobile", e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="sd-field sd-field-row">
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Đối tác liên hệ</label>
-                                            <input
-                                                className="sd-input"
-                                                placeholder="Nhập đối tác"
-                                                value={form.partnername}
-                                                onChange={(e) => set("partnername", e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">SDT đối tác</label>
-                                            <input
-                                                className="sd-input"
-                                                placeholder="Nhập SDT"
-                                                value={form.partnermobile}
-                                                onChange={(e) => set("partnermobile", e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="sd-field sd-field-row">
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Đại diện pháp luật</label>
-                                            <input
-                                                className="sd-input"
-                                                placeholder="Nhập đại diện pháp luật"
-                                                value={form.ownername}
-                                                onChange={(e) => set("ownername", e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Mã số thuế</label>
-                                            <input
-                                                className="sd-input"
-                                                placeholder="Nhập mã số thuế"
-                                                value={form.taxcode}
-                                                onChange={(e) => set("taxcode", e.target.value)}
-                                            />
-                                        </div>
+                                        {fieldErrors.customercode && <span className="sd-error-msg">{fieldErrors.customercode}</span>}
                                     </div>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* ── Thông tin chi tiết ── */}
-                        <div className="sd-card">
-                            <div className="sd-section-hd" style={{ cursor: "pointer" }} onClick={() => setOpenDetail((v) => !v)}>
-                                <span className="sd-section-icon"><IconCheck /></span>
-                                Thông tin chi tiết
-                                <span className="sd-section-hd-chevron"><IconChevron open={openDetail} /></span>
-                            </div>
-                            {openDetail && (
-                                <div className="sd-form">
-                                    <div className="sd-field">
-                                        <label className="sd-label">Ngành hàng</label>
+                                <div className="sd-field">
+                                    <label className="sd-label">Tên doanh nghiệp <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
                                         <input
-                                            className="sd-input"
-                                            placeholder="Nhập ngành hàng"
-                                            value={form.itemcatg}
-                                            onChange={(e) => set("itemcatg", e.target.value)}
+                                            className={`sd-input sd-input-name${fieldErrors.customername ? " sd-input-error" : ""}`}
+                                            placeholder="Nhập tên doanh nghiệp"
+                                            value={form.customername}
+                                            onChange={(e) => set("customername", e.target.value)}
                                         />
+                                        {fieldErrors.customername && <span className="sd-error-msg">{fieldErrors.customername}</span>}
                                     </div>
-
-                                    <div className="sd-field sd-field-row">
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Tài khoản NH</label>
-                                            <input
-                                                className="sd-input"
-                                                placeholder="Nhập tài khoản ngân hàng"
-                                                value={form.bankaccount}
-                                                onChange={(e) => set("bankaccount", e.target.value)}
-                                            />
+                                    <div className="sd-checkboxes" style={{ flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+                                        <div style={{ display: "flex", gap: 16 }}>
+                                            <label className="sd-check-label">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form.iscustomer}
+                                                    onChange={(e) => { set("iscustomer", e.target.checked); if (fieldErrors.role) setFieldErrors((prev) => { const n = { ...prev }; delete n.role; return n; }); }}
+                                                />
+                                                Là khách hàng
+                                            </label>
+                                            <label className="sd-check-label">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form.issupplier}
+                                                    onChange={(e) => { set("issupplier", e.target.checked); if (fieldErrors.role) setFieldErrors((prev) => { const n = { ...prev }; delete n.role; return n; }); }}
+                                                />
+                                                Là nhà cung cấp
+                                            </label>
                                         </div>
-                                        <div className="sd-field-half">
-                                            <label className="sd-label">Tên ngân hàng</label>
-                                            <input
-                                                className="sd-input"
-                                                placeholder="Nhập tên ngân hàng"
-                                                value={form.bankname}
-                                                onChange={(e) => set("bankname", e.target.value)}
-                                            />
-                                        </div>
+                                        {fieldErrors.role && <span className="sd-error-msg" style={{ paddingLeft: 0 }}>{fieldErrors.role}</span>}
                                     </div>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Footer */}
-                        {error && (
-                            <div className="sp-status-row sp-status-error">{error}</div>
+                                <div className="sd-field">
+                                    <label className="sd-label">Địa chỉ liên hệ</label>
+                                    <input
+                                        className="sd-input"
+                                        placeholder="Nhập địa chỉ"
+                                        value={form.address}
+                                        onChange={(e) => set("address", e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Email</label>
+                                        <input
+                                            className="sd-input"
+                                            placeholder="Nhập email"
+                                            value={form.email}
+                                            onChange={(e) => set("email", e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Số điện thoại</label>
+                                        <input
+                                            className="sd-input"
+                                            placeholder="Nhập số điện thoại"
+                                            value={form.mobile}
+                                            onChange={(e) => set("mobile", e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Đối tác liên hệ</label>
+                                        <input
+                                            className="sd-input"
+                                            placeholder="Nhập đối tác"
+                                            value={form.partnername}
+                                            onChange={(e) => set("partnername", e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">SDT đối tác</label>
+                                        <input
+                                            className="sd-input"
+                                            placeholder="Nhập SDT"
+                                            value={form.partnermobile}
+                                            onChange={(e) => set("partnermobile", e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Đại diện pháp luật</label>
+                                        <input
+                                            className="sd-input"
+                                            placeholder="Nhập đại diện pháp luật"
+                                            value={form.ownername}
+                                            onChange={(e) => set("ownername", e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Mã số thuế</label>
+                                        <input
+                                            className="sd-input"
+                                            placeholder="Nhập mã số thuế"
+                                            value={form.taxcode}
+                                            onChange={(e) => set("taxcode", e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         )}
-                        <div className="sd-footer">
-                            <button className="sd-btn-back" disabled={saving} onClick={() => navigate("/partners")}>
-                                Hủy bỏ
-                            </button>
-                            <button className="sd-btn-edit" disabled={saving} onClick={handleSave}>
-                                {saving ? "Đang lưu..." : "Lưu"}
-                            </button>
+                    </div>
+
+                    {/* ── Thông tin chi tiết ── */}
+                    <div className="sd-card">
+                        <div className="sd-section-hd" style={{ cursor: "pointer" }} onClick={() => setOpenDetail((v) => !v)}>
+                            <span className="sd-section-icon"><IconCheck /></span>
+                            Thông tin chi tiết
+                            <span className="sd-section-hd-chevron"><IconChevron open={openDetail} /></span>
                         </div>
+                        {openDetail && (
+                            <div className="sd-form">
+                                <div className="sd-field">
+                                    <label className="sd-label">Ngành hàng</label>
+                                    <input
+                                        className="sd-input"
+                                        placeholder="Nhập ngành hàng"
+                                        value={form.itemcatg}
+                                        onChange={(e) => set("itemcatg", e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Tài khoản NH</label>
+                                        <input
+                                            className="sd-input"
+                                            placeholder="Nhập tài khoản ngân hàng"
+                                            value={form.bankaccount}
+                                            onChange={(e) => set("bankaccount", e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Tên ngân hàng</label>
+                                        <input
+                                            className="sd-input"
+                                            placeholder="Nhập tên ngân hàng"
+                                            value={form.bankname}
+                                            onChange={(e) => set("bankname", e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer */}
+                    {error && (
+                        <div className="sp-status-row sp-status-error">{error}</div>
+                    )}
+                    <div className="sd-footer">
+                        <button className="sd-btn-back" disabled={saving} onClick={() => navigate("/partners")}>
+                            Hủy bỏ
+                        </button>
+                        <button className="sd-btn-edit" disabled={saving} onClick={handleSave}>
+                            {saving ? "Đang lưu..." : "Lưu"}
+                        </button>
                     </div>
                 </div>
             </div>
-        </SidebarLayout>
+        </div>
     );
 }

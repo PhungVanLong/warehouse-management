@@ -20,31 +20,37 @@ import LocationsCreatePage from "./pages/locations/LocationsCreatePage";
 import ReceiptsPage from "./pages/receipts/ReceiptsPage";
 import ReceiptCreatePage from "./pages/receipts/ReceiptCreatePage";
 import ReceiptDetailPage from "./pages/receipts/ReceiptDetailPage";
+import SidebarLayout from "./components/SidebarLayout";
 
 export default function AppRouter() {
     return (
         <Router>
             <Routes>
+                {/* Auth routes - không có sidebar */}
                 <Route path="/login" element={<LoginForm />} />
                 <Route path="/register" element={<RegisterForm />} />
                 <Route path="/forgot-password" element={<ForgotPasswordForm />} />
                 <Route path="/update-password" element={<UpdatePasswordForm />} />
-                <Route path="/supplies" element={<SuppliesPage />} />
-                <Route path="/supplies/create" element={<SuppliesCreatePage />} />
-                <Route path="/supplies/:id" element={<SuppliesDetailPage />} />
-                <Route path="/partners" element={<PartnersPage />} />
-                <Route path="/partners/create" element={<PartnersCreatePage />} />
-                <Route path="/partners/:id" element={<PartnersDetailPage />} />
-                <Route path="/employees" element={<EmployeesPage />} />
-                <Route path="/employees/create" element={<EmployeesCreatePage />} />
-                <Route path="/employees/:id" element={<EmployeesDetailPage />} />
-                <Route path="/account" element={<AccountPage />} />
-                <Route path="/locations" element={<LocationsPage />} />
-                <Route path="/locations/create" element={<LocationsCreatePage />} />
-                <Route path="/locations/:id" element={<LocationsDetailPage />} />
-                <Route path="/receipts" element={<ReceiptsPage />} />
-                <Route path="/receipts/create" element={<ReceiptCreatePage />} />
-                <Route path="/receipts/:id" element={<ReceiptDetailPage />} />
+
+                {/* Các route còn lại đều bọc SidebarLayout */}
+                <Route element={<SidebarLayout />}>
+                    <Route path="/supplies" element={<SuppliesPage />} />
+                    <Route path="/supplies/create" element={<SuppliesCreatePage />} />
+                    <Route path="/supplies/:id" element={<SuppliesDetailPage />} />
+                    <Route path="/partners" element={<PartnersPage />} />
+                    <Route path="/partners/create" element={<PartnersCreatePage />} />
+                    <Route path="/partners/:id" element={<PartnersDetailPage />} />
+                    <Route path="/employees" element={<EmployeesPage />} />
+                    <Route path="/employees/create" element={<EmployeesCreatePage />} />
+                    <Route path="/employees/:id" element={<EmployeesDetailPage />} />
+                    <Route path="/account" element={<AccountPage />} />
+                    <Route path="/locations" element={<LocationsPage />} />
+                    <Route path="/locations/create" element={<LocationsCreatePage />} />
+                    <Route path="/locations/:id" element={<LocationsDetailPage />} />
+                    <Route path="/receipts" element={<ReceiptsPage />} />
+                    <Route path="/receipts/create" element={<ReceiptCreatePage />} />
+                    <Route path="/receipts/:id" element={<ReceiptDetailPage />} />
+                </Route>
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         </Router>

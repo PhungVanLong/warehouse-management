@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import SidebarLayout from "../../components/SidebarLayout";
 import "../../styles/shared.css";
 import "./receipts.css";
 import { getReceiptById, confirmReceipt, cancelReceipt } from "../../api/receiptApi";
@@ -47,6 +46,7 @@ export default function ReceiptDetailPage() {
     const [toast, setToast] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+    const [confirmModal, setConfirmModal] = useState(false);
 
     const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
 
@@ -66,7 +66,7 @@ export default function ReceiptDetailPage() {
     useEffect(() => { fetchReceipt(); }, [fetchReceipt]);
 
     const handleConfirm = async () => {
-        if (!window.confirm("Xác nhận phiếu nhập kho? Tồn kho sẽ được cập nhật.")) return;
+        setConfirmModal(false);
         setActionLoading(true);
         try {
             const res = await confirmReceipt(id);
@@ -82,7 +82,6 @@ export default function ReceiptDetailPage() {
     };
 
     const handleCancel = async () => {
-        if (!window.confirm("Hủy phiếu nhập kho này?")) return;
         setActionLoading(true);
         try {
             const res = await cancelReceipt(id);
@@ -119,7 +118,35 @@ export default function ReceiptDetailPage() {
         : [];
 
     return (
-        <SidebarLayout>
+        <>
+            {confirmModal && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ background: "#fff", borderRadius: 12, padding: "32px 36px", minWidth: 340, boxShadow: "0 8px 32px rgba(30,133,74,0.15)", border: "1.5px solid #c6dfd0", textAlign: "center" }}>
+                        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1E854A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="9 12 11 14 15 10" />
+                            </svg>
+                        </div>
+                        <h3 style={{ margin: "0 0 8px", color: "#1E3A2F", fontSize: "1.1rem", fontWeight: 700 }}>Xác nhận phiếu nhập kho</h3>
+                        <p style={{ margin: "0 0 24px", color: "#4c6152", fontSize: "0.92rem" }}>Tồn kho sẽ được cập nhật sau khi xác nhận. Bạn có chắc chắn muốn tiếp tục không?</p>
+                        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+                            <button
+                                className="sp-btn-outline"
+                                onClick={() => setConfirmModal(false)}
+                                disabled={actionLoading}
+                                style={{ minWidth: 100 }}
+                            >Hủy bỏ</button>
+                            <button
+                                className="sp-btn-primary"
+                                onClick={handleConfirm}
+                                disabled={actionLoading}
+                                style={{ minWidth: 120 }}
+                            >{actionLoading ? "Đang xử lý..." : "Xác nhận"}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {toast && (
                 <div className={`sp-toast ${toast.type === "success" ? "sp-toast-success" : "sp-toast-error"}`}>{toast.msg}</div>
             )}
@@ -176,7 +203,7 @@ export default function ReceiptDetailPage() {
                                             <div style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#1a7f4b", fontWeight: 600 }}
                                                 onMouseEnter={(e) => e.currentTarget.style.background = "#f3faf6"}
                                                 onMouseLeave={(e) => e.currentTarget.style.background = ""}
-                                                onClick={handleConfirm}>
+                                                onClick={() => { setStatusMenuOpen(false); setConfirmModal(true); }}>
                                                 ✓ Xác nhận phiếu
                                             </div>
                                             <div style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#b71c1c" }}
@@ -283,7 +310,7 @@ export default function ReceiptDetailPage() {
                             <div className="rc-form-actions">
                                 <button className="sp-btn-outline" onClick={() => navigate("/receipts")}>Hủy bỏ</button>
                                 {receipt.docstatus === "DRAFT" && (
-                                    <button className="sp-btn-primary" onClick={handleConfirm} disabled={actionLoading}>
+                                    <button className="sp-btn-primary" onClick={() => setConfirmModal(true)} disabled={actionLoading}>
                                         {actionLoading ? "Đang xử lý..." : "Xác nhận"}
                                     </button>
                                 )}
@@ -297,6 +324,6 @@ export default function ReceiptDetailPage() {
                     )}
                 </div>
             </div>
-        </SidebarLayout>
+        </>
     );
 }

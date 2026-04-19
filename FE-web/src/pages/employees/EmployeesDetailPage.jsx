@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
-import SidebarLayout from "../../components/SidebarLayout";
 import DatePicker from "../../components/DatePicker";
 import { getEmployeeById, updateEmployee } from "../../api/employeeApi";
 
@@ -107,214 +106,212 @@ export default function EmployeesDetailPage() {
     };
 
     return (
-        <SidebarLayout activeKey="employees">
-            <div className="sp-main">
-                <div className="sp-topbar">
-                    <div>
-                        <div className="sp-breadcrumb">
-                            Danh mục &rsaquo;{" "}
-                            <span className="sp-breadcrumb-link" onClick={() => navigate("/employees")}>
-                                Danh mục nhân viên
-                            </span>
-                            {" "}&rsaquo;{" "}
-                            <span className="sp-breadcrumb-active">Chi tiết nhân viên</span>
-                        </div>
-                    </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
+        <div className="sp-main">
+            <div className="sp-topbar">
+                <div>
+                    <div className="sp-breadcrumb">
+                        Danh mục &rsaquo;{" "}
+                        <span className="sp-breadcrumb-link" onClick={() => navigate("/employees")}>
+                            Danh mục nhân viên
+                        </span>
+                        {" "}&rsaquo;{" "}
+                        <span className="sp-breadcrumb-active">Chi tiết nhân viên</span>
                     </div>
                 </div>
+                <div className="sp-topbar-right">
+                    <button className="sp-icon-btn">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        <span className="sp-notif-dot" />
+                    </button>
+                    <div className="sp-avatar" />
+                </div>
+            </div>
 
-                <div className="sp-content">
-                    <h1 className="sp-title">Chi tiết nhân viên</h1>
+            <div className="sp-content">
+                <h1 className="sp-title">Chi tiết nhân viên</h1>
 
-                    {loading ? (
-                        <div className="sp-status-row">Đang tải...</div>
-                    ) : error && !saving ? (
-                        <div className="sp-status-row sp-status-error">{error}</div>
-                    ) : (
-                        <div className="sd-two-sections">
-                            <div className="sd-card">
-                                <div className="sd-section-hd" style={{ cursor: "pointer" }} onClick={() => setOpenSection((v) => !v)}>
-                                    <span className="sd-section-icon"><IconCheck /></span>
-                                    Thông tin nhân viên
-                                    <span className="sd-section-hd-chevron"><IconChevron open={openSection} /></span>
-                                </div>
+                {loading ? (
+                    <div className="sp-status-row">Đang tải...</div>
+                ) : error && !saving ? (
+                    <div className="sp-status-row sp-status-error">{error}</div>
+                ) : (
+                    <div className="sd-two-sections">
+                        <div className="sd-card">
+                            <div className="sd-section-hd" style={{ cursor: "pointer" }} onClick={() => setOpenSection((v) => !v)}>
+                                <span className="sd-section-icon"><IconCheck /></span>
+                                Thông tin nhân viên
+                                <span className="sd-section-hd-chevron"><IconChevron open={openSection} /></span>
+                            </div>
 
-                                {openSection && (
-                                    <div className="sd-form">
-                                        {/* Row 1: Mã | Tên đăng nhập */}
-                                        <div className="sd-field sd-field-row">
-                                            <div className="sd-field-half">
-                                                <label className="sd-label">Mã <span className="sd-required">*</span></label>
-                                                <div className="sd-input-wrap">
-                                                    <input
-                                                        className={`sd-input${fieldErrors.usercode ? " sd-input-error" : ""}`}
-                                                        value={form.usercode}
-                                                        disabled={!isEditing}
-                                                        onChange={(e) => set("usercode", e.target.value)}
-                                                    />
-                                                    {fieldErrors.usercode && <span className="sd-error-msg">{fieldErrors.usercode}</span>}
-                                                </div>
-                                            </div>
-                                            <div className="sd-field-half">
-                                                <label className="sd-label">Tên đăng nhập</label>
+                            {openSection && (
+                                <div className="sd-form">
+                                    {/* Row 1: Mã | Tên đăng nhập */}
+                                    <div className="sd-field sd-field-row">
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Mã <span className="sd-required">*</span></label>
+                                            <div className="sd-input-wrap">
                                                 <input
-                                                    className="sd-input"
-                                                    value={form.username}
+                                                    className={`sd-input${fieldErrors.usercode ? " sd-input-error" : ""}`}
+                                                    value={form.usercode}
                                                     disabled={!isEditing}
-                                                    onChange={(e) => set("username", e.target.value)}
+                                                    onChange={(e) => set("usercode", e.target.value)}
                                                 />
+                                                {fieldErrors.usercode && <span className="sd-error-msg">{fieldErrors.usercode}</span>}
                                             </div>
                                         </div>
-
-                                        {/* Row 2: Họ và Tên | Email */}
-                                        <div className="sd-field sd-field-row">
-                                            <div className="sd-field-half">
-                                                <label className="sd-label">Họ và Tên <span className="sd-required">*</span></label>
-                                                <div className="sd-input-wrap">
-                                                    <input
-                                                        className={`sd-input${fieldErrors.fullname ? " sd-input-error" : ""}`}
-                                                        value={form.fullname}
-                                                        disabled={!isEditing}
-                                                        onChange={(e) => set("fullname", e.target.value)}
-                                                    />
-                                                    {fieldErrors.fullname && <span className="sd-error-msg">{fieldErrors.fullname}</span>}
-                                                </div>
-                                            </div>
-                                            <div className="sd-field-half">
-                                                <label className="sd-label">Email</label>
-                                                <input
-                                                    className="sd-input"
-                                                    value={form.email}
-                                                    disabled={!isEditing}
-                                                    onChange={(e) => set("email", e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Row 3: Bộ phận | Số điện thoại */}
-                                        <div className="sd-field sd-field-row">
-                                            <div className="sd-field-half">
-                                                <label className="sd-label">Bộ phận</label>
-                                                <input
-                                                    className="sd-input"
-                                                    value={form.department}
-                                                    disabled={!isEditing}
-                                                    onChange={(e) => set("department", e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="sd-field-half">
-                                                <label className="sd-label">Số điện thoại</label>
-                                                <input
-                                                    className="sd-input"
-                                                    value={form.phoneNumber}
-                                                    disabled={!isEditing}
-                                                    onChange={(e) => set("phoneNumber", e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Row 4: Địa chỉ */}
-                                        <div className="sd-field">
-                                            <label className="sd-label">Địa chỉ</label>
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Tên đăng nhập</label>
                                             <input
                                                 className="sd-input"
-                                                value={form.address}
+                                                value={form.username}
                                                 disabled={!isEditing}
-                                                onChange={(e) => set("address", e.target.value)}
-                                            />
-                                        </div>
-
-                                        {/* Row 5: Ngày sinh | Giới tính */}
-                                        <div className="sd-field sd-field-row">
-                                            <div className="sd-field-half">
-                                                <label className="sd-label">Ngày sinh</label>
-                                                <DatePicker
-                                                    value={form.birthdate}
-                                                    onChange={(v) => set("birthdate", v)}
-                                                    disabled={!isEditing}
-                                                />
-                                            </div>
-                                            <div className="sd-field-half">
-                                                <label className="sd-label">Giới tính</label>
-                                                <select
-                                                    className="sd-input sd-select"
-                                                    value={form.gender}
-                                                    disabled={!isEditing}
-                                                    onChange={(e) => set("gender", e.target.value)}
-                                                >
-                                                    <option value="">Chọn giới tính</option>
-                                                    <option value="Nam">Nam</option>
-                                                    <option value="Nữ">Nữ</option>
-                                                    <option value="Khác">Khác</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        {/* Row 6: Ngày vào làm | Tài khoản NH */}
-                                        <div className="sd-field sd-field-row">
-                                            <div className="sd-field-half">
-                                                <label className="sd-label">Ngày vào làm</label>
-                                                <DatePicker
-                                                    value={form.firstworkingdate}
-                                                    onChange={(v) => set("firstworkingdate", v)}
-                                                    disabled={!isEditing}
-                                                />
-                                            </div>
-                                            <div className="sd-field-half">
-                                                <label className="sd-label">Tài khoản NH</label>
-                                                <input
-                                                    className="sd-input"
-                                                    value={form.bankaccount}
-                                                    disabled={!isEditing}
-                                                    onChange={(e) => set("bankaccount", e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Row 7: Tên ngân hàng */}
-                                        <div className="sd-field">
-                                            <label className="sd-label">Tên ngân hàng</label>
-                                            <input
-                                                className="sd-input"
-                                                style={{ maxWidth: 320 }}
-                                                value={form.bankname}
-                                                disabled={!isEditing}
-                                                onChange={(e) => set("bankname", e.target.value)}
+                                                onChange={(e) => set("username", e.target.value)}
                                             />
                                         </div>
                                     </div>
-                                )}
-                            </div>
 
-                            {/* ── Footer actions ── */}
-                            <div className="sd-footer-actions">
-                                {isEditing ? (
-                                    <>
-                                        <button className="sp-btn-outline" onClick={handleCancel} disabled={saving}>Hủy bỏ</button>
-                                        <button className="sp-btn-primary" onClick={handleSave} disabled={saving}>
-                                            {saving ? "Đang lưu..." : "Lưu"}
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <button className="sp-btn-outline" onClick={() => navigate("/employees")}>Quay lại</button>
-                                        <button className="sp-btn-primary" onClick={() => setIsEditing(true)}>Sửa</button>
-                                    </>
-                                )}
-                            </div>
+                                    {/* Row 2: Họ và Tên | Email */}
+                                    <div className="sd-field sd-field-row">
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Họ và Tên <span className="sd-required">*</span></label>
+                                            <div className="sd-input-wrap">
+                                                <input
+                                                    className={`sd-input${fieldErrors.fullname ? " sd-input-error" : ""}`}
+                                                    value={form.fullname}
+                                                    disabled={!isEditing}
+                                                    onChange={(e) => set("fullname", e.target.value)}
+                                                />
+                                                {fieldErrors.fullname && <span className="sd-error-msg">{fieldErrors.fullname}</span>}
+                                            </div>
+                                        </div>
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Email</label>
+                                            <input
+                                                className="sd-input"
+                                                value={form.email}
+                                                disabled={!isEditing}
+                                                onChange={(e) => set("email", e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Row 3: Bộ phận | Số điện thoại */}
+                                    <div className="sd-field sd-field-row">
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Bộ phận</label>
+                                            <input
+                                                className="sd-input"
+                                                value={form.department}
+                                                disabled={!isEditing}
+                                                onChange={(e) => set("department", e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Số điện thoại</label>
+                                            <input
+                                                className="sd-input"
+                                                value={form.phoneNumber}
+                                                disabled={!isEditing}
+                                                onChange={(e) => set("phoneNumber", e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Row 4: Địa chỉ */}
+                                    <div className="sd-field">
+                                        <label className="sd-label">Địa chỉ</label>
+                                        <input
+                                            className="sd-input"
+                                            value={form.address}
+                                            disabled={!isEditing}
+                                            onChange={(e) => set("address", e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* Row 5: Ngày sinh | Giới tính */}
+                                    <div className="sd-field sd-field-row">
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Ngày sinh</label>
+                                            <DatePicker
+                                                value={form.birthdate}
+                                                onChange={(v) => set("birthdate", v)}
+                                                disabled={!isEditing}
+                                            />
+                                        </div>
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Giới tính</label>
+                                            <select
+                                                className="sd-input sd-select"
+                                                value={form.gender}
+                                                disabled={!isEditing}
+                                                onChange={(e) => set("gender", e.target.value)}
+                                            >
+                                                <option value="">Chọn giới tính</option>
+                                                <option value="Nam">Nam</option>
+                                                <option value="Nữ">Nữ</option>
+                                                <option value="Khác">Khác</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Row 6: Ngày vào làm | Tài khoản NH */}
+                                    <div className="sd-field sd-field-row">
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Ngày vào làm</label>
+                                            <DatePicker
+                                                value={form.firstworkingdate}
+                                                onChange={(v) => set("firstworkingdate", v)}
+                                                disabled={!isEditing}
+                                            />
+                                        </div>
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Tài khoản NH</label>
+                                            <input
+                                                className="sd-input"
+                                                value={form.bankaccount}
+                                                disabled={!isEditing}
+                                                onChange={(e) => set("bankaccount", e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Row 7: Tên ngân hàng */}
+                                    <div className="sd-field">
+                                        <label className="sd-label">Tên ngân hàng</label>
+                                        <input
+                                            className="sd-input"
+                                            style={{ maxWidth: 320 }}
+                                            value={form.bankname}
+                                            disabled={!isEditing}
+                                            onChange={(e) => set("bankname", e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
+
+                        {/* ── Footer actions ── */}
+                        <div className="sd-footer-actions">
+                            {isEditing ? (
+                                <>
+                                    <button className="sp-btn-outline" onClick={handleCancel} disabled={saving}>Hủy bỏ</button>
+                                    <button className="sp-btn-primary" onClick={handleSave} disabled={saving}>
+                                        {saving ? "Đang lưu..." : "Lưu"}
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button className="sp-btn-outline" onClick={() => navigate("/employees")}>Quay lại</button>
+                                    <button className="sp-btn-primary" onClick={() => setIsEditing(true)}>Sửa</button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
-        </SidebarLayout>
+        </div>
     );
 }

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import SidebarLayout from "../../components/SidebarLayout";
 import "../../styles/shared.css";
 import "./receipts.css";
 import { getAllReceipts } from "../../api/receiptApi";
@@ -154,162 +153,160 @@ export default function ReceiptsPage() {
     }, [totalPages, safeP]);
 
     return (
-        <SidebarLayout>
-            <div className="sp-main">
-                <div className="sp-topbar">
-                    <div>
-                        <div className="sp-breadcrumb">
-                            Chứng từ &rsaquo; <span className="sp-breadcrumb-active">Phiếu nhập kho</span>
-                        </div>
-                    </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
+        <div className="sp-main">
+            <div className="sp-topbar">
+                <div>
+                    <div className="sp-breadcrumb">
+                        Chứng từ &rsaquo; <span className="sp-breadcrumb-active">Phiếu nhập kho</span>
                     </div>
                 </div>
+                <div className="sp-topbar-right">
+                    <button className="sp-icon-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        <span className="sp-notif-dot" />
+                    </button>
+                    <div className="sp-avatar" />
+                </div>
+            </div>
 
-                <div className="sp-content">
-                    <h1 className="sp-title">Phiếu nhập kho</h1>
+            <div className="sp-content">
+                <h1 className="sp-title">Phiếu nhập kho</h1>
 
-                    {/* Toolbar */}
-                    <div className="sp-toolbar">
-                        <div className="sp-search-wrap">
-                            <span className="sp-search-icon">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-                                </svg>
-                            </span>
-                            <input
-                                className="sp-search"
-                                placeholder="Search"
-                                value={search}
-                                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                            />
+                {/* Toolbar */}
+                <div className="sp-toolbar">
+                    <div className="sp-search-wrap">
+                        <span className="sp-search-icon">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                        </span>
+                        <input
+                            className="sp-search"
+                            placeholder="Search"
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        />
+                    </div>
+                    <div className="sp-toolbar-spacer" />
+                    <button className="sp-btn-primary" onClick={() => navigate("/receipts/create")}>
+                        <IconPlus /> Thêm mới
+                    </button>
+                    <button className="rc-btn-template">
+                        <IconDoc /> Thêm bản sao mới
+                    </button>
+                    <button className="rc-btn-template">
+                        <IconPrint /> Mẫu in
+                    </button>
+                    <button className="rc-btn-template">
+                        <IconExport /> Export
+                    </button>
+                </div>
+
+                {/* Tabs */}
+                <div className="rc-tabs">
+                    {TABS.map((tab) => (
+                        <div
+                            key={tab}
+                            className={`rc-tab${activeTab === tab ? " rc-tab-active" : ""}`}
+                            onClick={() => { setActiveTab(tab); setPage(1); }}
+                        >
+                            {tab}
                         </div>
-                        <div className="sp-toolbar-spacer" />
-                        <button className="sp-btn-primary" onClick={() => navigate("/receipts/create")}>
-                            <IconPlus /> Thêm mới
-                        </button>
-                        <button className="rc-btn-template">
-                            <IconDoc /> Thêm bản sao mới
-                        </button>
-                        <button className="rc-btn-template">
-                            <IconPrint /> Mẫu in
-                        </button>
-                        <button className="rc-btn-template">
-                            <IconExport /> Export
-                        </button>
-                    </div>
+                    ))}
+                </div>
 
-                    {/* Tabs */}
-                    <div className="rc-tabs">
-                        {TABS.map((tab) => (
-                            <div
-                                key={tab}
-                                className={`rc-tab${activeTab === tab ? " rc-tab-active" : ""}`}
-                                onClick={() => { setActiveTab(tab); setPage(1); }}
-                            >
-                                {tab}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Table */}
-                    <div className="sp-table-wrap sp-scrollable">
-                        <table className="sp-table">
-                            <thead>
-                                <tr>
-                                    <th className="sp-th-cb">
-                                        <input type="checkbox" checked={allChecked} onChange={toggleAll} />
-                                    </th>
-                                    <th>Số chứng từ <IconSort /></th>
-                                    <th>Ngày <IconSort /></th>
-                                    <th>Nhà cung cấp <IconSort /></th>
-                                    <th>Tổng tiền <IconSort /></th>
-                                    <th>Người lập <IconSort /></th>
-                                    <th>Trạng thái <IconSort /></th>
-                                    <th className="sp-th-action">Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading && (
-                                    <tr><td colSpan={8} className="sp-status-row">Đang tải dữ liệu...</td></tr>
-                                )}
-                                {!loading && error && (
-                                    <tr><td colSpan={8} className="sp-status-row sp-status-error">{error}</td></tr>
-                                )}
-                                {!loading && !error && pageData.length === 0 && (
-                                    <tr><td colSpan={8} className="sp-status-row">Không có phiếu nhập kho nào.</td></tr>
-                                )}
-                                {!loading && !error && pageData.map((r) => (
-                                    <tr
-                                        key={r.id}
-                                        className={`sp-row-clickable${selected.has(r.id) ? " sp-row-selected" : ""}`}
-                                        onClick={() => navigate(`/receipts/${r.id}`)}
-                                    >
-                                        <td className="sp-td-cb" onClick={(e) => { e.stopPropagation(); toggleOne(r.id); }}>
-                                            <input type="checkbox" checked={selected.has(r.id)} onChange={() => { }} />
-                                        </td>
-                                        <td className="sp-td-id">{r.docno}</td>
-                                        <td>{formatDate(r.docDate)}</td>
-                                        <td>{r.customerName || "-"}</td>
-                                        <td className="rc-td-num" style={{ textAlign: "right" }}>
-                                            {calcTotal(r.details) ? formatMoney(calcTotal(r.details)) : "-"}
-                                        </td>
-                                        <td>{r.createdByName || "-"}</td>
-                                        <td>
-                                            <span className={STATUS_BADGE[r.docstatus] || "rc-badge"}>
-                                                {STATUS_LABELS[r.docstatus] || r.docstatus}
-                                            </span>
-                                        </td>
-                                        <td className="sp-td-action" onClick={(e) => { e.stopPropagation(); navigate(`/receipts/${r.id}`); }}>
-                                            <button className="sp-edit-btn" title="Xem chi tiết"><IconEye /></button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-
-                        {/* Pagination */}
-                        <div className="sp-pagination">
-                            <div className="sp-rows-info">
-                                <span>Rows per page</span>
-                                <select
-                                    className="sp-rows-select"
-                                    value={rowsPerPage}
-                                    onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
-                                >
-                                    {ROWS_OPTIONS.map((n) => <option key={n}>{n}</option>)}
-                                </select>
-                                <span className="sp-total-label">of {filtered.length} rows</span>
-                            </div>
-                            <button className="sp-page-btn" onClick={() => setPage(1)} disabled={safeP === 1}>«</button>
-                            <button className="sp-page-btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safeP === 1}>‹</button>
-                            {pages.map((p, i) =>
-                                p === "..." ? (
-                                    <span key={i} className="sp-page-ellipsis">...</span>
-                                ) : (
-                                    <button
-                                        key={p}
-                                        className={`sp-page-btn${safeP === p ? " sp-page-active" : ""}`}
-                                        onClick={() => setPage(p)}
-                                    >
-                                        {p}
-                                    </button>
-                                )
+                {/* Table */}
+                <div className="sp-table-wrap sp-scrollable">
+                    <table className="sp-table">
+                        <thead>
+                            <tr>
+                                <th className="sp-th-cb">
+                                    <input type="checkbox" checked={allChecked} onChange={toggleAll} />
+                                </th>
+                                <th>Số chứng từ <IconSort /></th>
+                                <th>Ngày <IconSort /></th>
+                                <th>Nhà cung cấp <IconSort /></th>
+                                <th>Tổng tiền <IconSort /></th>
+                                <th>Người lập <IconSort /></th>
+                                <th>Trạng thái <IconSort /></th>
+                                <th className="sp-th-action">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading && (
+                                <tr><td colSpan={8} className="sp-status-row">Đang tải dữ liệu...</td></tr>
                             )}
-                            <button className="sp-page-btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safeP === totalPages}>›</button>
-                            <button className="sp-page-btn" onClick={() => setPage(totalPages)} disabled={safeP === totalPages}>»</button>
+                            {!loading && error && (
+                                <tr><td colSpan={8} className="sp-status-row sp-status-error">{error}</td></tr>
+                            )}
+                            {!loading && !error && pageData.length === 0 && (
+                                <tr><td colSpan={8} className="sp-status-row">Không có phiếu nhập kho nào.</td></tr>
+                            )}
+                            {!loading && !error && pageData.map((r) => (
+                                <tr
+                                    key={r.id}
+                                    className={`sp-row-clickable${selected.has(r.id) ? " sp-row-selected" : ""}`}
+                                    onClick={() => navigate(`/receipts/${r.id}`)}
+                                >
+                                    <td className="sp-td-cb" onClick={(e) => { e.stopPropagation(); toggleOne(r.id); }}>
+                                        <input type="checkbox" checked={selected.has(r.id)} onChange={() => { }} />
+                                    </td>
+                                    <td className="sp-td-id">{r.docno}</td>
+                                    <td>{formatDate(r.docDate)}</td>
+                                    <td>{r.customerName || "-"}</td>
+                                    <td className="rc-td-num" style={{ textAlign: "right" }}>
+                                        {calcTotal(r.details) ? formatMoney(calcTotal(r.details)) : "-"}
+                                    </td>
+                                    <td>{r.createdByName || "-"}</td>
+                                    <td>
+                                        <span className={STATUS_BADGE[r.docstatus] || "rc-badge"}>
+                                            {STATUS_LABELS[r.docstatus] || r.docstatus}
+                                        </span>
+                                    </td>
+                                    <td className="sp-td-action" onClick={(e) => { e.stopPropagation(); navigate(`/receipts/${r.id}`); }}>
+                                        <button className="sp-edit-btn" title="Xem chi tiết"><IconEye /></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    {/* Pagination */}
+                    <div className="sp-pagination">
+                        <div className="sp-rows-info">
+                            <span>Rows per page</span>
+                            <select
+                                className="sp-rows-select"
+                                value={rowsPerPage}
+                                onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}
+                            >
+                                {ROWS_OPTIONS.map((n) => <option key={n}>{n}</option>)}
+                            </select>
+                            <span className="sp-total-label">of {filtered.length} rows</span>
                         </div>
+                        <button className="sp-page-btn" onClick={() => setPage(1)} disabled={safeP === 1}>«</button>
+                        <button className="sp-page-btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safeP === 1}>‹</button>
+                        {pages.map((p, i) =>
+                            p === "..." ? (
+                                <span key={i} className="sp-page-ellipsis">...</span>
+                            ) : (
+                                <button
+                                    key={p}
+                                    className={`sp-page-btn${safeP === p ? " sp-page-active" : ""}`}
+                                    onClick={() => setPage(p)}
+                                >
+                                    {p}
+                                </button>
+                            )
+                        )}
+                        <button className="sp-page-btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safeP === totalPages}>›</button>
+                        <button className="sp-page-btn" onClick={() => setPage(totalPages)} disabled={safeP === totalPages}>»</button>
                     </div>
                 </div>
             </div>
-        </SidebarLayout>
+        </div>
     );
 }

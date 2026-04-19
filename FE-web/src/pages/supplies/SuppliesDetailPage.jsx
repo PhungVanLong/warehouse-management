@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "./supplies.css";
-import SidebarLayout from "../../components/SidebarLayout";
 import { getItemById, updateItem } from "../../api/itemApi";
 
 const EMPTY_FORM = {
@@ -75,164 +74,162 @@ export default function SuppliesDetailPage() {
     };
 
     return (
-        <SidebarLayout>
-            <div className="sp-main">
-                {/* Topbar */}
-                <div className="sp-topbar">
-                    <div>
-                        <div className="sp-breadcrumb">
-                            Danh mục &rsaquo; <span
-                                className="sp-breadcrumb-link"
-                                onClick={() => navigate("/supplies")}
-                            >Danh mục vật tư hàng hóa</span>
-                            {" "}&rsaquo; <span className="sp-breadcrumb-active">Chi tiết vật tư hàng hóa</span>
-                        </div>
-                    </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
+        <div className="sp-main">
+            {/* Topbar */}
+            <div className="sp-topbar">
+                <div>
+                    <div className="sp-breadcrumb">
+                        Danh mục &rsaquo; <span
+                            className="sp-breadcrumb-link"
+                            onClick={() => navigate("/supplies")}
+                        >Danh mục vật tư hàng hóa</span>
+                        {" "}&rsaquo; <span className="sp-breadcrumb-active">Chi tiết vật tư hàng hóa</span>
                     </div>
                 </div>
-
-                {/* Content */}
-                <div className="sp-content">
-                    <h1 className="sp-title">Chi tiết vật tư hàng hóa</h1>
-
-                    {loading ? (
-                        <div className="sp-status-row">Đang tải...</div>
-                    ) : error ? (
-                        <div className="sp-status-row sp-status-error">{error}</div>
-                    ) : (
-                        <div className="sd-card">
-                            {/* Section header */}
-                            <div className="sd-section-hd">
-                                <span className="sd-section-icon">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2DBE60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="12" cy="12" r="10" />
-                                        <polyline points="9 12 11 14 15 10" />
-                                    </svg>
-                                </span>
-                                Thông tin vật tư hàng hóa
-                            </div>
-
-                            {/* Form */}
-                            <div className="sd-form">
-                                <div className="sd-field">
-                                    <label className="sd-label">Mã vật tư <span className="sd-required">*</span></label>
-                                    <div className="sd-input-wrap">
-                                        <input
-                                            className={`sd-input${fieldErrors.itemcode ? " sd-input-error" : ""}`}
-                                            value={form.itemcode}
-                                            disabled={!isEditing}
-                                            onChange={(e) => handleChange("itemcode", e.target.value)}
-                                        />
-                                        {fieldErrors.itemcode && <span className="sd-error-msg">{fieldErrors.itemcode}</span>}
-                                    </div>
-                                </div>
-
-                                <div className="sd-field">
-                                    <label className="sd-label">Tên vật tư hàng hóa <span className="sd-required">*</span></label>
-                                    <div className="sd-input-wrap">
-                                        <input
-                                            className={`sd-input${fieldErrors.itemname ? " sd-input-error" : ""}`}
-                                            value={form.itemname}
-                                            disabled={!isEditing}
-                                            onChange={(e) => handleChange("itemname", e.target.value)}
-                                        />
-                                        {fieldErrors.itemname && <span className="sd-error-msg">{fieldErrors.itemname}</span>}
-                                    </div>
-                                </div>
-
-                                <div className="sd-field">
-                                    <label className="sd-label">Tên trên hóa đơn</label>
-                                    <input
-                                        className="sd-input"
-                                        value={form.invoicename}
-                                        disabled={!isEditing}
-                                        onChange={(e) => handleChange("invoicename", e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="sd-field">
-                                    <label className="sd-label">Ngành hàng</label>
-                                    <input
-                                        className="sd-input"
-                                        value={form.itemcatg}
-                                        disabled={!isEditing}
-                                        onChange={(e) => handleChange("itemcatg", e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="sd-field">
-                                    <label className="sd-label">Mô tả / Thông số kỹ thuật</label>
-                                    <input
-                                        className="sd-input"
-                                        value={form.description}
-                                        disabled={!isEditing}
-                                        onChange={(e) => handleChange("description", e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="sd-field sd-field-row">
-                                    <div className="sd-field-half">
-                                        <label className="sd-label">Đơn vị tính <span className="sd-required">*</span></label>
-                                        <div className="sd-input-wrap">
-                                            <input
-                                                className={`sd-input${fieldErrors.unitof ? " sd-input-error" : ""}`}
-                                                value={form.unitof}
-                                                disabled={!isEditing}
-                                                onChange={(e) => handleChange("unitof", e.target.value)}
-                                            />
-                                            {fieldErrors.unitof && <span className="sd-error-msg">{fieldErrors.unitof}</span>}
-                                        </div>
-                                    </div>
-                                    <div className="sd-field-half">
-                                        <label className="sd-label">Loại vật tư <span className="sd-required">*</span></label>
-                                        <div className="sd-input-wrap">
-                                            <input
-                                                className={`sd-input${fieldErrors.itemtype ? " sd-input-error" : ""}`}
-                                                value={form.itemtype}
-                                                disabled={!isEditing}
-                                                onChange={(e) => handleChange("itemtype", e.target.value)}
-                                            />
-                                            {fieldErrors.itemtype && <span className="sd-error-msg">{fieldErrors.itemtype}</span>}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Footer actions */}
-                            <div className="sd-footer">
-                                {isEditing ? (
-                                    <>
-                                        <button className="sd-btn-back" disabled={saving} onClick={() => { setForm({ ...original }); setIsEditing(false); setFieldErrors({}); }}>
-                                            Hủy
-                                        </button>
-                                        <button className="sd-btn-edit" disabled={saving} onClick={handleSave}>
-                                            {saving ? "Đang lưu..." : "Lưu"}
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <button className="sd-btn-back" onClick={() => navigate("/supplies")}>
-                                            Quay lại
-                                        </button>
-                                        <button className="sd-btn-edit" onClick={() => setIsEditing(true)}>
-                                            Sửa
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    )}
+                <div className="sp-topbar-right">
+                    <button className="sp-icon-btn">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        <span className="sp-notif-dot" />
+                    </button>
+                    <div className="sp-avatar" />
                 </div>
             </div>
-        </SidebarLayout>
+
+            {/* Content */}
+            <div className="sp-content">
+                <h1 className="sp-title">Chi tiết vật tư hàng hóa</h1>
+
+                {loading ? (
+                    <div className="sp-status-row">Đang tải...</div>
+                ) : error ? (
+                    <div className="sp-status-row sp-status-error">{error}</div>
+                ) : (
+                    <div className="sd-card">
+                        {/* Section header */}
+                        <div className="sd-section-hd">
+                            <span className="sd-section-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2DBE60" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="9 12 11 14 15 10" />
+                                </svg>
+                            </span>
+                            Thông tin vật tư hàng hóa
+                        </div>
+
+                        {/* Form */}
+                        <div className="sd-form">
+                            <div className="sd-field">
+                                <label className="sd-label">Mã vật tư <span className="sd-required">*</span></label>
+                                <div className="sd-input-wrap">
+                                    <input
+                                        className={`sd-input${fieldErrors.itemcode ? " sd-input-error" : ""}`}
+                                        value={form.itemcode}
+                                        disabled={!isEditing}
+                                        onChange={(e) => handleChange("itemcode", e.target.value)}
+                                    />
+                                    {fieldErrors.itemcode && <span className="sd-error-msg">{fieldErrors.itemcode}</span>}
+                                </div>
+                            </div>
+
+                            <div className="sd-field">
+                                <label className="sd-label">Tên vật tư hàng hóa <span className="sd-required">*</span></label>
+                                <div className="sd-input-wrap">
+                                    <input
+                                        className={`sd-input${fieldErrors.itemname ? " sd-input-error" : ""}`}
+                                        value={form.itemname}
+                                        disabled={!isEditing}
+                                        onChange={(e) => handleChange("itemname", e.target.value)}
+                                    />
+                                    {fieldErrors.itemname && <span className="sd-error-msg">{fieldErrors.itemname}</span>}
+                                </div>
+                            </div>
+
+                            <div className="sd-field">
+                                <label className="sd-label">Tên trên hóa đơn</label>
+                                <input
+                                    className="sd-input"
+                                    value={form.invoicename}
+                                    disabled={!isEditing}
+                                    onChange={(e) => handleChange("invoicename", e.target.value)}
+                                />
+                            </div>
+
+                            <div className="sd-field">
+                                <label className="sd-label">Ngành hàng</label>
+                                <input
+                                    className="sd-input"
+                                    value={form.itemcatg}
+                                    disabled={!isEditing}
+                                    onChange={(e) => handleChange("itemcatg", e.target.value)}
+                                />
+                            </div>
+
+                            <div className="sd-field">
+                                <label className="sd-label">Mô tả / Thông số kỹ thuật</label>
+                                <input
+                                    className="sd-input"
+                                    value={form.description}
+                                    disabled={!isEditing}
+                                    onChange={(e) => handleChange("description", e.target.value)}
+                                />
+                            </div>
+
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Đơn vị tính <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.unitof ? " sd-input-error" : ""}`}
+                                            value={form.unitof}
+                                            disabled={!isEditing}
+                                            onChange={(e) => handleChange("unitof", e.target.value)}
+                                        />
+                                        {fieldErrors.unitof && <span className="sd-error-msg">{fieldErrors.unitof}</span>}
+                                    </div>
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Loại vật tư <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.itemtype ? " sd-input-error" : ""}`}
+                                            value={form.itemtype}
+                                            disabled={!isEditing}
+                                            onChange={(e) => handleChange("itemtype", e.target.value)}
+                                        />
+                                        {fieldErrors.itemtype && <span className="sd-error-msg">{fieldErrors.itemtype}</span>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer actions */}
+                        <div className="sd-footer">
+                            {isEditing ? (
+                                <>
+                                    <button className="sd-btn-back" disabled={saving} onClick={() => { setForm({ ...original }); setIsEditing(false); setFieldErrors({}); }}>
+                                        Hủy
+                                    </button>
+                                    <button className="sd-btn-edit" disabled={saving} onClick={handleSave}>
+                                        {saving ? "Đang lưu..." : "Lưu"}
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button className="sd-btn-back" onClick={() => navigate("/supplies")}>
+                                        Quay lại
+                                    </button>
+                                    <button className="sd-btn-edit" onClick={() => setIsEditing(true)}>
+                                        Sửa
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }
