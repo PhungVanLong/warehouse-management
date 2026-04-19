@@ -11,7 +11,7 @@ export default function SidebarLayout({ children, activeKey }) {
         if (path.startsWith("/supplies") || path.startsWith("/employees") || path.startsWith("/locations") || path.startsWith("/partners")) {
             return { danhmuc: true, chungtu: false, baocao: false };
         }
-        if (path.startsWith("/receipts")) {
+        if (path.startsWith("/receipts") || path.startsWith("/issues")) {
             return { danhmuc: false, chungtu: true, baocao: false };
         }
         return { danhmuc: false, chungtu: false, baocao: false };
@@ -91,7 +91,7 @@ export default function SidebarLayout({ children, activeKey }) {
                     {openGroups.chungtu && (
                         <div className="sp-nav-children">
                             <div className={`sp-nav-child${location.pathname.startsWith("/receipts") ? " sp-child-active" : ""}`} onClick={() => navTo("Phiếu nhập kho", "/receipts")}>Phiếu nhập kho</div>
-                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Phiếu xuất kho')}>Phiếu xuất kho</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/issues") ? " sp-child-active" : ""}`} onClick={() => navTo("Phiếu xuất kho", "/issues")}>Phiếu xuất kho</div>
                             <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Kiểm kê hàng tồn kho')}>Kiểm kê hàng tồn kho</div>
                             <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Phiếu xuất/ nhập điều chỉnh')}>Phiếu xuất/ nhập điều chỉnh</div>
                         </div>

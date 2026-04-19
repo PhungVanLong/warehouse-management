@@ -3,8 +3,6 @@ package hoshimoto.cdtn.controller;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import jakarta.validation.Valid;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +19,7 @@ import hoshimoto.cdtn.dto.ApiResponse;
 import hoshimoto.cdtn.dto.UserResponse;
 import hoshimoto.cdtn.dto.request.UserRequest;
 import hoshimoto.cdtn.service.UserService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")

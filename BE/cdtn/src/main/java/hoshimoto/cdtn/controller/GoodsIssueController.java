@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import hoshimoto.cdtn.dto.ApiResponse;
 import hoshimoto.cdtn.dto.GoodsIssueResponse;
+import hoshimoto.cdtn.dto.LocationDetailResponse;
 import hoshimoto.cdtn.dto.LocationSuggestionResponse;
 import hoshimoto.cdtn.dto.request.GoodsIssueRequest;
 import hoshimoto.cdtn.service.GoodsIssueService;
@@ -46,16 +47,33 @@ public class GoodsIssueController {
     }
 
     /**
-     * Lấy danh sách vị trí đang chứa hàng đủ số lượng cần xuất.
-     * GET /api/goods-issues/available-locations?itemId=1&quantity=20
+     * Liệt kê TẤT CẢ vị trí đang chứa itemId (không so sánh với quantity cần xuất).
+     * Sắp xếp: tồn kho nhiều nhất trước. Mỗi vị trí kèm danh sách toàn bộ hàng tại đó.
+     * GET /api/goods-issues/available-locations?itemId=1
      */
     @GetMapping("/available-locations")
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
-    public ResponseEntity<ApiResponse<List<LocationSuggestionResponse>>> availableLocations(
+    public ResponseEntity<ApiResponse<List<LocationDetailResponse>>> listAvailableForIssue(
+            @RequestParam Long itemId) {
+        List<LocationDetailResponse> locations = goodsIssueService.listAvailableForIssue(itemId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Liệt kê vị trí khả dụng để xuất kho thành công", locations));
+    }
+
+    /**
+     * Gợi ý phân bổ số lượng qua nhiều vị trí khi quantity > tồn tại một vị trí.
+     * GET /api/goods-issues/suggest-split?itemId=1&quantity=1000
+     */
+    @GetMapping("/suggest-split")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ApiResponse<List<LocationSuggestionResponse>>> suggestSplit(
             @RequestParam Long itemId,
             @RequestParam BigDecimal quantity) {
-        List<LocationSuggestionResponse> locations = goodsIssueService.availableLocations(itemId, quantity);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách vị trí xuất kho thành công", locations));
+        try {
+            List<LocationSuggestionResponse> splits = goodsIssueService.suggestSplit(itemId, quantity);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Gợi ý phân bổ vị trí xuất thành công", splits));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
+        }
     }
 
     /** Tạo phiếu xuất nháp */

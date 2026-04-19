@@ -2,15 +2,19 @@ package hoshimoto.cdtn.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import hoshimoto.cdtn.dto.GoodsIssueDetailResponse;
 import hoshimoto.cdtn.dto.GoodsIssueResponse;
+import hoshimoto.cdtn.dto.LocationDetailResponse;
+import hoshimoto.cdtn.dto.LocationDetailResponse.LocationItemStock;
 import hoshimoto.cdtn.dto.LocationSuggestionResponse;
 import hoshimoto.cdtn.dto.request.GoodsIssueDetailRequest;
 import hoshimoto.cdtn.dto.request.GoodsIssueRequest;
@@ -22,6 +26,7 @@ import hoshimoto.cdtn.entity.InventoryBalance;
 import hoshimoto.cdtn.entity.Item;
 import hoshimoto.cdtn.entity.ItemLocation;
 import hoshimoto.cdtn.entity.Location;
+import hoshimoto.cdtn.entity.User;
 import hoshimoto.cdtn.repository.CustomerRepository;
 import hoshimoto.cdtn.repository.GoodsIssueDetailRepository;
 import hoshimoto.cdtn.repository.GoodsIssueRepository;
@@ -29,6 +34,7 @@ import hoshimoto.cdtn.repository.InventoryBalanceRepository;
 import hoshimoto.cdtn.repository.ItemLocationRepository;
 import hoshimoto.cdtn.repository.ItemRepository;
 import hoshimoto.cdtn.repository.LocationRepository;
+import hoshimoto.cdtn.repository.UserRepository;
 
 @Service
 public class GoodsIssueService {
@@ -40,6 +46,7 @@ public class GoodsIssueService {
     @Autowired private ItemLocationRepository itemLocationRepository;
     @Autowired private InventoryBalanceRepository inventoryBalanceRepository;
     @Autowired private CustomerRepository customerRepository;
+    @Autowired private UserRepository userRepository;
 
     // ───────────────────────── CRUD ─────────────────────────
 
@@ -142,6 +149,10 @@ public class GoodsIssueService {
 
         issue.setDocstatus(DocStatus.CONFIRMED);
         issue.setModifiedAt(LocalDateTime.now());
+        getCurrentUser().ifPresent(u -> {
+            issue.setApprover(u);
+            issue.setModifiedBy(u.getUsername());
+        });
         issueRepository.save(issue);
         return toResponse(issue);
     }
@@ -155,11 +166,64 @@ public class GoodsIssueService {
         requireStatus(issue, DocStatus.DRAFT, "Chỉ có thể hủy phiếu ở trạng thái DRAFT");
         issue.setDocstatus(DocStatus.CANCELLED);
         issue.setModifiedAt(LocalDateTime.now());
+        getCurrentUser().ifPresent(u -> {
+            issue.setApprover(u);
+            issue.setModifiedBy(u.getUsername());
+        });
         issueRepository.save(issue);
         return toResponse(issue);
     }
 
-    // ───────────────────────── AVAILABLE LOCATIONS ─────────────────────────
+    // ───────────────────────── AVAILABLE LOCATIONS (XUẤT KHO) ─────────────────────────
+
+    /**
+     * Liệt kê TẤT CẢ vị trí đang chứa itemId với quantity > 0 (không so sánh với quantity cần xuất).
+     * Mỗi vị trí kèm danh sách TẤT CẢ sản phẩm đang chứa tại đó (để FE thống kê).
+     * Sắp xếp: tồn kho nhiều nhất trước → FE hiển thị checkbox, tích nhiều vị trí khi cần.
+     */
+    public List<LocationDetailResponse> listAvailableForIssue(Long itemId) {
+        List<ItemLocation> stockLocations = itemLocationRepository.findAllWithStockByItemId(itemId);
+        List<LocationDetailResponse> result = new ArrayList<>();
+
+        for (ItemLocation il : stockLocations) {
+            Location loc = il.getLocation();
+            BigDecimal used = itemLocationRepository.getTotalUsedCapacity(loc.getId());
+            BigDecimal cap = loc.getCapacity() != null ? BigDecimal.valueOf(loc.getCapacity()) : null;
+            BigDecimal remaining = cap != null ? cap.subtract(used) : null;
+
+            // Lấy tất cả hàng tại vị trí này để thống kê
+            List<ItemLocation> itemsAtLoc = itemLocationRepository.findByLocationIdAndIsActiveTrue(loc.getId());
+            List<LocationItemStock> stockList = itemsAtLoc.stream().map(sil -> new LocationItemStock(
+                    sil.getItem().getId(),
+                    sil.getItem().getItemcode(),
+                    sil.getItem().getItemname(),
+                    sil.getItem().getUnitof(),
+                    sil.getQuantity()
+            )).collect(Collectors.toList());
+
+            result.add(new LocationDetailResponse(
+                    loc.getId(), loc.getLocationcode(), loc.getLocationname(),
+                    loc.getRackno(), loc.getFloorno(), loc.getColumnno(),
+                    loc.getCapacity(), used, remaining, "HAS_STOCK", stockList));
+        }
+
+        // Sắp xếp: tồn kho của item này tại vị trí giảm dần
+        result.sort((a, b) -> {
+            BigDecimal stockA = a.getItems().stream()
+                    .filter(s -> s.getItemId().equals(itemId))
+                    .map(LocationItemStock::getQuantity)
+                    .findFirst().orElse(BigDecimal.ZERO);
+            BigDecimal stockB = b.getItems().stream()
+                    .filter(s -> s.getItemId().equals(itemId))
+                    .map(LocationItemStock::getQuantity)
+                    .findFirst().orElse(BigDecimal.ZERO);
+            return stockB.compareTo(stockA);
+        });
+
+        return result;
+    }
+
+    // ───────────────────────── AVAILABLE LOCATIONS (OLD) ─────────────────────────
 
     /**
      * Lấy danh sách vị trí đang chứa item với số lượng đủ để xuất.
@@ -170,10 +234,41 @@ public class GoodsIssueService {
                     Location loc = il.getLocation();
                     return new LocationSuggestionResponse(
                             loc.getId(), loc.getLocationcode(), loc.getLocationname(),
-                            loc.getCapacity(), il.getQuantity(),
-                            il.getQuantity(), // availableSpace = current stock at this location
-                            "HAS_STOCK");
+                            loc.getCapacity(), il.getQuantity(), il.getQuantity(),
+                            "HAS_STOCK", null);
                 }).collect(Collectors.toList());
+    }
+
+    /**
+     * Gợi ý phân bổ số lượng cần xuất qua nhiều vị trí (khi quantity > tồn tại một vị trí).
+     * Ưu tiên vị trí có tồn kho lớn nhất trước. Tự động tính suggestedQuantity cho mỗi vị trí.
+     */
+    public List<LocationSuggestionResponse> suggestSplit(Long itemId, BigDecimal quantity) {
+        // Lấy tất cả vị trí có hàng (dù chưa đủ quantity), sắp xếp theo tồn giảm dần
+        List<ItemLocation> all = itemLocationRepository.findByItemIdAndIsActiveTrue(itemId);
+        all.sort((a, b) -> b.getQuantity().compareTo(a.getQuantity()));
+
+        List<LocationSuggestionResponse> result = new ArrayList<>();
+        BigDecimal remaining = quantity;
+
+        for (ItemLocation il : all) {
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal stock = il.getQuantity();
+            if (stock.compareTo(BigDecimal.ZERO) <= 0) continue;
+            BigDecimal take = remaining.min(stock);
+            Location loc = il.getLocation();
+            LocationSuggestionResponse r = new LocationSuggestionResponse(
+                    loc.getId(), loc.getLocationcode(), loc.getLocationname(),
+                    loc.getCapacity(), stock, stock, "HAS_STOCK", take);
+            result.add(r);
+            remaining = remaining.subtract(take);
+        }
+
+        if (remaining.compareTo(BigDecimal.ZERO) > 0) {
+            throw new RuntimeException(
+                "Tồn kho tổng không đủ số lượng cần xuất " + quantity + " (còn thiếu " + remaining + ")");
+        }
+        return result;
     }
 
     // ───────────────────────── PRIVATE HELPERS ─────────────────────────
@@ -187,6 +282,17 @@ public class GoodsIssueService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng id: " + request.getCustomerId()));
             issue.setCustomer(customer);
         }
+        // Gán người tạo từ JWT token (chỉ set khi tạo mới, không ghi đè khi update)
+        if (issue.getUser() == null) {
+            getCurrentUser().ifPresent(issue::setUser);
+        }
+    }
+
+    private java.util.Optional<User> getCurrentUser() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) return java.util.Optional.empty();
+        String username = auth.getName();
+        return userRepository.findByUsername(username);
     }
 
     private void saveDetails(GoodsIssue issue, List<GoodsIssueDetailRequest> detailRequests) {
@@ -237,8 +343,20 @@ public class GoodsIssueService {
         if (issue.getCustomer() != null) {
             res.setCustomerId(issue.getCustomer().getId());
             res.setCustomerName(issue.getCustomer().getCustomername());
+            res.setCustomerTaxcode(issue.getCustomer().getTaxcode());
         }
-
+        if (issue.getUser() != null) {
+            res.setCreatedByUsername(issue.getUser().getUsername());
+            res.setCreatedByFullname(issue.getUser().getFullname());
+        } else {
+            res.setCreatedByUsername(null);
+            res.setCreatedByFullname(null);
+        }
+        if (issue.getApprover() != null) {
+            res.setActionByUsername(issue.getApprover().getUsername());
+            res.setActionByFullname(issue.getApprover().getFullname());
+            res.setApprovedAt(issue.getModifiedAt());
+        }
         List<GoodsIssueDetail> details = detailRepository.findByGoodsIssueId(issue.getId());
         res.setDetails(details.stream().map(d -> {
             GoodsIssueDetailResponse dr = new GoodsIssueDetailResponse();
@@ -259,7 +377,6 @@ public class GoodsIssueService {
             }
             return dr;
         }).collect(Collectors.toList()));
-
         return res;
     }
 }

@@ -19,5 +19,17 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     @Query("SELECT l FROM Location l WHERE l.isActive = true AND l.capacity >= :requiredQty " +
            "AND l.id NOT IN (SELECT il.location.id FROM ItemLocation il WHERE il.isActive = true AND il.quantity > 0)")
     List<Location> findEmptyLocationsWithCapacity(@Param("requiredQty") java.math.BigDecimal requiredQty);
+
+    /**
+     * Tất cả vị trí đang còn chỗ trống (remainingCapacity > 0) – kể cả vị trí trống hoàn toàn
+     * và vị trí đã chứa một phần nhưng vẫn còn dư.
+     * Dùng để FE liệt kê checkbox cho người dùng chọn khi nhập kho (kể cả capacity < quantity cần nhập).
+     */
+    @Query("SELECT l FROM Location l WHERE l.isActive = true AND (" +
+           "  l.capacity IS NULL " +
+           "  OR l.capacity > (SELECT COALESCE(SUM(il.quantity), 0) FROM ItemLocation il " +
+           "                    WHERE il.location.id = l.id AND il.isActive = true)" +
+           ")")
+    List<Location> findAllLocationsWithAnySpace();
 }
 

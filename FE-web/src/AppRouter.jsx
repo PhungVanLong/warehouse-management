@@ -20,6 +20,9 @@ import LocationsCreatePage from "./pages/locations/LocationsCreatePage";
 import ReceiptsPage from "./pages/receipts/ReceiptsPage";
 import ReceiptCreatePage from "./pages/receipts/ReceiptCreatePage";
 import ReceiptDetailPage from "./pages/receipts/ReceiptDetailPage";
+import IssuesPage from "./pages/issues/IssuesPage";
+import IssueCreatePage from "./pages/issues/IssueCreatePage";
+import IssueDetailPage from "./pages/issues/IssueDetailPage";
 import SidebarLayout from "./components/SidebarLayout";
 
 export default function AppRouter() {
@@ -50,6 +53,9 @@ export default function AppRouter() {
                     <Route path="/receipts" element={<ReceiptsPage />} />
                     <Route path="/receipts/create" element={<ReceiptCreatePage />} />
                     <Route path="/receipts/:id" element={<ReceiptDetailPage />} />
+                    <Route path="/issues" element={<IssuesPage />} />
+                    <Route path="/issues/create" element={<IssueCreatePage />} />
+                    <Route path="/issues/:id" element={<IssueDetailPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>

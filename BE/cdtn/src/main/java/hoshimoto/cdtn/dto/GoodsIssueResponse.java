@@ -16,6 +16,12 @@ public class GoodsIssueResponse {
     private DocStatus docstatus;
     private Long customerId;
     private String customerName;
+    private String customerTaxcode;
     private LocalDateTime createdAt;
+    private String createdByUsername;
+    private String createdByFullname;
+    private String actionByUsername;
+    private String actionByFullname;
+    private LocalDateTime approvedAt;
     private List<GoodsIssueDetailResponse> details;
 }

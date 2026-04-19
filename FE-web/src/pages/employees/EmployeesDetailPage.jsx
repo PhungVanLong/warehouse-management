@@ -293,6 +293,40 @@ export default function EmployeesDetailPage() {
                             )}
                         </div>
 
+                        {/* ── Thông tin tài khoản ── */}
+                        <div className="sd-card" style={{ marginTop: 16 }}>
+                            <div className="sd-section-hd">
+                                <span className="sd-section-icon"><IconCheck /></span>
+                                Thông tin tài khoản
+                            </div>
+                            <div className="sd-form">
+                                {/* Tên đăng nhập | Phân quyền */}
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Tên đăng nhập</label>
+                                        <input
+                                            className="sd-input"
+                                            value={form.username}
+                                            disabled={!isEditing}
+                                            onChange={(e) => set("username", e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Phân quyền</label>
+                                        <select
+                                            className="sd-input sd-select"
+                                            value={form.role}
+                                            disabled={!isEditing}
+                                            onChange={(e) => set("role", e.target.value)}
+                                        >
+                                            <option value="STAFF">STAFF</option>
+                                            <option value="ADMIN">ADMIN</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* ── Footer actions ── */}
                         <div className="sd-footer-actions">
                             {isEditing ? (

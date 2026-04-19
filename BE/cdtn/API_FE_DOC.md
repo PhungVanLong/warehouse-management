@@ -214,6 +214,142 @@
 # API DOC CHUẨN CHO UI FRONTEND (FE)
 port: http://localhost:8080
 
+---
+
+## 12.x API lấy danh sách và chi tiết phiếu nhập kho (Goods Receipt)
+
+### Lấy danh sách phiếu nhập
+**Endpoint:** `GET /api/goods-receipts`
+- Trả về danh sách tất cả phiếu nhập (order mới nhất lên đầu).
+- Không cần truyền tham số nếu muốn lấy toàn bộ.
+
+**Response thành công:**
+```json
+{
+  "success": true,
+  "message": "Lấy danh sách phiếu nhập thành công",
+  "data": [
+    {
+      "id": 1,
+      "docno": "PN-2026-001",
+      "docDate": "2026-04-19",
+      "description": "Nhập hàng tháng 4",
+      "docstatus": "DRAFT",
+      "customerId": 2,
+      "customerName": "Công ty ABC",
+      "createdAt": "2026-04-19T09:00:00",
+      "details": [ /* Xem chi tiết bên dưới */ ]
+    }
+    // ...
+  ]
+}
+```
+
+### Lấy chi tiết phiếu nhập
+**Endpoint:** `GET /api/goods-receipts/{id}`
+- Trả về chi tiết 1 phiếu nhập theo id.
+
+**Response thành công:**
+```json
+{
+  "success": true,
+  "message": "Lấy chi tiết phiếu nhập thành công",
+  "data": {
+    "id": 1,
+    "docno": "PN-2026-001",
+    "docDate": "2026-04-19",
+    "description": "Nhập hàng tháng 4",
+    "docstatus": "DRAFT",
+    "customerId": 2,
+    "customerName": "Công ty ABC",
+    "createdAt": "2026-04-19T09:00:00",
+    "details": [
+      {
+        "itemId": 5,
+        "itemcode": "SP001",
+        "itemname": "Sản phẩm A",
+        "unitof": "Cái",
+        "quantity": 100,
+        "unitprice": 50000,
+        "amount": 5000000,
+        "locationId": 3,
+        "locationcode": "A1-01",
+        "locationname": "Kệ A1, tầng 1, cột 1"
+      }
+      // ...
+    ]
+  }
+}
+```
+
+---
+
+## 13.x API lấy danh sách và chi tiết phiếu xuất kho (Goods Issue)
+
+### Lấy danh sách phiếu xuất
+**Endpoint:** `GET /api/goods-issues`
+- Trả về danh sách tất cả phiếu xuất (order mới nhất lên đầu).
+- Không cần truyền tham số nếu muốn lấy toàn bộ.
+
+**Response thành công:**
+```json
+{
+  "success": true,
+  "message": "Lấy danh sách phiếu xuất thành công",
+  "data": [
+    {
+      "id": 1,
+      "docno": "PX-2026-001",
+      "docDate": "2026-04-19",
+      "description": "Xuất hàng đơn đặt hàng #123",
+      "docstatus": "DRAFT",
+      "customerId": 3,
+      "customerName": "Công ty XYZ",
+      "createdAt": "2026-04-19T09:00:00",
+      "details": [ /* Xem chi tiết bên dưới */ ]
+    }
+    // ...
+  ]
+}
+```
+
+### Lấy chi tiết phiếu xuất
+**Endpoint:** `GET /api/goods-issues/{id}`
+- Trả về chi tiết 1 phiếu xuất theo id.
+
+**Response thành công:**
+```json
+{
+  "success": true,
+  "message": "Lấy chi tiết phiếu xuất thành công",
+  "data": {
+    "id": 1,
+    "docno": "PX-2026-001",
+    "docDate": "2026-04-19",
+    "description": "Xuất hàng đơn đặt hàng #123",
+    "docstatus": "DRAFT",
+    "customerId": 3,
+    "customerName": "Công ty XYZ",
+    "createdAt": "2026-04-19T09:00:00",
+    "details": [
+      {
+        "itemId": 5,
+        "itemcode": "SP001",
+        "itemname": "Sản phẩm A",
+        "unitof": "Cái",
+        "quantity": 20,
+        "unitprice": 55000,
+        "amount": 1100000,
+        "locationId": 3,
+        "locationcode": "A1-01",
+        "locationname": "Kệ A1, tầng 1, cột 1"
+      }
+      // ...
+    ]
+  }
+}
+```
+
 ## 1. Đăng nhập (Login)
 - **Endpoint:** `POST /api/auth/login`
   - Trường bắt buộc: `username`, `password`
@@ -574,6 +710,8 @@ port: http://localhost:8080
         "floorno": "1",
         "columnno": "1",
         "capacity": 100,
+        "usedCapacity": 0,
+        "remainingCapacity": 100,
         "description": "Kệ tầng 1, sức chứa 100",
         "isActive": true,
         "createdAt": "2026-04-12T10:00:00",
@@ -607,6 +745,8 @@ port: http://localhost:8080
           "floorno": "1",
           "columnno": "1",
           "capacity": 100,
+          "usedCapacity": 40,
+          "remainingCapacity": 60,
           "description": "Kệ tầng 1, sức chứa 100",
           "isActive": true,
           "createdAt": "2026-04-12T10:00:00",
@@ -633,6 +773,8 @@ port: http://localhost:8080
         "floorno": "1",
         "columnno": "1",
         "capacity": 100,
+        "usedCapacity": 40,
+        "remainingCapacity": 60,
         "description": "Kệ tầng 1, sức chứa 100",
         "isActive": true,
         "createdAt": "2026-04-12T10:00:00",
@@ -785,8 +927,8 @@ port: http://localhost:8080
         "locationcode": "A1-01",
         "locationname": "Kệ A1, tầng 1, cột 1",
         "capacity": 500,
-        "currentQuantity": 100,
-        "availableSpace": 400,
+        "currentQuantity": 120,
+        "availableSpace": 380,
         "type": "EXISTING"
       },
       {
@@ -802,12 +944,159 @@ port: http://localhost:8080
   }
   ```
 
+> **Lưu ý về capacity:**
+> - `currentQuantity` = **tổng số lượng TẤT CẢ mặt hàng** đang chiếm tại vị trí đó (không chỉ mặt hàng đang tìm).
+> - `availableSpace` = `capacity - currentQuantity`.
+> - Khi FE hiển thị, nên show thanh progress: `currentQuantity / capacity`.
+> - Khi người dùng nhập số lượng vào dòng chi tiết, FE nên kiểm tra `quantity <= availableSpace` trước khi gửi.
+> - Nếu xác nhận phiếu nhập (confirm) mà tổng vượt capacity, server sẽ trả về lỗi 400.
+
 ---
 
+### 12.3b Gợi ý phân bổ nhiều vị trí nhập (suggest-split) *(dùng khi quantity > sức chứa 1 vị trí)*
+**Endpoint:** `GET /api/goods-receipts/suggest-split?itemId={itemId}&quantity={quantity}`
+
+BE tự động chia số lượng cần nhập qua nhiều vị trí: ưu tiên EXISTING (vị trí đang chứa cùng mặt hàng, còn chỗ), rồi EMPTY (trống hoàn toàn), cho đến khi đủ quantity.
+
+  ```json
+  {
+    "success": true,
+    "message": "Gợi ý phân bổ vị trí nhập thành công",
+    "data": [
+      {
+        "locationId": 3,
+        "locationcode": "A1-01",
+        "locationname": "Kệ A1, tầng 1, cột 1",
+        "capacity": 200,
+        "currentQuantity": 50,
+        "availableSpace": 150,
+        "type": "EXISTING",
+        "suggestedQuantity": 150
+      },
+      {
+        "locationId": 7,
+        "locationcode": "B2-03",
+        "locationname": "Kệ B2, tầng 2, cột 3",
+        "capacity": 200,
+        "currentQuantity": 0,
+        "availableSpace": 200,
+        "type": "EMPTY",
+        "suggestedQuantity": 200
+      }
+    ]
+  }
+  ```
+
+> **Hướng dẫn sử dụng:**
+> - FE gọi API này khi người dùng nhập quantity cho 1 mặt hàng và quantity đó có thể vượt sức chứa 1 vị trí.
+> - Mỗi phần tử trả về là 1 dòng chi tiết gợi ý: FE map `locationId` + `suggestedQuantity` thành các dòng trong `details` của request tạo phiếu.
+> - Nếu tổng sức chứa các vị trí không đủ, BE trả về `400` với thông báo lỗi.
+> - `suggestedQuantity`: số lượng phân bổ vào vị trí đó, tổng các `suggestedQuantity` = `quantity` yêu cầu.
+
+### 12.3c Liệt kê tất cả vị trí khả dụng để nhập (available-locations)
+**Endpoint:** `GET /api/goods-receipts/available-locations?itemId={itemId}`
+
+> **Thay đổi:** Không cần truyền `quantity`. BE liệt kê TẤT CẢ vị trí còn chỗ trống, ưu tiên vị trí đã có cùng mã hàng. FE tự quản lý việc chọn vị trí và tính tổng số lượng.
+
+**Thứ tự ưu tiên:**
+1. `EXISTING` – Vị trí đã có cùng mã hàng, còn chỗ trống *(ưu tiên 1)*
+2. `EMPTY` – Vị trí hoàn toàn trống *(ưu tiên 2)*
+3. `PARTIAL` – Vị trí có hàng khác, còn chỗ *(ưu tiên 3)*
+
+**Response mẫu (LocationDetailResponse):**
+```json
+{
+  "success": true,
+  "message": "Liệt kê vị trí khả dụng để nhập kho thành công",
+  "data": [
+    {
+      "locationId": 3,
+      "locationcode": "A1-01",
+      "locationname": "Kệ A1, tầng 1, cột 1",
+      "rackno": "A1",
+      "floorno": "1",
+      "columnno": "1",
+      "capacity": 500,
+      "usedCapacity": 120,
+      "remainingCapacity": 380,
+      "type": "EXISTING",
+      "items": [
+        {
+          "itemId": 5,
+          "itemcode": "SP001",
+          "itemname": "Sản phẩm A",
+          "unitof": "Cái",
+          "quantity": 100
+        }
+      ]
+    },
+    {
+      "locationId": 7,
+      "locationcode": "B2-03",
+      "locationname": "Kệ B2, tầng 2, cột 3",
+      "rackno": "B2",
+      "floorno": "2",
+      "columnno": "3",
+      "capacity": 300,
+      "usedCapacity": 0,
+      "remainingCapacity": 300,
+      "type": "EMPTY",
+      "items": []
+    },
+    {
+      "locationId": 9,
+      "locationcode": "C3-02",
+      "locationname": "Kệ C3, tầng 3, cột 2",
+      "rackno": "C3",
+      "floorno": "3",
+      "columnno": "2",
+      "capacity": 400,
+      "usedCapacity": 200,
+      "remainingCapacity": 200,
+      "type": "PARTIAL",
+      "items": [
+        {
+          "itemId": 8,
+          "itemcode": "SP003",
+          "itemname": "Sản phẩm C",
+          "unitof": "Hộp",
+          "quantity": 200
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Giải thích trường (LocationDetailResponse):**
+| Trường | Kiểu | Mô tả |
+|---|---|---|
+| `locationId` | Long | ID vị trí |
+| `locationcode` | String | Mã vị trí |
+| `locationname` | String | Tên vị trí |
+| `rackno` | String | Số kệ |
+| `floorno` | String | Tầng |
+| `columnno` | String | Cột |
+| `capacity` | Integer | Sức chứa tối đa (null = không giới hạn) |
+| `usedCapacity` | BigDecimal | Đã sử dụng (tổng tất cả hàng tại vị trí) |
+| `remainingCapacity` | BigDecimal | Còn trống = capacity - usedCapacity |
+| `type` | String | `EXISTING` / `EMPTY` / `PARTIAL` |
+| `items` | Array | Danh sách hàng đang chứa tại vị trí |
+| `items[].itemId` | Long | ID hàng hóa |
+| `items[].itemcode` | String | Mã hàng hóa |
+| `items[].itemname` | String | Tên hàng hóa |
+| `items[].unitof` | String | Đơn vị tính |
+| `items[].quantity` | BigDecimal | Số lượng đang chứa |
+
+> **Lưu ý cho FE (nhập kho):**
+> - Không cần truyền `quantity` trong query param.
+> - FE cho người dùng chọn 1 hoặc nhiều vị trí, nhập số lượng vào từng vị trí.
+> - FE nên kiểm tra `số lượng nhập <= remainingCapacity` trước khi tạo phiếu.
+> - Nếu vượt capacity khi confirm, BE trả về lỗi 400.
 ### 12.4 Tạo phiếu nhập (DRAFT)
 **Endpoint:** `POST /api/goods-receipts`
 
-> FE cần gọi API gợi ý vị trí (12.3) cho từng dòng hàng, cho người dùng chọn `locationId`, rồi mới gửi request tạo phiếu.
+> FE gọi `GET /api/goods-receipts/available-locations?itemId=X` (mục 12.3c) để lấy danh sách vị trí, cho người dùng chọn `locationId` và nhập số lượng, rồi mới gửi request tạo phiếu.
 
 - **Request body:**
   ```json
@@ -939,36 +1228,126 @@ Giống mục 12 (DRAFT / CONFIRMED / CANCELLED).
 
 ---
 
-### 13.3 Lấy danh sách vị trí có hàng để xuất *(gọi trước khi tạo phiếu hoặc thêm dòng chi tiết)*
-**Endpoint:** `GET /api/goods-issues/available-locations?itemId={itemId}&quantity={quantity}`
+### 13.3 Liệt kê tất cả vị trí có hàng để xuất (available-locations)
+**Endpoint:** `GET /api/goods-issues/available-locations?itemId={itemId}`
 
-Trả về các vị trí đang chứa `itemId` với tồn kho tại vị trí đó `>= quantity`.
+> **Thay đổi:** Không cần truyền `quantity`. BE liệt kê TẤT CẢ vị trí đang chứa mã hàng `itemId` (bất kể số lượng tồn), sắp xếp theo tồn kho giảm dần. FE tự quản lý việc chọn vị trí và tính tổng số lượng có thể xuất.
+
+**Response mẫu (LocationDetailResponse):**
+```json
+{
+  "success": true,
+  "message": "Liệt kê vị trí khả dụng để xuất kho thành công",
+  "data": [
+    {
+      "locationId": 3,
+      "locationcode": "A1-01",
+      "locationname": "Kệ A1, tầng 1, cột 1",
+      "rackno": "A1",
+      "floorno": "1",
+      "columnno": "1",
+      "capacity": 500,
+      "usedCapacity": 300,
+      "remainingCapacity": 200,
+      "type": "HAS_STOCK",
+      "items": [
+        {
+          "itemId": 5,
+          "itemcode": "SP001",
+          "itemname": "Sản phẩm A",
+          "unitof": "Cái",
+          "quantity": 300
+        }
+      ]
+    },
+    {
+      "locationId": 7,
+      "locationcode": "B2-03",
+      "locationname": "Kệ B2, tầng 2, cột 3",
+      "rackno": "B2",
+      "floorno": "2",
+      "columnno": "3",
+      "capacity": 200,
+      "usedCapacity": 80,
+      "remainingCapacity": 120,
+      "type": "HAS_STOCK",
+      "items": [
+        {
+          "itemId": 5,
+          "itemcode": "SP001",
+          "itemname": "Sản phẩm A",
+          "unitof": "Cái",
+          "quantity": 80
+        }
+      ]
+    }
+  ]
+}
+```
+
+> **Lưu ý cho FE (xuất kho):**
+> - Không cần truyền `quantity` trong query param.
+> - Dữ liệu sắp xếp: vị trí có tồn kho **nhiều nhất** của mã hàng đó lên đầu.
+> - FE cho người dùng chọn 1 hoặc nhiều vị trí, nhập số lượng xuất từng vị trí.
+> - FE nên kiểm tra `số lượng xuất <= items[i].quantity (của mã hàng đó)` trước khi tạo phiếu.
+> - Nếu tồn kho không đủ khi confirm, BE trả về lỗi 400.
+
+---
+
+### 13.3b Gợi ý phân bổ nhiều vị trí xuất (suggest-split) *(dùng khi quantity > tồn tại 1 vị trí)*
+**Endpoint:** `GET /api/goods-issues/suggest-split?itemId={itemId}&quantity={quantity}`
+
+BE tự động chia số lượng cần xuất qua nhiều vị trí, ưu tiên vị trí có tồn kho nhiều nhất trước.
 
 - **Response thành công:**
   ```json
   {
     "success": true,
-    "message": "Lấy danh sách vị trí xuất kho thành công",
+    "message": "Gợi ý phân bổ vị trí xuất thành công",
     "data": [
       {
         "locationId": 3,
         "locationcode": "A1-01",
         "locationname": "Kệ A1, tầng 1, cột 1",
         "capacity": 500,
-        "currentQuantity": 100,
-        "availableSpace": 100,
-        "type": "HAS_STOCK"
+        "currentQuantity": 300,
+        "availableSpace": 300,
+        "type": "HAS_STOCK",
+        "suggestedQuantity": 300
+      },
+      {
+        "locationId": 5,
+        "locationcode": "A2-02",
+        "locationname": "Kệ A2, tầng 2, cột 2",
+        "capacity": 200,
+        "currentQuantity": 200,
+        "availableSpace": 200,
+        "type": "HAS_STOCK",
+        "suggestedQuantity": 200
       }
     ]
   }
   ```
+- **Response thất bại (tổng tồn kho không đủ):**
+  ```json
+  {
+    "success": false,
+    "message": "Tồn kho tổng không đủ số lượng cần xuất 1000 (còn thiếu 500)",
+    "data": null
+  }
+  ```
+
+> **Hướng dẫn sử dụng:**
+> - FE gọi API này khi người dùng nhập quantity cho 1 mặt hàng và tồn kho tại 1 vị trí có thể không đủ.
+> - Mỗi phần tử trả về là 1 dòng chi tiết gợi ý: map `locationId` + `suggestedQuantity` thành các dòng trong `details` của request tạo phiếu.
+> - `suggestedQuantity`: số lượng rút từ vị trí đó, tổng các `suggestedQuantity` = `quantity` yêu cầu.
 
 ---
 
 ### 13.4 Tạo phiếu xuất (DRAFT)
 **Endpoint:** `POST /api/goods-issues`
 
-> FE cần gọi API vị trí có hàng (13.3) cho từng dòng hàng, cho người dùng chọn `locationId`, rồi mới gửi request tạo phiếu.
+> FE gọi `GET /api/goods-issues/available-locations?itemId=X` (mục 13.3) để lấy danh sách vị trí có hàng, cho người dùng chọn `locationId` và nhập số lượng xuất, rồi mới gửi request tạo phiếu.
 
 - **Request body:**
   ```json
@@ -1034,19 +1413,21 @@ Trả về các vị trí đang chứa `itemId` với tồn kho tại vị trí 
 
 ### Tạo phiếu nhập kho
 1. Người dùng nhập header phiếu (docno, ngày, khách hàng, ghi chú).
-2. Thêm từng dòng hàng: chọn `itemId` + nhập `quantity`.
-3. FE gọi `GET /api/goods-receipts/suggest-locations?itemId=X&quantity=Y` → hiển thị dropdown gợi ý vị trí.
-4. Người dùng chọn vị trí cho từng dòng.
-5. FE gọi `POST /api/goods-receipts` → phiếu tạo trạng thái `DRAFT`.
-6. Khi sẵn sàng: FE gọi `POST /api/goods-receipts/{id}/confirm`.
+2. Thêm từng dòng hàng: chọn `itemId`.
+3. FE gọi `GET /api/goods-receipts/available-locations?itemId=X` → nhận danh sách **tất cả** vị trí còn chỗ, sắp xếp: vị trí **đã có cùng mã hàng** (`EXISTING`) lên đầu, tiếp đến trống (`EMPTY`), sau đó chứa hàng khác (`PARTIAL`).
+4. Người dùng chọn 1 hoặc nhiều vị trí, nhập số lượng cho mỗi vị trí. FE kiểm tra `số lượng nhập <= remainingCapacity` trước khi tạo phiếu.
+5. *(Tùy chọn)* Nếu muốn BE tự chia tự động: FE gọi `GET /api/goods-receipts/suggest-split?itemId=X&quantity=Y`. BE tự chia thành nhiều dòng gợi ý, FE map mỗi phần tử `{locationId, suggestedQuantity}` thành 1 dòng chi tiết riêng trong request.
+6. FE gọi `POST /api/goods-receipts` với danh sách `details` → phiếu tạo trạng thái `DRAFT`.
+7. Khi sẵn sàng: FE gọi `POST /api/goods-receipts/{id}/confirm`.
 
 ### Tạo phiếu xuất kho
 1. Người dùng nhập header phiếu (docno, ngày, khách hàng, ghi chú).
-2. Thêm từng dòng hàng: chọn `itemId` + nhập `quantity`.
-3. FE gọi `GET /api/goods-issues/available-locations?itemId=X&quantity=Y` → hiển thị dropdown vị trí có hàng.
-4. Người dùng chọn vị trí cho từng dòng.
-5. FE gọi `POST /api/goods-issues` → phiếu tạo trạng thái `DRAFT`.
-6. Khi sẵn sàng: FE gọi `POST /api/goods-issues/{id}/confirm`.
+2. Thêm từng dòng hàng: chọn `itemId`.
+3. FE gọi `GET /api/goods-issues/available-locations?itemId=X` → nhận danh sách **tất cả** vị trí đang chứa mã hàng đó, sắp xếp theo tồn kho **giảm dần** (vị trí nhiều hàng nhất lên đầu).
+4. Người dùng chọn 1 hoặc nhiều vị trí, nhập số lượng xuất từng vị trí. FE kiểm tra `số lượng xuất <= items[i].quantity (của mã hàng đó)`.
+5. *(Tùy chọn)* Nếu muốn BE tự chia tự động: FE gọi `GET /api/goods-issues/suggest-split?itemId=X&quantity=Y`. BE tự chia thành nhiều dòng gợi ý, FE map mỗi phần tử `{locationId, suggestedQuantity}` thành 1 dòng chi tiết riêng.
+6. FE gọi `POST /api/goods-issues` với danh sách `details` → phiếu tạo trạng thái `DRAFT`.
+7. Khi sẵn sàng: FE gọi `POST /api/goods-issues/{id}/confirm`.
 
 ---
 

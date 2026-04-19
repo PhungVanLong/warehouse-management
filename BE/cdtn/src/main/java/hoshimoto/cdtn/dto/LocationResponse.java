@@ -1,5 +1,7 @@
 package hoshimoto.cdtn.dto;
 
+import java.math.BigDecimal;
+
 import lombok.Data;
 
 @Data
@@ -11,6 +13,8 @@ public class LocationResponse {
     private String floorno;
     private String columnno;
     private Integer capacity;
+    private BigDecimal usedCapacity;      // Tổng số lượng đang chiếm tại vị trí
+    private BigDecimal remainingCapacity; // capacity - usedCapacity
     private String description;
     private Boolean isActive;
     private String createdAt;
@@ -18,6 +22,10 @@ public class LocationResponse {
     private String modifiedBy;
 
     public static LocationResponse fromEntity(hoshimoto.cdtn.entity.Location l) {
+        return fromEntity(l, null);
+    }
+
+    public static LocationResponse fromEntity(hoshimoto.cdtn.entity.Location l, java.math.BigDecimal usedCapacity) {
         LocationResponse dto = new LocationResponse();
         dto.setId(l.getId());
         dto.setLocationcode(l.getLocationcode());
@@ -31,6 +39,12 @@ public class LocationResponse {
         dto.setCreatedAt(l.getCreatedAt() != null ? l.getCreatedAt().toString() : null);
         dto.setModifiedAt(l.getModifiedAt() != null ? l.getModifiedAt().toString() : null);
         dto.setModifiedBy(l.getModifiedBy());
+        if (usedCapacity != null) {
+            dto.setUsedCapacity(usedCapacity);
+            if (l.getCapacity() != null) {
+                dto.setRemainingCapacity(java.math.BigDecimal.valueOf(l.getCapacity()).subtract(usedCapacity));
+            }
+        }
         return dto;
     }
 

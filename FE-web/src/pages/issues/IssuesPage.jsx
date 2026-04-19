@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
-import "./receipts.css";
-import { getAllReceipts } from "../../api/receiptApi";
+import "../receipts/receipts.css";
+import "./issues.css";
+import { getAllIssues } from "../../api/issueApi";
 
 const STATUS_LABELS = {
     DRAFT: "Chờ duyệt",
@@ -33,7 +34,6 @@ function calcTotal(details) {
     return details.reduce((s, d) => s + (d.amount || (d.quantity || 0) * (d.unitprice || 0)), 0);
 }
 
-// Icons
 function IconPlus() {
     return (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -83,8 +83,8 @@ function IconExport() {
     );
 }
 
-export default function ReceiptsPage() {
-    const [receipts, setReceipts] = useState([]);
+export default function IssuesPage() {
+    const [issues, setIssues] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [search, setSearch] = useState("");
@@ -94,23 +94,23 @@ export default function ReceiptsPage() {
     const [selected, setSelected] = useState(new Set());
     const navigate = useNavigate();
 
-    const fetchReceipts = useCallback(async () => {
+    const fetchIssues = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllReceipts();
-            setReceipts(data);
+            const data = await getAllIssues();
+            setIssues(data);
         } catch {
-            setError("Không thể tải danh sách phiếu nhập kho.");
+            setError("Không thể tải danh sách phiếu xuất kho.");
         } finally {
             setLoading(false);
         }
     }, []);
 
-    useEffect(() => { fetchReceipts(); }, [fetchReceipts]);
+    useEffect(() => { fetchIssues(); }, [fetchIssues]);
 
     const filtered = useMemo(() => {
-        let list = receipts;
+        let list = issues;
         if (activeTab !== "Tất cả") {
             const st = TAB_STATUS[activeTab];
             list = list.filter((r) => r.docstatus === st);
@@ -125,7 +125,7 @@ export default function ReceiptsPage() {
             );
         }
         return list;
-    }, [receipts, activeTab, search]);
+    }, [issues, activeTab, search]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
     const safeP = Math.min(page, totalPages);
@@ -144,7 +144,6 @@ export default function ReceiptsPage() {
         setSelected(next);
     };
 
-    // Pagination pages
     const pages = useMemo(() => {
         if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
         if (safeP <= 4) return [1, 2, 3, 4, 5, "...", totalPages];
@@ -157,7 +156,7 @@ export default function ReceiptsPage() {
             <div className="sp-topbar">
                 <div>
                     <div className="sp-breadcrumb">
-                        Chứng từ &rsaquo; <span className="sp-breadcrumb-active">Phiếu nhập kho</span>
+                        Chứng từ &rsaquo; <span className="sp-breadcrumb-active">Phiếu xuất kho</span>
                     </div>
                 </div>
                 <div className="sp-topbar-right">
@@ -173,7 +172,7 @@ export default function ReceiptsPage() {
             </div>
 
             <div className="sp-content">
-                <h1 className="sp-title">Phiếu nhập kho</h1>
+                <h1 className="sp-title">Phiếu xuất kho</h1>
 
                 {/* Toolbar */}
                 <div className="sp-toolbar">
@@ -191,18 +190,12 @@ export default function ReceiptsPage() {
                         />
                     </div>
                     <div className="sp-toolbar-spacer" />
-                    <button className="sp-btn-primary" onClick={() => navigate("/receipts/create")}>
+                    <button className="sp-btn-primary" onClick={() => navigate("/issues/create")}>
                         <IconPlus /> Thêm mới
                     </button>
-                    <button className="rc-btn-template">
-                        <IconDoc /> Thêm bản sao mới
-                    </button>
-                    <button className="rc-btn-template">
-                        <IconPrint /> Mẫu in
-                    </button>
-                    <button className="rc-btn-template">
-                        <IconExport /> Export
-                    </button>
+                    <button className="rc-btn-template"><IconDoc /> Thêm bản sao mới</button>
+                    <button className="rc-btn-template"><IconPrint /> Mẫu in</button>
+                    <button className="rc-btn-template"><IconExport /> Export</button>
                 </div>
 
                 {/* Tabs */}
@@ -243,20 +236,20 @@ export default function ReceiptsPage() {
                                 <tr><td colSpan={8} className="sp-status-row sp-status-error">{error}</td></tr>
                             )}
                             {!loading && !error && pageData.length === 0 && (
-                                <tr><td colSpan={8} className="sp-status-row">Không có phiếu nhập kho nào.</td></tr>
+                                <tr><td colSpan={8} className="sp-status-row">Không có phiếu xuất kho nào.</td></tr>
                             )}
                             {!loading && !error && pageData.map((r) => (
                                 <tr
                                     key={r.id}
                                     className={`sp-row-clickable${selected.has(r.id) ? " sp-row-selected" : ""}`}
-                                    onClick={() => navigate(`/receipts/${r.id}`)}
+                                    onClick={() => navigate(`/issues/${r.id}`)}
                                 >
                                     <td className="sp-td-cb" onClick={(e) => { e.stopPropagation(); toggleOne(r.id); }}>
                                         <input type="checkbox" checked={selected.has(r.id)} onChange={() => { }} />
                                     </td>
                                     <td className="sp-td-id">{r.docno}</td>
                                     <td>{formatDate(r.docDate)}</td>
-                                    <td>{r.customerName || r.supplierName || "-"}</td>
+                                    <td>{r.customerName || "-"}</td>
                                     <td className="rc-td-num" style={{ width: 120, textAlign: "right" }}>
                                         {calcTotal(r.details) ? formatMoney(calcTotal(r.details)) : "-"}
                                     </td>
@@ -266,7 +259,7 @@ export default function ReceiptsPage() {
                                             {STATUS_LABELS[r.docstatus] || r.docstatus}
                                         </span>
                                     </td>
-                                    <td className="sp-td-action" onClick={(e) => { e.stopPropagation(); navigate(`/receipts/${r.id}`); }}>
+                                    <td className="sp-td-action" onClick={(e) => { e.stopPropagation(); navigate(`/issues/${r.id}`); }}>
                                         <button className="sp-edit-btn" title="Xem chi tiết"><IconEye /></button>
                                     </td>
                                 </tr>
@@ -297,9 +290,7 @@ export default function ReceiptsPage() {
                                     key={p}
                                     className={`sp-page-btn${safeP === p ? " sp-page-active" : ""}`}
                                     onClick={() => setPage(p)}
-                                >
-                                    {p}
-                                </button>
+                                >{p}</button>
                             )
                         )}
                         <button className="sp-page-btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={safeP === totalPages}>›</button>

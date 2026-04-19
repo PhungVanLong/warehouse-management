@@ -42,4 +42,7 @@ public class UserRequest {
     private String role;
 
     private String modifiedBy;
+    
+        /** Password thô, chỉ dùng khi tạo/sửa user */
+        private String password;
 }

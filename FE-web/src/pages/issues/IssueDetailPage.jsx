@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "../../styles/shared.css";
-import "./receipts.css";
-import { getReceiptById, confirmReceipt, cancelReceipt } from "../../api/receiptApi";
+import "../receipts/receipts.css";
+import "./issues.css";
+import { getIssueById, confirmIssue, cancelIssue } from "../../api/issueApi";
 
 const STATUS_LABELS = { DRAFT: "Chờ duyệt", CONFIRMED: "Đã duyệt", CANCELLED: "Hủy" };
 const STATUS_CLASS = {
@@ -36,11 +37,11 @@ function IconChevron() {
     );
 }
 
-export default function ReceiptDetailPage() {
+export default function IssueDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const [receipt, setReceipt] = useState(null);
+    const [issue, setIssue] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [toast, setToast] = useState(null);
@@ -50,29 +51,29 @@ export default function ReceiptDetailPage() {
 
     const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
 
-    const fetchReceipt = useCallback(async () => {
+    const fetchIssue = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await getReceiptById(id);
-            setReceipt(data);
+            const data = await getIssueById(id);
+            setIssue(data);
         } catch {
-            setError("Không thể tải chi tiết phiếu nhập kho.");
+            setError("Không thể tải chi tiết phiếu xuất kho.");
         } finally {
             setLoading(false);
         }
     }, [id]);
 
-    useEffect(() => { fetchReceipt(); }, [fetchReceipt]);
+    useEffect(() => { fetchIssue(); }, [fetchIssue]);
 
     const handleConfirm = async () => {
         setConfirmModal(false);
         setActionLoading(true);
         try {
-            const res = await confirmReceipt(id);
+            const res = await confirmIssue(id);
             if (res?.success) {
-                showToast("success", "Xác nhận phiếu nhập kho thành công!");
-                await fetchReceipt();
+                showToast("success", "Xác nhận phiếu xuất kho thành công!");
+                await fetchIssue();
             } else {
                 showToast("error", res?.message || "Xác nhận thất bại.");
             }
@@ -84,10 +85,10 @@ export default function ReceiptDetailPage() {
     const handleCancel = async () => {
         setActionLoading(true);
         try {
-            const res = await cancelReceipt(id);
+            const res = await cancelIssue(id);
             if (res?.success) {
-                showToast("success", "Đã hủy phiếu nhập kho.");
-                await fetchReceipt();
+                showToast("success", "Đã hủy phiếu xuất kho.");
+                await fetchIssue();
             } else {
                 showToast("error", res?.message || "Hủy thất bại.");
             }
@@ -96,14 +97,14 @@ export default function ReceiptDetailPage() {
         } finally { setActionLoading(false); setStatusMenuOpen(false); }
     };
 
-    const totalAmount = receipt?.details
-        ? receipt.details.reduce((s, d) => s + (d.amount || (d.quantity || 0) * (d.unitprice || 0)), 0)
+    const totalAmount = issue?.details
+        ? issue.details.reduce((s, d) => s + (d.amount || (d.quantity || 0) * (d.unitprice || 0)), 0)
         : 0;
 
-    // Group details by itemId for display (show combined locations per item)
-    const groupedDetails = receipt?.details
+    // Group details by itemId
+    const groupedDetails = issue?.details
         ? Object.values(
-            receipt.details.reduce((acc, d) => {
+            issue.details.reduce((acc, d) => {
                 const key = d.itemId;
                 if (!acc[key]) {
                     acc[key] = { ...d, locations: [d.locationcode || d.locationId], amounts: d.amount || (d.quantity || 0) * (d.unitprice || 0), quantities: d.quantity };
@@ -128,21 +129,13 @@ export default function ReceiptDetailPage() {
                                 <polyline points="9 12 11 14 15 10" />
                             </svg>
                         </div>
-                        <h3 style={{ margin: "0 0 8px", color: "#1E3A2F", fontSize: "1.1rem", fontWeight: 700 }}>Xác nhận phiếu nhập kho</h3>
-                        <p style={{ margin: "0 0 24px", color: "#4c6152", fontSize: "0.92rem" }}>Tồn kho sẽ được cập nhật sau khi xác nhận. Bạn có chắc chắn muốn tiếp tục không?</p>
+                        <h3 style={{ margin: "0 0 8px", color: "#1E3A2F", fontSize: "1.1rem", fontWeight: 700 }}>Xác nhận phiếu xuất kho</h3>
+                        <p style={{ margin: "0 0 24px", color: "#4c6152", fontSize: "0.92rem" }}>Tồn kho sẽ bị trừ sau khi xác nhận. Bạn có chắc chắn muốn tiếp tục không?</p>
                         <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-                            <button
-                                className="sp-btn-outline"
-                                onClick={() => setConfirmModal(false)}
-                                disabled={actionLoading}
-                                style={{ minWidth: 100 }}
-                            >Hủy bỏ</button>
-                            <button
-                                className="sp-btn-primary"
-                                onClick={handleConfirm}
-                                disabled={actionLoading}
-                                style={{ minWidth: 120 }}
-                            >{actionLoading ? "Đang xử lý..." : "Xác nhận"}</button>
+                            <button className="sp-btn-outline" onClick={() => setConfirmModal(false)} disabled={actionLoading} style={{ minWidth: 100 }}>Hủy bỏ</button>
+                            <button className="sp-btn-primary" onClick={handleConfirm} disabled={actionLoading} style={{ minWidth: 120 }}>
+                                {actionLoading ? "Đang xử lý..." : "Xác nhận"}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -155,9 +148,9 @@ export default function ReceiptDetailPage() {
                     <div>
                         <div className="sp-breadcrumb">
                             Chứng từ &rsaquo;{" "}
-                            <span className="sp-breadcrumb-link" onClick={() => navigate("/receipts")}>Phiếu nhập kho</span>
+                            <span className="sp-breadcrumb-link" onClick={() => navigate("/issues")}>Phiếu xuất kho</span>
                             {" "}&rsaquo;{" "}
-                            <span className="sp-breadcrumb-active">Chi tiết phiếu nhập kho</span>
+                            <span className="sp-breadcrumb-active">Chi tiết phiếu xuất kho</span>
                         </div>
                     </div>
                     <div className="sp-topbar-right">
@@ -173,58 +166,34 @@ export default function ReceiptDetailPage() {
                 </div>
 
                 <div className="sp-content">
-                    <h1 className="sp-title">Phiếu nhập kho</h1>
+                    <h1 className="sp-title">Phiếu xuất kho</h1>
 
                     {loading && <div style={{ textAlign: "center", color: "#4c6152", padding: "40px 0" }}>Đang tải...</div>}
                     {!loading && error && <div style={{ textAlign: "center", color: "#b71c1c", padding: "40px 0" }}>{error}</div>}
 
-                    {!loading && !error && receipt && (
+                    {!loading && !error && issue && (
                         <div className="rc-form-card">
                             {/* ── Header ── */}
                             <div className="rc-header-row">
                                 <label className="rc-form-label">Ngày</label>
-                                <input type="date" className="rc-form-input" style={{ minWidth: 150 }} value={formatDateInput(receipt.docDate)} readOnly />
+                                <input type="date" className="rc-form-input" style={{ minWidth: 150 }} value={formatDateInput(issue.docDate)} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
-                                <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.docno || ""} readOnly />
+                                <input className="rc-form-input" style={{ minWidth: 200 }} value={issue.docno || ""} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Người lập</label>
-                                <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.createdByFullname || receipt.createdByName || ""} readOnly />
+                                <input className="rc-form-input" style={{ minWidth: 200 }} value={issue.createdByFullname || issue.createdByName || ""} readOnly />
 
-                                {receipt.docstatus === "CANCELLED" ? (
-                                    <>
-                                        <label className="rc-form-label" style={{ marginLeft: 16 }}>Người hủy</label>
-                                        <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.cancelledByFullname || receipt.cancelledByUsername || ""} readOnly />
-                                        {receipt.cancelledAt && (
-                                            <>
-                                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Ngày hủy</label>
-                                                <input className="rc-form-input" style={{ minWidth: 170 }} value={formatDate(receipt.cancelledAt)} readOnly />
-                                            </>
-                                        )}
-                                    </>
-                                ) : (
-                                    <>
-                                        <label className="rc-form-label" style={{ marginLeft: 16 }}>Người duyệt</label>
-                                        <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.approvedByFullname || receipt.approvedByUsername || ""} readOnly />
-                                        {receipt.approvedAt && (
-                                            <>
-                                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Ngày duyệt</label>
-                                                <input className="rc-form-input" style={{ minWidth: 170 }} value={formatDate(receipt.approvedAt)} readOnly />
-                                            </>
-                                        )}
-                                    </>
-                                )}
-
-                                {/* Status pill with dropdown menu */}
+                                {/* Status pill with dropdown */}
                                 <div style={{ position: "relative", marginLeft: "auto" }}>
                                     <button
-                                        className={STATUS_CLASS[receipt.docstatus] || "rc-status-pill"}
-                                        onClick={() => receipt.docstatus === "DRAFT" && setStatusMenuOpen((v) => !v)}
-                                        style={{ cursor: receipt.docstatus === "DRAFT" ? "pointer" : "default" }}
+                                        className={STATUS_CLASS[issue.docstatus] || "rc-status-pill"}
+                                        onClick={() => issue.docstatus === "DRAFT" && setStatusMenuOpen((v) => !v)}
+                                        style={{ cursor: issue.docstatus === "DRAFT" ? "pointer" : "default" }}
                                         disabled={actionLoading}
                                     >
-                                        {STATUS_LABELS[receipt.docstatus] || receipt.docstatus}
-                                        {receipt.docstatus === "DRAFT" && <IconChevron />}
+                                        {STATUS_LABELS[issue.docstatus] || issue.docstatus}
+                                        {issue.docstatus === "DRAFT" && <IconChevron />}
                                     </button>
-                                    {statusMenuOpen && receipt.docstatus === "DRAFT" && (
+                                    {statusMenuOpen && issue.docstatus === "DRAFT" && (
                                         <div style={{ position: "absolute", right: 0, top: "110%", background: "#fff", border: "1.5px solid #c6dfd0", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", zIndex: 100, minWidth: 160, padding: "4px 0" }}>
                                             <div style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#1a7f4b", fontWeight: 600 }}
                                                 onMouseEnter={(e) => e.currentTarget.style.background = "#f3faf6"}
@@ -246,36 +215,36 @@ export default function ReceiptDetailPage() {
                             {/* ── Đối tượng ── */}
                             <div className="rc-form-row">
                                 <label className="rc-form-label">Đối tượng</label>
-                                <input className="rc-form-input rc-form-full" value={receipt.customerName || ""} readOnly />
+                                <input className="rc-form-input rc-form-full" value={issue.customerName || ""} readOnly />
                             </div>
 
                             {/* ── Diễn giải ── */}
                             <div className="rc-form-row">
                                 <label className="rc-form-label">Diễn giải</label>
-                                <input className="rc-form-input rc-form-full" value={receipt.description || ""} readOnly />
+                                <input className="rc-form-input rc-form-full" value={issue.description || ""} readOnly />
                             </div>
 
                             {/* ── Địa chỉ ── */}
-                            {receipt.address && (
+                            {issue.address && (
                                 <div className="rc-form-row">
                                     <label className="rc-form-label">Địa chỉ</label>
-                                    <input className="rc-form-input rc-form-full" value={receipt.address} readOnly />
+                                    <input className="rc-form-input rc-form-full" value={issue.address} readOnly />
                                 </div>
                             )}
 
                             {/* ── Detail table ── */}
                             <div className="rc-detail-table-wrap">
-                                <table className="rc-detail-table" style={{ tableLayout: "auto", width: "100%" }}>
+                                <table className="rc-detail-table">
                                     <thead>
                                         <tr>
-                                            <th className="rc-td-stt" style={{ width: 48, minWidth: 48 }}>STT</th>
-                                            <th style={{ minWidth: 90, width: "12%" }}>Mã hàng</th>
-                                            <th style={{ minWidth: 140, width: "20%" }}>Tên hàng hóa</th>
-                                            <th style={{ minWidth: 70, width: "10%" }}>Đơn vị</th>
-                                            <th style={{ minWidth: 80, width: "10%", textAlign: "right" }}>Số lượng</th>
-                                            <th style={{ minWidth: 120, width: "18%" }}>Vị trí</th>
-                                            <th style={{ minWidth: 90, width: "12%", textAlign: "right" }}>Đơn giá</th>
-                                            <th style={{ minWidth: 110, width: "14%", textAlign: "right" }}>Thành tiền</th>
+                                            <th className="rc-td-stt">STT</th>
+                                            <th>Mã hàng</th>
+                                            <th>Tên hàng hóa</th>
+                                            <th>Đơn vị</th>
+                                            <th>Số lượng</th>
+                                            <th>Vị trí</th>
+                                            <th>Đơn giá</th>
+                                            <th>Thành tiền</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -294,11 +263,11 @@ export default function ReceiptDetailPage() {
                                             </tr>
                                         ))}
                                         {groupedDetails.length === 0 && (
-                                            <tr><td colSpan={9} style={{ textAlign: "center", color: "#8ba392", padding: 16 }}>Không có dữ liệu chi tiết.</td></tr>
+                                            <tr><td colSpan={8} style={{ textAlign: "center", color: "#8ba392", padding: 16 }}>Không có dữ liệu chi tiết.</td></tr>
                                         )}
                                         {totalAmount > 0 && (
                                             <tr className="rc-total-row">
-                                                <td colSpan={8} style={{ textAlign: "right", paddingRight: 12 }}>Tổng cộng</td>
+                                                <td colSpan={7} style={{ textAlign: "right", paddingRight: 12 }}>Tổng cộng</td>
                                                 <td className="rc-td-num" style={{ textAlign: "right" }}>{formatMoney(totalAmount)}</td>
                                             </tr>
                                         )}
@@ -306,42 +275,16 @@ export default function ReceiptDetailPage() {
                                 </table>
                             </div>
 
-                            {/* ── Invoice section (display only) ── */}
-                            <div className="rc-section-hd">Chi tiết</div>
-                            <div className="rc-section-sub">Thông tin hóa đơn</div>
-                            <div className="rc-form-2col">
-                                <div className="rc-form-field">
-                                    <label className="rc-form-label">MST</label>
-                                    <input className="rc-form-input" value={receipt.customerTaxcode || receipt.taxcode || ""} readOnly />
-                                </div>
-                                <div className="rc-form-field">
-                                    <label className="rc-form-label">Ngày HD</label>
-                                    <input type="date" className="rc-form-input" value={formatDateInput(receipt.invoiceDate || receipt.docDate || "")} readOnly />
-                                </div>
-                            </div>
-                            <div className="rc-form-2col">
-                                <div className="rc-form-field">
-                                    <label className="rc-form-label">Số hóa đơn</label>
-                                    <input className="rc-form-input" value={receipt.invoiceNo || receipt.docno || ""} readOnly />
-                                </div>
-                                <div className="rc-form-field">
-                                    <label className="rc-form-label">Tên NCC/Khách hàng</label>
-                                    <input className="rc-form-input" value={receipt.supplierName || receipt.customerName || ""} readOnly />
-                                </div>
-                            </div>
-
                             {/* ── Actions ── */}
                             <div className="rc-form-actions">
-                                <button className="sp-btn-outline" onClick={() => navigate("/receipts")}>Hủy bỏ</button>
-                                {receipt.docstatus === "DRAFT" && (
+                                <button className="sp-btn-outline" onClick={() => navigate("/issues")}>Hủy bỏ</button>
+                                {issue.docstatus === "DRAFT" && (
                                     <button className="sp-btn-primary" onClick={() => setConfirmModal(true)} disabled={actionLoading}>
                                         {actionLoading ? "Đang xử lý..." : "Xác nhận"}
                                     </button>
                                 )}
-                                {receipt.docstatus !== "DRAFT" && (
-                                    <button className="sp-btn-primary" onClick={() => navigate("/receipts")} >
-                                        Lưu
-                                    </button>
+                                {issue.docstatus !== "DRAFT" && (
+                                    <button className="sp-btn-primary" onClick={() => navigate("/issues")}>Lưu</button>
                                 )}
                             </div>
                         </div>

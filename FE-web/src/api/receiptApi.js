@@ -15,10 +15,13 @@ export const getReceiptById = async (id) => {
     return res.data.data;
 };
 
-/** GET /api/goods-receipts/suggest-locations?itemId=X&quantity=Y */
-export const suggestLocations = async (itemId, quantity) => {
+/** GET /api/goods-receipts/available-locations?itemId=X
+ *  Liệt kê TẤT CẢ vị trí còn chỗ trống (EXISTING → EMPTY → PARTIAL)
+ *  Response: LocationDetailResponse (có remainingCapacity, usedCapacity, items[])
+ */
+export const getAvailableLocations = async (itemId) => {
     const res = await axiosInstance.get(
-        `${BASE}/suggest-locations?itemId=${itemId}&quantity=${quantity}`
+        `${BASE}/available-locations?itemId=${itemId}`
     );
     return res.data.data || [];
 };
@@ -49,5 +52,16 @@ export const confirmReceipt = async (id) => {
 /** POST /api/goods-receipts/{id}/cancel — Hủy phiếu nhập */
 export const cancelReceipt = async (id) => {
     const res = await axiosInstance.post(`${BASE}/${id}/cancel`);
+    return res.data;
+};
+
+/** GET /api/goods-receipts/suggest-split?itemId=X&quantity=Y
+ *  BE tự động chia số lượng qua nhiều vị trí (ưu tiên EXISTING → EMPTY)
+ *  Mỗi phần tử trả về có thêm trường `suggestedQuantity`
+ */
+export const suggestSplitReceipt = async (itemId, quantity) => {
+    const res = await axiosInstance.get(
+        `${BASE}/suggest-split?itemId=${itemId}&quantity=${quantity}`
+    );
     return res.data;
 };

@@ -1,14 +1,18 @@
 package hoshimoto.cdtn.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import hoshimoto.cdtn.dto.LocationResponse;
 import hoshimoto.cdtn.dto.request.LocationRequest;
 import hoshimoto.cdtn.entity.Location;
+import hoshimoto.cdtn.repository.ItemLocationRepository;
 import hoshimoto.cdtn.repository.LocationRepository;
 
 @Service
@@ -16,12 +20,21 @@ public class LocationService {
     @Autowired
     private LocationRepository locationRepository;
 
-    public List<Location> getAllLocations() {
-        return locationRepository.findAll();
+    @Autowired
+    private ItemLocationRepository itemLocationRepository;
+
+    public List<LocationResponse> getAllLocations() {
+        return locationRepository.findAll().stream()
+                .map(this::toResponse).collect(Collectors.toList());
     }
 
-    public Optional<Location> getLocationById(Long id) {
-        return locationRepository.findById(id);
+    public Optional<LocationResponse> getLocationById(Long id) {
+        return locationRepository.findById(id).map(this::toResponse);
+    }
+
+    public LocationResponse toResponse(Location l) {
+        BigDecimal usedCapacity = itemLocationRepository.getTotalUsedCapacity(l.getId());
+        return LocationResponse.fromEntity(l, usedCapacity);
     }
 
     public Location createLocation(LocationRequest request) {

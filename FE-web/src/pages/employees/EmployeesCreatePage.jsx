@@ -9,6 +9,7 @@ const EMPTY_FORM = {
     department: "", phoneNumber: "", address: "",
     birthdate: "", gender: "", firstworkingdate: "",
     bankaccount: "", bankname: "", isActive: true, role: "STAFF",
+    password: "", confirmPassword: "",
 };
 
 function IconCheck() {
@@ -37,6 +38,7 @@ export default function EmployeesCreatePage() {
     const [showToast, setShowToast] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
     const [openSection, setOpenSection] = useState(true);
+    const [openAccountSection, setOpenAccountSection] = useState(true);
 
     const set = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -47,6 +49,10 @@ export default function EmployeesCreatePage() {
         const errs = {};
         if (!form.usercode?.trim()) errs.usercode = "Bắt buộc";
         if (!form.fullname?.trim()) errs.fullname = "Bắt buộc";
+        if (!form.username?.trim()) errs.username = "Bắt buộc";
+        if (!form.password) errs.password = "Bắt buộc";
+        else if (form.password.length < 6) errs.password = "Tối thiểu 6 ký tự";
+        if (form.password !== form.confirmPassword) errs.confirmPassword = "Mật khẩu không khớp";
         return errs;
     };
 
@@ -71,6 +77,7 @@ export default function EmployeesCreatePage() {
                 bankname: form.bankname,
                 isActive: true,
                 role: form.role || "STAFF",
+                password: form.password,
             });
             setShowToast(true);
             setTimeout(() => navigate("/employees"), 2000);
@@ -127,7 +134,7 @@ export default function EmployeesCreatePage() {
                             <div className="sd-form">
                                 {error && <div className="sd-error-banner">{error}</div>}
 
-                                {/* Row 1: Mã | Tên đăng nhập */}
+                                {/* Row 1: Mã | Họ và Tên */}
                                 <div className="sd-field sd-field-row">
                                     <div className="sd-field-half">
                                         <label className="sd-label">Mã <span className="sd-required">*</span></label>
@@ -142,19 +149,6 @@ export default function EmployeesCreatePage() {
                                         </div>
                                     </div>
                                     <div className="sd-field-half">
-                                        <label className="sd-label">Tên đăng nhập</label>
-                                        <input
-                                            className="sd-input"
-                                            placeholder="Nhập tên đăng nhập"
-                                            value={form.username}
-                                            onChange={(e) => set("username", e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Row 2: Họ và Tên | Email */}
-                                <div className="sd-field sd-field-row">
-                                    <div className="sd-field-half">
                                         <label className="sd-label">Họ và Tên <span className="sd-required">*</span></label>
                                         <div className="sd-input-wrap">
                                             <input
@@ -166,6 +160,10 @@ export default function EmployeesCreatePage() {
                                             {fieldErrors.fullname && <span className="sd-error-msg">{fieldErrors.fullname}</span>}
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Row 2: Email | Số điện thoại */}
+                                <div className="sd-field sd-field-row">
                                     <div className="sd-field-half">
                                         <label className="sd-label">Email</label>
                                         <input
@@ -173,19 +171,6 @@ export default function EmployeesCreatePage() {
                                             placeholder="Nhập email"
                                             value={form.email}
                                             onChange={(e) => set("email", e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Row 3: Bộ phận | Số điện thoại */}
-                                <div className="sd-field sd-field-row">
-                                    <div className="sd-field-half">
-                                        <label className="sd-label">Bộ phận</label>
-                                        <input
-                                            className="sd-input"
-                                            placeholder="Nhập tên bộ phận"
-                                            value={form.department}
-                                            onChange={(e) => set("department", e.target.value)}
                                         />
                                     </div>
                                     <div className="sd-field-half">
@@ -199,15 +184,26 @@ export default function EmployeesCreatePage() {
                                     </div>
                                 </div>
 
-                                {/* Row 4: Địa chỉ */}
-                                <div className="sd-field">
-                                    <label className="sd-label">Địa chỉ</label>
-                                    <input
-                                        className="sd-input"
-                                        placeholder="Nhập địa chỉ"
-                                        value={form.address}
-                                        onChange={(e) => set("address", e.target.value)}
-                                    />
+                                {/* Row 3: Bộ phận | Địa chỉ */}
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Bộ phận</label>
+                                        <input
+                                            className="sd-input"
+                                            placeholder="Nhập tên bộ phận"
+                                            value={form.department}
+                                            onChange={(e) => set("department", e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Địa chỉ</label>
+                                        <input
+                                            className="sd-input"
+                                            placeholder="Nhập địa chỉ"
+                                            value={form.address}
+                                            onChange={(e) => set("address", e.target.value)}
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Row 5: Ngày sinh | Giới tính */}
@@ -264,6 +260,75 @@ export default function EmployeesCreatePage() {
                                         value={form.bankname}
                                         onChange={(e) => set("bankname", e.target.value)}
                                     />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── Thông tin tài khoản ── */}
+                    <div className="sd-card" style={{ marginTop: 16 }}>
+                        <div className="sd-section-hd" style={{ cursor: "pointer" }} onClick={() => setOpenAccountSection((v) => !v)}>
+                            <span className="sd-section-icon"><IconCheck /></span>
+                            Thông tin tài khoản
+                            <span className="sd-section-hd-chevron"><IconChevron open={openAccountSection} /></span>
+                        </div>
+                        {openAccountSection && (
+                            <div className="sd-form">
+                                {/* Tên đăng nhập | Phân quyền */}
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Tên đăng nhập <span className="sd-required">*</span></label>
+                                        <div className="sd-input-wrap">
+                                            <input
+                                                className={`sd-input${fieldErrors.username ? " sd-input-error" : ""}`}
+                                                placeholder="Nhập tên đăng nhập"
+                                                value={form.username}
+                                                onChange={(e) => set("username", e.target.value)}
+                                            />
+                                            {fieldErrors.username && <span className="sd-error-msg">{fieldErrors.username}</span>}
+                                        </div>
+                                    </div>
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Phân quyền</label>
+                                        <select
+                                            className="sd-input sd-select"
+                                            value={form.role}
+                                            onChange={(e) => set("role", e.target.value)}
+                                        >
+                                            <option value="STAFF">STAFF</option>
+                                            <option value="ADMIN">ADMIN</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Mật khẩu | Xác nhận mật khẩu */}
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Mật khẩu <span className="sd-required">*</span></label>
+                                        <div className="sd-input-wrap">
+                                            <input
+                                                type="password"
+                                                className={`sd-input${fieldErrors.password ? " sd-input-error" : ""}`}
+                                                placeholder="Tối thiểu 6 ký tự"
+                                                value={form.password}
+                                                onChange={(e) => set("password", e.target.value)}
+                                            />
+                                            {fieldErrors.password && <span className="sd-error-msg">{fieldErrors.password}</span>}
+                                        </div>
+                                    </div>
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Xác nhận mật khẩu <span className="sd-required">*</span></label>
+                                        <div className="sd-input-wrap">
+                                            <input
+                                                type="password"
+                                                className={`sd-input${fieldErrors.confirmPassword ? " sd-input-error" : ""}`}
+                                                placeholder="Nhập lại mật khẩu"
+                                                value={form.confirmPassword}
+                                                onChange={(e) => set("confirmPassword", e.target.value)}
+                                            />
+                                            {fieldErrors.confirmPassword && <span className="sd-error-msg">{fieldErrors.confirmPassword}</span>}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
