@@ -17,6 +17,9 @@ import AccountPage from "./pages/account/AccountPage";
 import LocationsPage from "./pages/locations/LocationsPage";
 import LocationsDetailPage from "./pages/locations/LocationsDetailPage";
 import LocationsCreatePage from "./pages/locations/LocationsCreatePage";
+import ReceiptsPage from "./pages/receipts/ReceiptsPage";
+import ReceiptCreatePage from "./pages/receipts/ReceiptCreatePage";
+import ReceiptDetailPage from "./pages/receipts/ReceiptDetailPage";
 
 export default function AppRouter() {
     return (
@@ -39,6 +42,9 @@ export default function AppRouter() {
                 <Route path="/locations" element={<LocationsPage />} />
                 <Route path="/locations/create" element={<LocationsCreatePage />} />
                 <Route path="/locations/:id" element={<LocationsDetailPage />} />
+                <Route path="/receipts" element={<ReceiptsPage />} />
+                <Route path="/receipts/create" element={<ReceiptCreatePage />} />
+                <Route path="/receipts/:id" element={<ReceiptDetailPage />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
         </Router>
