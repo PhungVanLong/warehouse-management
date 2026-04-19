@@ -691,6 +691,365 @@ port: http://localhost:8080
 
 ---
 
+## 12. Phiếu nhập kho (Goods Receipt)
+
+> **Quyền truy cập:** ADMIN và STAFF đều thao tác được.
+> **Luồng chuẩn:** Tạo phiếu DRAFT → (tuỳ chọn sửa) → Xác nhận → Tồn kho được cập nhật tự động.
+
+### Trạng thái phiếu (`docstatus`)
+| Giá trị | Ý nghĩa |
+|---------|---------|
+| `DRAFT` | Phiếu nháp, chưa ảnh hưởng tồn kho |
+| `CONFIRMED` | Đã xác nhận, tồn kho đã được cộng |
+| `CANCELLED` | Đã hủy |
+
+---
+
+### 12.1 Lấy danh sách phiếu nhập
+**Endpoint:** `GET /api/goods-receipts`
+- **Response thành công:**
+  ```json
+  {
+    "success": true,
+    "message": "Lấy danh sách phiếu nhập thành công",
+    "data": [
+      {
+        "id": 1,
+        "docno": "PN-2026-001",
+        "docDate": "2026-04-19",
+        "description": "Nhập hàng tháng 4",
+        "docstatus": "DRAFT",
+        "customerId": 2,
+        "customerName": "Công ty ABC",
+        "createdAt": "2026-04-19T09:00:00",
+        "details": []
+      }
+    ]
+  }
+  ```
+
+---
+
+### 12.2 Xem chi tiết phiếu nhập
+**Endpoint:** `GET /api/goods-receipts/{id}`
+- **Response thành công:**
+  ```json
+  {
+    "success": true,
+    "message": "Lấy chi tiết phiếu nhập thành công",
+    "data": {
+      "id": 1,
+      "docno": "PN-2026-001",
+      "docDate": "2026-04-19",
+      "description": "Nhập hàng tháng 4",
+      "docstatus": "DRAFT",
+      "customerId": 2,
+      "customerName": "Công ty ABC",
+      "createdAt": "2026-04-19T09:00:00",
+      "details": [
+        {
+          "id": 1,
+          "itemId": 5,
+          "itemcode": "SP001",
+          "itemname": "Sản phẩm A",
+          "unitof": "Cái",
+          "quantity": 100,
+          "unitprice": 50000,
+          "amount": 5000000,
+          "locationId": 3,
+          "locationcode": "A1-01",
+          "locationname": "Kệ A1, tầng 1, cột 1"
+        }
+      ]
+    }
+  }
+  ```
+
+---
+
+### 12.3 Gợi ý vị trí khi nhập hàng *(gọi trước khi tạo phiếu hoặc thêm dòng chi tiết)*
+**Endpoint:** `GET /api/goods-receipts/suggest-locations?itemId={itemId}&quantity={quantity}`
+
+**Ý nghĩa trường `type`:**
+- `EXISTING` – Vị trí đang chứa cùng mã hàng, còn chỗ trống → **ưu tiên chọn trước**
+- `EMPTY` – Vị trí hoàn toàn trống, đủ sức chứa
+
+- **Response thành công:**
+  ```json
+  {
+    "success": true,
+    "message": "Gợi ý vị trí nhập kho thành công",
+    "data": [
+      {
+        "locationId": 3,
+        "locationcode": "A1-01",
+        "locationname": "Kệ A1, tầng 1, cột 1",
+        "capacity": 500,
+        "currentQuantity": 100,
+        "availableSpace": 400,
+        "type": "EXISTING"
+      },
+      {
+        "locationId": 7,
+        "locationcode": "B2-03",
+        "locationname": "Kệ B2, tầng 2, cột 3",
+        "capacity": 300,
+        "currentQuantity": 0,
+        "availableSpace": 300,
+        "type": "EMPTY"
+      }
+    ]
+  }
+  ```
+
+---
+
+### 12.4 Tạo phiếu nhập (DRAFT)
+**Endpoint:** `POST /api/goods-receipts`
+
+> FE cần gọi API gợi ý vị trí (12.3) cho từng dòng hàng, cho người dùng chọn `locationId`, rồi mới gửi request tạo phiếu.
+
+- **Request body:**
+  ```json
+  {
+    "docno": "PN-2026-001",
+    "docDate": "2026-04-19",
+    "description": "Nhập hàng tháng 4",
+    "customerId": 2,
+    "details": [
+      {
+        "itemId": 5,
+        "locationId": 3,
+        "quantity": 100,
+        "unitprice": 50000
+      }
+    ]
+  }
+  ```
+- **Response thành công:** Trả về object phiếu nhập đầy đủ (cấu trúc như mục 12.2).
+- **Response thất bại (ví dụ):**
+  ```json
+  {
+    "success": false,
+    "message": "Mã phiếu 'PN-2026-001' đã tồn tại",
+    "data": null
+  }
+  ```
+
+---
+
+### 12.5 Cập nhật phiếu nhập (chỉ DRAFT)
+**Endpoint:** `PUT /api/goods-receipts/{id}`
+- Request body giống 12.4. Toàn bộ dòng chi tiết cũ sẽ bị thay thế bởi danh sách mới.
+- Chỉ thao tác được khi `docstatus = DRAFT`.
+
+---
+
+### 12.6 Xác nhận phiếu nhập
+**Endpoint:** `POST /api/goods-receipts/{id}/confirm`
+- Không cần request body.
+- BE sẽ: cộng số lượng vào `ItemLocation` (vị trí đã chọn trong chi tiết) và `InventoryBalance`.
+- **Lưu ý:** Mọi dòng chi tiết phải có `locationId`, nếu thiếu BE trả lỗi.
+- **Response thành công:**
+  ```json
+  {
+    "success": true,
+    "message": "Xác nhận phiếu nhập thành công",
+    "data": { "...": "object phiếu nhập với docstatus = CONFIRMED" }
+  }
+  ```
+
+---
+
+### 12.7 Hủy phiếu nhập
+**Endpoint:** `POST /api/goods-receipts/{id}/cancel`
+- Không cần request body. Chỉ hủy được khi `docstatus = DRAFT`.
+
+---
+
+## 13. Phiếu xuất kho (Goods Issue)
+
+> **Quyền truy cập:** ADMIN và STAFF đều thao tác được.
+> **Luồng chuẩn:** Tạo phiếu DRAFT → (tuỳ chọn sửa) → Xác nhận → Tồn kho bị trừ tự động.
+
+### Trạng thái phiếu (`docstatus`)
+Giống mục 12 (DRAFT / CONFIRMED / CANCELLED).
+
+---
+
+### 13.1 Lấy danh sách phiếu xuất
+**Endpoint:** `GET /api/goods-issues`
+- **Response thành công:**
+  ```json
+  {
+    "success": true,
+    "message": "Lấy danh sách phiếu xuất thành công",
+    "data": [
+      {
+        "id": 1,
+        "docno": "PX-2026-001",
+        "docDate": "2026-04-19",
+        "description": "Xuất hàng đơn đặt hàng #123",
+        "docstatus": "DRAFT",
+        "customerId": 3,
+        "customerName": "Công ty XYZ",
+        "createdAt": "2026-04-19T10:00:00",
+        "details": []
+      }
+    ]
+  }
+  ```
+
+---
+
+### 13.2 Xem chi tiết phiếu xuất
+**Endpoint:** `GET /api/goods-issues/{id}`
+- **Response thành công:**
+  ```json
+  {
+    "success": true,
+    "message": "Lấy chi tiết phiếu xuất thành công",
+    "data": {
+      "id": 1,
+      "docno": "PX-2026-001",
+      "docDate": "2026-04-19",
+      "description": "Xuất hàng đơn đặt hàng #123",
+      "docstatus": "DRAFT",
+      "customerId": 3,
+      "customerName": "Công ty XYZ",
+      "createdAt": "2026-04-19T10:00:00",
+      "details": [
+        {
+          "id": 1,
+          "itemId": 5,
+          "itemcode": "SP001",
+          "itemname": "Sản phẩm A",
+          "unitof": "Cái",
+          "quantity": 20,
+          "unitprice": 55000,
+          "amount": 1100000,
+          "locationId": 3,
+          "locationcode": "A1-01",
+          "locationname": "Kệ A1, tầng 1, cột 1"
+        }
+      ]
+    }
+  }
+  ```
+
+---
+
+### 13.3 Lấy danh sách vị trí có hàng để xuất *(gọi trước khi tạo phiếu hoặc thêm dòng chi tiết)*
+**Endpoint:** `GET /api/goods-issues/available-locations?itemId={itemId}&quantity={quantity}`
+
+Trả về các vị trí đang chứa `itemId` với tồn kho tại vị trí đó `>= quantity`.
+
+- **Response thành công:**
+  ```json
+  {
+    "success": true,
+    "message": "Lấy danh sách vị trí xuất kho thành công",
+    "data": [
+      {
+        "locationId": 3,
+        "locationcode": "A1-01",
+        "locationname": "Kệ A1, tầng 1, cột 1",
+        "capacity": 500,
+        "currentQuantity": 100,
+        "availableSpace": 100,
+        "type": "HAS_STOCK"
+      }
+    ]
+  }
+  ```
+
+---
+
+### 13.4 Tạo phiếu xuất (DRAFT)
+**Endpoint:** `POST /api/goods-issues`
+
+> FE cần gọi API vị trí có hàng (13.3) cho từng dòng hàng, cho người dùng chọn `locationId`, rồi mới gửi request tạo phiếu.
+
+- **Request body:**
+  ```json
+  {
+    "docno": "PX-2026-001",
+    "docDate": "2026-04-19",
+    "description": "Xuất hàng đơn đặt hàng #123",
+    "customerId": 3,
+    "details": [
+      {
+        "itemId": 5,
+        "locationId": 3,
+        "quantity": 20,
+        "unitprice": 55000
+      }
+    ]
+  }
+  ```
+- **Response thành công:** Trả về object phiếu xuất đầy đủ (cấu trúc như mục 13.2).
+- **Response thất bại (ví dụ):**
+  ```json
+  {
+    "success": false,
+    "message": "Mã phiếu 'PX-2026-001' đã tồn tại",
+    "data": null
+  }
+  ```
+
+---
+
+### 13.5 Cập nhật phiếu xuất (chỉ DRAFT)
+**Endpoint:** `PUT /api/goods-issues/{id}`
+- Request body giống 13.4. Toàn bộ dòng chi tiết cũ sẽ bị thay thế bởi danh sách mới.
+- Chỉ thao tác được khi `docstatus = DRAFT`.
+
+---
+
+### 13.6 Xác nhận phiếu xuất
+**Endpoint:** `POST /api/goods-issues/{id}/confirm`
+- Không cần request body.
+- BE sẽ: kiểm tra tồn kho tại từng vị trí, rồi trừ số lượng khỏi `ItemLocation` và `InventoryBalance`.
+- **Lưu ý lỗi BE có thể trả về:**
+  - Dòng chi tiết thiếu `locationId`
+  - Tồn kho tại vị trí không đủ số lượng cần xuất
+- **Response thành công:**
+  ```json
+  {
+    "success": true,
+    "message": "Xác nhận phiếu xuất thành công",
+    "data": { "...": "object phiếu xuất với docstatus = CONFIRMED" }
+  }
+  ```
+
+---
+
+### 13.7 Hủy phiếu xuất
+**Endpoint:** `POST /api/goods-issues/{id}/cancel`
+- Không cần request body. Chỉ hủy được khi `docstatus = DRAFT`.
+
+---
+
+## 14. Luồng thao tác FE đề xuất
+
+### Tạo phiếu nhập kho
+1. Người dùng nhập header phiếu (docno, ngày, khách hàng, ghi chú).
+2. Thêm từng dòng hàng: chọn `itemId` + nhập `quantity`.
+3. FE gọi `GET /api/goods-receipts/suggest-locations?itemId=X&quantity=Y` → hiển thị dropdown gợi ý vị trí.
+4. Người dùng chọn vị trí cho từng dòng.
+5. FE gọi `POST /api/goods-receipts` → phiếu tạo trạng thái `DRAFT`.
+6. Khi sẵn sàng: FE gọi `POST /api/goods-receipts/{id}/confirm`.
+
+### Tạo phiếu xuất kho
+1. Người dùng nhập header phiếu (docno, ngày, khách hàng, ghi chú).
+2. Thêm từng dòng hàng: chọn `itemId` + nhập `quantity`.
+3. FE gọi `GET /api/goods-issues/available-locations?itemId=X&quantity=Y` → hiển thị dropdown vị trí có hàng.
+4. Người dùng chọn vị trí cho từng dòng.
+5. FE gọi `POST /api/goods-issues` → phiếu tạo trạng thái `DRAFT`.
+6. Khi sẵn sàng: FE gọi `POST /api/goods-issues/{id}/confirm`.
+
+---
+
 ## 11. Danh mục nhân viên (User)
 ### Tạo mới nhân viên
 **Endpoint:** `POST /api/users`

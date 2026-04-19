@@ -11,9 +11,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "goodsissuedetail")
+@Data
+@NoArgsConstructor
 public class GoodsIssueDetail {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,5 +49,7 @@ public class GoodsIssueDetail {
     @JoinColumn(name = "itemid")
     private Item item;
 
-    // Getters, setters, constructors (có thể sinh tự động bằng Lombok hoặc IDE)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "locationid")
+    private Location location;
 }
