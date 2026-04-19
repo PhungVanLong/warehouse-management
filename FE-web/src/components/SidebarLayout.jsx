@@ -76,7 +76,7 @@ export default function SidebarLayout({ children, activeKey }) {
                     </div>
                     {openGroups.chungtu && (
                         <div className="sp-nav-children">
-                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Phiếu nhập kho')}>Phiếu nhập kho</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/receipts") ? " sp-child-active" : ""}`} onClick={() => { navTo("Phiếu nhập kho", "/receipts"); console.log("CLICK PHIEU NHAP KHO"); }}>Phiếu nhập kho</div>
                             <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Phiếu xuất kho')}>Phiếu xuất kho</div>
                             <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Kiểm kê hàng tồn kho')}>Kiểm kê hàng tồn kho</div>
                             <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Phiếu xuất/ nhập điều chỉnh')}>Phiếu xuất/ nhập điều chỉnh</div>

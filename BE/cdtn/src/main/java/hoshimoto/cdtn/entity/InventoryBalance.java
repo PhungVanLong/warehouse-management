@@ -9,10 +9,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "inventorybalance")
-
+@Data
+@NoArgsConstructor
 public class InventoryBalance {
     @Id
     @Column(name = "itemid")
@@ -27,6 +30,4 @@ public class InventoryBalance {
 
     @Column(name = "lastupdated")
     private LocalDateTime lastUpdated;
-
-    // Getters, setters, constructors (có thể sinh tự động bằng Lombok hoặc IDE)
 }
