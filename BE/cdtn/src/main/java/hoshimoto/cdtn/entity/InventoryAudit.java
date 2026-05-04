@@ -5,8 +5,11 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import hoshimoto.cdtn.entity.Enum.DocStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,9 +17,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "inventoryaudit")
+@Data
+@NoArgsConstructor
 public class InventoryAudit {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,8 +38,9 @@ public class InventoryAudit {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Enumerated(EnumType.STRING)
     @Column(length = 20)
-    private String docstatus;
+    private DocStatus docstatus = DocStatus.DRAFT;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "locationid")
@@ -57,6 +65,4 @@ public class InventoryAudit {
 
     @Column(name = "isactive")
     private Boolean isActive = true;
-
-    // Getters, setters, constructors (có thể sinh tự động bằng Lombok hoặc IDE)
 }

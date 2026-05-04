@@ -107,6 +107,10 @@ public class GoodsReceiptService {
 
         List<GoodsReceiptDetail> details = detailRepository.findByGoodsReceiptId(id);
 
+        if (details == null || details.isEmpty()) {
+            throw new RuntimeException("Phiếu nhập không có dòng chi tiết nào");
+        }
+
         for (GoodsReceiptDetail detail : details) {
             if (detail.getLocation() == null) {
                 throw new RuntimeException(
@@ -261,8 +265,10 @@ public class GoodsReceiptService {
             Location loc = il.getLocation();
             // Tổng tất cả items đang chiếm tại vị trí này
             BigDecimal usedCapacity = itemLocationRepository.getTotalUsedCapacity(loc.getId());
-            BigDecimal totalCap = loc.getCapacity() != null ? BigDecimal.valueOf(loc.getCapacity()) : BigDecimal.ZERO;
-            BigDecimal available = totalCap.subtract(usedCapacity);
+            // null capacity = unlimited → available = null (không giới hạn)
+            BigDecimal available = loc.getCapacity() != null
+                    ? BigDecimal.valueOf(loc.getCapacity()).subtract(usedCapacity)
+                    : null;
             result.add(new LocationSuggestionResponse(
                     loc.getId(), loc.getLocationcode(), loc.getLocationname(),
                     loc.getCapacity(), usedCapacity, available, "EXISTING", null));
@@ -293,7 +299,8 @@ public class GoodsReceiptService {
 
         for (LocationSuggestionResponse loc : all) {
             if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
-            BigDecimal space = loc.getAvailableSpace() != null ? loc.getAvailableSpace() : BigDecimal.ZERO;
+            // null availableSpace = unlimited capacity → có thể nhận toàn bộ số còn lại
+            BigDecimal space = loc.getAvailableSpace() != null ? loc.getAvailableSpace() : remaining;
             if (space.compareTo(BigDecimal.ZERO) <= 0) continue;
             BigDecimal take = remaining.min(space);
             loc.setSuggestedQuantity(take);
@@ -316,6 +323,7 @@ public class GoodsReceiptService {
             Customer customer = customerRepository.findById(request.getCustomerId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng id: " + request.getCustomerId()));
             receipt.setCustomer(customer);
+            receipt.setTaxcode(customer.getTaxcode());
         }
         // Gán người tạo từ JWT token (chỉ set khi tạo mới, không ghi đè khi update)
         if (receipt.getUser() == null) {

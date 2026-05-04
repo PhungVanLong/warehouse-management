@@ -106,6 +106,10 @@ public class GoodsIssueService {
 
         List<GoodsIssueDetail> details = detailRepository.findByGoodsIssueId(id);
 
+        if (details == null || details.isEmpty()) {
+            throw new RuntimeException("Phiếu xuất không có dòng chi tiết nào");
+        }
+
         for (GoodsIssueDetail detail : details) {
             if (detail.getLocation() == null) {
                 throw new RuntimeException(
@@ -142,7 +146,13 @@ public class GoodsIssueService {
                     .orElseThrow(() -> new RuntimeException(
                             "Không tìm thấy tồn kho tổng của hàng hóa id: " + item.getId()));
 
-            balance.setQuantity(balance.getQuantity().subtract(qty));
+            BigDecimal newBalance = balance.getQuantity().subtract(qty);
+            if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
+                throw new RuntimeException(
+                        "Tồn kho tổng của '" + item.getItemcode() + "' không đủ số lượng để xuất "
+                        + "(cần " + qty + ", hiện có " + balance.getQuantity() + ")");
+            }
+            balance.setQuantity(newBalance);
             balance.setLastUpdated(LocalDateTime.now());
             inventoryBalanceRepository.save(balance);
         }
@@ -281,6 +291,7 @@ public class GoodsIssueService {
             Customer customer = customerRepository.findById(request.getCustomerId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng id: " + request.getCustomerId()));
             issue.setCustomer(customer);
+            issue.setTaxcode(customer.getTaxcode());
         }
         // Gán người tạo từ JWT token (chỉ set khi tạo mới, không ghi đè khi update)
         if (issue.getUser() == null) {

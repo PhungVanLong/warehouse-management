@@ -14,9 +14,11 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     Optional<Location> findByLocationcode(String locationcode);
 
     /**
-     * Vị trí đang trống hoàn toàn (không có ItemLocation active nào) và còn chứa được requiredQty
+     * Vị trí đang trống hoàn toàn (không có ItemLocation active nào) và còn chứa được requiredQty.
+     * Bao gồm cả vị trí capacity IS NULL (không giới hạn).
      */
-    @Query("SELECT l FROM Location l WHERE l.isActive = true AND l.capacity >= :requiredQty " +
+    @Query("SELECT l FROM Location l WHERE l.isActive = true " +
+           "AND (l.capacity IS NULL OR l.capacity >= :requiredQty) " +
            "AND l.id NOT IN (SELECT il.location.id FROM ItemLocation il WHERE il.isActive = true AND il.quantity > 0)")
     List<Location> findEmptyLocationsWithCapacity(@Param("requiredQty") java.math.BigDecimal requiredQty);
 
