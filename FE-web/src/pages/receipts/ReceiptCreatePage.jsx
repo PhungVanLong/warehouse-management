@@ -5,6 +5,7 @@ import "./receipts.css";
 import { createReceipt, getAvailableLocations } from "../../api/receiptApi";
 import { getAllCustomers } from "../../api/customerApi";
 import { getAllItems } from "../../api/itemApi";
+import { createBatch } from "../../api/batchApi";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 let _rowKey = 0;
@@ -16,8 +17,28 @@ const newRow = () => ({
     unitof: "",
     quantity: "",
     price: "",
+    nameBatch: "",
     selectedLocations: [], // [{locationId, locationcode, allocQty}]
 });
+
+// ─── Batch code generator ─────────────────────────────────────────────────────
+function toBatchSegment(str) {
+    if (!str) return "";
+    return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\u0111]/g, "d").replace(/[\u0110]/g, "D")
+        .replace(/[^a-zA-Z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toUpperCase();
+}
+
+function generateBatchCode(nameBatch, dateStr, itemcode) {
+    if (!nameBatch || !dateStr || !itemcode) return "";
+    const yyyymmdd = dateStr.replace(/-/g, "");
+    return `${toBatchSegment(nameBatch)}-${yyyymmdd}-${toBatchSegment(itemcode)}`;
+}
 
 function formatMoney(n) {
     if (!n && n !== 0) return "";
@@ -357,6 +378,29 @@ export default function ReceiptCreatePage() {
         try {
             const result = await createReceipt({ docno: form.docno.trim(), docDate: form.date, description: form.description.trim(), customerId: Number(form.customerId), details });
             if (result?.success) {
+                // Tạo lô hàng cho các dòng có nhập tên lô
+                const returnedDetails = result?.data?.details || [];
+                let detailOffset = 0;
+                const batchPromises = [];
+                for (const row of rows) {
+                    const nLocs = row.selectedLocations.length;
+                    if (row.nameBatch?.trim() && nLocs > 0) {
+                        const firstDetailId = returnedDetails[detailOffset]?.id;
+                        if (firstDetailId) {
+                            batchPromises.push(
+                                createBatch({
+                                    itemId: Number(row.itemId),
+                                    nameBatch: row.nameBatch.trim(),
+                                    receiptDetailId: firstDetailId,
+                                    unitCost: Number(row.price) || 0,
+                                    quantity: Number(row.quantity),
+                                }).catch(() => { })
+                            );
+                        }
+                    }
+                    detailOffset += nLocs;
+                }
+                if (batchPromises.length > 0) await Promise.all(batchPromises);
                 showToast("success", "Tạo phiếu nhập kho thành công!");
                 setTimeout(() => navigate("/receipts"), 1200);
             } else {
@@ -453,6 +497,8 @@ export default function ReceiptCreatePage() {
                                         <th className="rc-td-stt">STT</th>
                                         <th style={{ minWidth: 100 }}>Mã hàng</th>
                                         <th style={{ minWidth: 180 }}>Tên vật tư hàng hóa</th>
+                                        <th style={{ minWidth: 150 }}>Tên lô</th>
+                                        <th style={{ minWidth: 200 }}>Mã lô (tự gen)</th>
                                         <th style={{ minWidth: 90 }}>Đơn vị tính</th>
                                         <th style={{ minWidth: 80 }}>Số lượng</th>
                                         <th style={{ minWidth: 70 }}>Chênh lệch</th>
@@ -477,6 +523,22 @@ export default function ReceiptCreatePage() {
                                                 </td>
                                                 <td>
                                                     <input className="rc-td-input" value={row.itemname} readOnly style={{ background: "#f6fbf8", color: "#4c6152" }} placeholder="Tên vật tư" />
+                                                </td>
+                                                <td>
+                                                    <input
+                                                        className="rc-td-input"
+                                                        placeholder="Tên lô (tuỳ chọn)"
+                                                        value={row.nameBatch}
+                                                        onChange={(e) => handleRowChange(idx, "nameBatch", e.target.value)}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input
+                                                        className="rc-td-input rc-batch-code-preview"
+                                                        readOnly
+                                                        value={generateBatchCode(row.nameBatch, form.date, row.itemcode)}
+                                                        placeholder={row.nameBatch || row.itemcode ? "Nhập đủ thông tin..." : ""}
+                                                    />
                                                 </td>
                                                 <td>
                                                     <input className="rc-td-input" value={row.unitof} readOnly style={{ background: "#f6fbf8", color: "#4c6152", maxWidth: 80 }} />
@@ -512,7 +574,7 @@ export default function ReceiptCreatePage() {
                                         );
                                     })}
                                     <tr className="rc-add-row" onClick={handleAddRow}>
-                                        <td colSpan={10}>
+                                        <td colSpan={12}>
                                             <button className="rc-add-row-btn" type="button">
                                                 <IconPlus size={13} /> Thêm mới dữ liệu
                                             </button>
@@ -520,7 +582,7 @@ export default function ReceiptCreatePage() {
                                     </tr>
                                     {totalAmount > 0 && (
                                         <tr className="rc-total-row">
-                                            <td colSpan={8} style={{ textAlign: "right", paddingRight: 12 }}>Tổng cộng</td>
+                                            <td colSpan={10} style={{ textAlign: "right", paddingRight: 12 }}>Tổng cộng</td>
                                             <td className="rc-td-num" style={{ textAlign: "right" }}>{formatMoney(totalAmount)}</td>
                                             <td />
                                         </tr>

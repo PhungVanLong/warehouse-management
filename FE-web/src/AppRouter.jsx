@@ -23,6 +23,8 @@ import ReceiptDetailPage from "./pages/receipts/ReceiptDetailPage";
 import IssuesPage from "./pages/issues/IssuesPage";
 import IssueCreatePage from "./pages/issues/IssueCreatePage";
 import IssueDetailPage from "./pages/issues/IssueDetailPage";
+import BatchesPage from "./pages/batches/BatchesPage";
+import BatchDetailPage from "./pages/batches/BatchDetailPage";
 import SidebarLayout from "./components/SidebarLayout";
 
 export default function AppRouter() {
@@ -56,6 +58,8 @@ export default function AppRouter() {
                     <Route path="/issues" element={<IssuesPage />} />
                     <Route path="/issues/create" element={<IssueCreatePage />} />
                     <Route path="/issues/:id" element={<IssueDetailPage />} />
+                    <Route path="/batches" element={<BatchesPage />} />
+                    <Route path="/batches/:id" element={<BatchDetailPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>

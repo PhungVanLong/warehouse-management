@@ -8,7 +8,7 @@ export default function SidebarLayout({ children, activeKey }) {
     const location = useLocation();
 
     const getInitialOpen = (path) => {
-        if (path.startsWith("/supplies") || path.startsWith("/employees") || path.startsWith("/locations") || path.startsWith("/partners")) {
+        if (path.startsWith("/supplies") || path.startsWith("/employees") || path.startsWith("/locations") || path.startsWith("/partners") || path.startsWith("/batches")) {
             return { danhmuc: true, chungtu: false, baocao: false };
         }
         if (path.startsWith("/receipts") || path.startsWith("/issues")) {
@@ -70,6 +70,7 @@ export default function SidebarLayout({ children, activeKey }) {
                     {openGroups.danhmuc && (
                         <div className="sp-nav-children">
                             <div className={`sp-nav-child${location.pathname.startsWith("/supplies") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục vật tư hàng hóa", "/supplies")}>Danh mục vật tư hàng hóa</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/batches") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục lô vật tư hàng hóa", "/batches")}>Danh mục lô vật tư hàng hóa</div>
                             <div className={`sp-nav-child${location.pathname.startsWith("/employees") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục nhân viên", "/employees")}>Danh mục nhân viên</div>
                             <div className={`sp-nav-child${location.pathname.startsWith("/locations") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục vị trí", "/locations")}>Danh mục vị trí</div>
                             <div className={`sp-nav-child${location.pathname.startsWith("/partners") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục đối tượng", "/partners")}>Danh mục đối tượng</div>
@@ -93,7 +94,6 @@ export default function SidebarLayout({ children, activeKey }) {
                             <div className={`sp-nav-child${location.pathname.startsWith("/receipts") ? " sp-child-active" : ""}`} onClick={() => navTo("Phiếu nhập kho", "/receipts")}>Phiếu nhập kho</div>
                             <div className={`sp-nav-child${location.pathname.startsWith("/issues") ? " sp-child-active" : ""}`} onClick={() => navTo("Phiếu xuất kho", "/issues")}>Phiếu xuất kho</div>
                             <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Kiểm kê hàng tồn kho')}>Kiểm kê hàng tồn kho</div>
-                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Phiếu xuất/ nhập điều chỉnh')}>Phiếu xuất/ nhập điều chỉnh</div>
                         </div>
                     )}
 

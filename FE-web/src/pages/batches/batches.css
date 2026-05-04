@@ -1,0 +1,53 @@
+/* ── Batches module styles ──────────────────────────── */
+
+/* Read-only value display */
+.bt-read-value {
+    flex: 1;
+    padding: 8px 12px;
+    background: #f8fcf9;
+    border: 1.5px solid #daeee4;
+    border-radius: 7px;
+    font-size: 0.9rem;
+    color: #1a3a25;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+}
+
+.bt-read-value-highlight {
+    color: #1a7f4b;
+    font-weight: 600;
+}
+
+.bt-qty-zero-text {
+    color: #c0392b;
+    font-weight: 600;
+}
+
+/* Table cell styles */
+.bt-td-itemcode {
+    font-weight: 600;
+    color: #4c6152;
+    white-space: nowrap;
+}
+
+.bt-td-number {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.bt-td-date {
+    white-space: nowrap;
+    color: #4c6152;
+}
+
+/* Quantity remaining badge */
+.bt-qty-remaining {
+    font-weight: 600;
+    color: #1a7f4b;
+}
+
+.bt-qty-zero {
+    color: #c0392b;
+}

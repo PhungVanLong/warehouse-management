@@ -6,6 +6,7 @@ import "./issues.css";
 import { createIssue, getAvailableLocations } from "../../api/issueApi";
 import { getAllCustomers } from "../../api/customerApi";
 import { getAllItems } from "../../api/itemApi";
+import { getAllBatches } from "../../api/batchApi";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 let _rowKey = 0;
@@ -15,10 +16,21 @@ const newRow = () => ({
     itemcode: "",
     itemname: "",
     unitof: "",
+    batchId: "",
+    batchCode: "",
+    unitCost: "",   // giá nhập từ lô
     quantity: "",
-    price: "",
+    price: "",      // giá xuất (tự tính, cho phép sửa)
     selectedLocations: [], // [{locationId, locationcode, allocQty}]
 });
+
+/** Tính giá xuất dựa trên giá nhập */
+function calcSalePrice(unitCost) {
+    const cost = Number(unitCost);
+    if (!cost) return "";
+    const multiplier = cost < 50000 ? 1.5 : cost <= 500000 ? 1.3 : 1.2;
+    return String(Math.round(cost * multiplier));
+}
 
 function formatMoney(n) {
     if (!n && n !== 0) return "";
@@ -48,13 +60,6 @@ function IconClose() {
     return (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-    );
-}
-function IconChevron() {
-    return (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="6 9 12 15 18 9" />
         </svg>
     );
 }
@@ -232,21 +237,21 @@ export default function IssueCreatePage() {
 
     const [form, setForm] = useState({ date: todayStr(), docno: "", customerId: "", address: "", description: "" });
     const [rows, setRows] = useState([newRow()]);
-    const [invoice, setInvoice] = useState({ date: "", number: "" });
     const [customers, setCustomers] = useState([]);
     const [items, setItems] = useState([]);
+    const [batches, setBatches] = useState([]);
     const [loadingData, setLoadingData] = useState(true);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
-    const [lapPhieuOpen, setLapPhieuOpen] = useState(false);
     const [locModal, setLocModal] = useState({ open: false, rowIdx: null, locations: [], loading: false });
 
     const loadData = useCallback(async () => {
         setLoadingData(true);
         try {
-            const [cList, iList] = await Promise.all([getAllCustomers(), getAllItems()]);
+            const [cList, iList, bList] = await Promise.all([getAllCustomers(), getAllItems(), getAllBatches()]);
             setCustomers(cList);
             setItems(iList);
+            setBatches(bList);
         } catch { /* non-blocking */ } finally { setLoadingData(false); }
     }, []);
     useEffect(() => { loadData(); }, [loadData]);
@@ -260,8 +265,6 @@ export default function IssueCreatePage() {
         setForm((prev) => ({ ...prev, customerId, address: found?.address || "" }));
     };
 
-    const handleInvoiceChange = (field, value) => setInvoice((prev) => ({ ...prev, [field]: value }));
-
     const handleRowChange = (idx, field, value) => {
         setRows((prev) => {
             const next = [...prev];
@@ -271,7 +274,17 @@ export default function IssueCreatePage() {
                 next[idx].itemcode = found?.itemcode || "";
                 next[idx].itemname = found?.itemname || "";
                 next[idx].unitof = found?.unitof || "";
+                next[idx].batchId = "";
+                next[idx].batchCode = "";
+                next[idx].unitCost = "";
+                next[idx].price = "";
                 next[idx].selectedLocations = [];
+            }
+            if (field === "batchId") {
+                const found = batches.find((b) => String(b.id) === String(value));
+                next[idx].batchCode = found?.batchCode || "";
+                next[idx].unitCost = found?.unitCost ? String(found.unitCost) : "";
+                next[idx].price = calcSalePrice(found?.unitCost);
             }
             return next;
         });
@@ -326,7 +339,8 @@ export default function IssueCreatePage() {
             const result = await createIssue({ docno: form.docno.trim(), docDate: form.date, description: form.description.trim(), customerId: Number(form.customerId), details });
             if (result?.success) {
                 showToast("success", "Tạo phiếu xuất kho thành công!");
-                setTimeout(() => navigate("/issues"), 1200);
+                const newId = result?.data?.id;
+                setTimeout(() => navigate(newId ? `/issues/${newId}` : "/issues"), 1200);
             } else {
                 showToast("error", result?.message || "Tạo phiếu thất bại.");
             }
@@ -384,21 +398,6 @@ export default function IssueCreatePage() {
                             <input type="date" className="rc-form-input" style={{ minWidth: 150 }} value={form.date} onChange={(e) => handleFormChange("date", e.target.value)} />
                             <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
                             <input className="rc-form-input" style={{ minWidth: 200 }} placeholder="Nhập số chứng từ" value={form.docno} onChange={(e) => handleFormChange("docno", e.target.value)} />
-                            <div style={{ position: "relative", marginLeft: "auto" }}>
-                                <button className="rc-lapphieu-btn" onClick={() => setLapPhieuOpen((v) => !v)}>
-                                    Lập phiếu <IconChevron />
-                                </button>
-                                {lapPhieuOpen && (
-                                    <div style={{ position: "absolute", right: 0, top: "110%", background: "#fff", border: "1.5px solid #c6dfd0", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 100, minWidth: 160, padding: "4px 0" }}>
-                                        {["Tạo mới"].map((opt) => (
-                                            <div key={opt} style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#243427" }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = "#f3faf6"}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = ""}
-                                                onClick={() => setLapPhieuOpen(false)}>{opt}</div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
                         </div>
 
                         {/* ── Đối tượng ── */}
@@ -430,13 +429,15 @@ export default function IssueCreatePage() {
                                 <thead>
                                     <tr>
                                         <th className="rc-td-stt">STT</th>
-                                        <th>Mã hàng</th>
-                                        <th>Tên vật tư hàng hóa</th>
-                                        <th>Đơn vị tính</th>
-                                        <th>Số lượng</th>
-                                        <th>Vị trí xuất</th>
-                                        <th>Đơn giá</th>
-                                        <th>Thành tiền</th>
+                                        <th style={{ minWidth: 100 }}>Mã hàng</th>
+                                        <th style={{ minWidth: 160 }}>Tên vật tư hàng hóa</th>
+                                        <th style={{ minWidth: 160 }}>Mã lô</th>
+                                        <th style={{ minWidth: 70 }}>Đơn vị tính</th>
+                                        <th style={{ minWidth: 70 }}>Số lượng</th>
+                                        <th style={{ minWidth: 110 }}>Vị trí xuất</th>
+                                        <th style={{ minWidth: 105 }}>Giá nhập</th>
+                                        <th style={{ minWidth: 110 }}>Đơn giá xuất</th>
+                                        <th style={{ minWidth: 110 }}>Thành tiền</th>
                                         <th style={{ width: 36 }}></th>
                                     </tr>
                                 </thead>
@@ -446,7 +447,7 @@ export default function IssueCreatePage() {
                                             <td className="rc-td-stt">{idx + 1}</td>
                                             <td>
                                                 <select
-                                                    className="rc-form-select"
+                                                    className="rc-td-select"
                                                     style={{ minWidth: 120 }}
                                                     value={row.itemId}
                                                     onChange={(e) => handleRowChange(idx, "itemId", e.target.value)}
@@ -460,7 +461,7 @@ export default function IssueCreatePage() {
                                             </td>
                                             <td>
                                                 <input
-                                                    className="rc-form-input"
+                                                    className="rc-td-input"
                                                     style={{ minWidth: 160 }}
                                                     value={row.itemname}
                                                     readOnly
@@ -468,11 +469,27 @@ export default function IssueCreatePage() {
                                                 />
                                             </td>
                                             <td>
-                                                <input className="rc-form-input" style={{ width: 80 }} value={row.unitof} readOnly />
+                                                <select
+                                                    className="rc-td-select"
+                                                    style={{ minWidth: 155 }}
+                                                    value={row.batchId}
+                                                    onChange={(e) => handleRowChange(idx, "batchId", e.target.value)}
+                                                    disabled={!row.itemId || loadingData}
+                                                >
+                                                    <option value="">-- Chọn lô --</option>
+                                                    {batches
+                                                        .filter((b) => String(b.itemId) === String(row.itemId) && (b.quantityRemaining ?? b.quantity) > 0)
+                                                        .map((b) => (
+                                                            <option key={b.id} value={b.id}>{b.batchCode}</option>
+                                                        ))}
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <input className="rc-td-input" style={{ width: 75 }} value={row.unitof} readOnly />
                                             </td>
                                             <td>
                                                 <input
-                                                    className="rc-form-input rc-td-num"
+                                                    className="rc-td-input rc-td-num"
                                                     style={{ width: 80 }}
                                                     type="number"
                                                     min="1"
@@ -499,15 +516,19 @@ export default function IssueCreatePage() {
                                                         : "+ Chọn vị trí"}
                                                 </button>
                                             </td>
+                                            <td className="rc-td-num" style={{ color: "#4c6152", fontSize: "0.87rem" }}>
+                                                {row.unitCost ? formatMoney(row.unitCost) : "—"}
+                                            </td>
                                             <td>
                                                 <input
-                                                    className="rc-form-input rc-td-num"
-                                                    style={{ width: 100 }}
+                                                    className="rc-td-input rc-td-num"
+                                                    style={{ width: 100, background: row.price ? "#f0faf4" : undefined, fontWeight: row.price ? 600 : undefined, color: "#1E3A2F" }}
                                                     type="number"
                                                     min="0"
                                                     value={row.price}
                                                     onChange={(e) => handleRowChange(idx, "price", e.target.value)}
                                                     placeholder="0"
+                                                    title={row.unitCost ? `Giá nhập: ${formatMoney(row.unitCost)} → ×${Number(row.unitCost) < 50000 ? "1.5" : Number(row.unitCost) <= 500000 ? "1.3" : "1.2"}` : ""}
                                                 />
                                             </td>
                                             <td className="rc-td-num">
@@ -535,20 +556,6 @@ export default function IssueCreatePage() {
                                 Tổng cộng: {formatMoney(totalAmount)}
                             </div>
                         )}
-
-                        {/* ── Invoice info ── */}
-                        <div className="rc-section-hd">Chi tiết</div>
-                        <div className="rc-section-sub">Thông tin chứng từ xuất</div>
-                        <div className="rc-form-2col">
-                            <div className="rc-form-field">
-                                <label className="rc-form-label">Ngày xuất</label>
-                                <input type="date" className="rc-form-input" value={invoice.date} onChange={(e) => handleInvoiceChange("date", e.target.value)} />
-                            </div>
-                            <div className="rc-form-field">
-                                <label className="rc-form-label">Số tham chiếu</label>
-                                <input className="rc-form-input" placeholder="Số đơn hàng / tham chiếu" value={invoice.number} onChange={(e) => handleInvoiceChange("number", e.target.value)} />
-                            </div>
-                        </div>
 
                         {/* ── Actions ── */}
                         <div className="rc-form-actions">
