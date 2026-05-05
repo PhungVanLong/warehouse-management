@@ -1,19 +1,33 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import "../styles/shared.css";
 import logo from "../assets/logo.png";
 
 export default function SidebarLayout({ children, activeKey }) {
-    const [openGroups, setOpenGroups] = useState({ danhmuc: true, chungtu: true, baocao: true });
-    const toggleGroup = (key) => {
-        console.log(`[Sidebar] Toggle group: ${key}`);
-        setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
-    };
     const navigate = useNavigate();
     const location = useLocation();
 
+    const getInitialOpen = (path) => {
+        if (path.startsWith("/supplies") || path.startsWith("/employees") || path.startsWith("/locations") || path.startsWith("/partners") || path.startsWith("/batches")) {
+            return { danhmuc: true, chungtu: false, baocao: false };
+        }
+        if (path.startsWith("/receipts") || path.startsWith("/issues") || path.startsWith("/audits")) {
+            return { danhmuc: false, chungtu: true, baocao: false };
+        }
+        return { danhmuc: false, chungtu: false, baocao: false };
+    };
+
+    const [openGroups, setOpenGroups] = useState(() => getInitialOpen(location.pathname));
+
+    // Cho phép nhiều group mở cùng lúc
+    const toggleGroup = (key) => {
+        setOpenGroups((prev) => ({
+            ...prev,
+            [key]: !prev[key],
+        }));
+    };
+
     const navTo = (label, path) => {
-        console.log(`[Sidebar] Navigate: ${label} → ${path}`);
         navigate(path);
     };
 
@@ -42,7 +56,7 @@ export default function SidebarLayout({ children, activeKey }) {
                     </div>
 
                     {/* Danh mục */}
-                    <div className="sp-nav-group-hd sp-group-active" onClick={() => toggleGroup("danhmuc")}>
+                    <div className={`sp-nav-group-hd${openGroups.danhmuc ? " sp-group-active" : ""}`} onClick={() => toggleGroup("danhmuc")}>
                         <span className="sp-nav-icon">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                                 <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
@@ -56,6 +70,7 @@ export default function SidebarLayout({ children, activeKey }) {
                     {openGroups.danhmuc && (
                         <div className="sp-nav-children">
                             <div className={`sp-nav-child${location.pathname.startsWith("/supplies") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục vật tư hàng hóa", "/supplies")}>Danh mục vật tư hàng hóa</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/batches") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục lô vật tư hàng hóa", "/batches")}>Danh mục lô vật tư hàng hóa</div>
                             <div className={`sp-nav-child${location.pathname.startsWith("/employees") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục nhân viên", "/employees")}>Danh mục nhân viên</div>
                             <div className={`sp-nav-child${location.pathname.startsWith("/locations") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục vị trí", "/locations")}>Danh mục vị trí</div>
                             <div className={`sp-nav-child${location.pathname.startsWith("/partners") ? " sp-child-active" : ""}`} onClick={() => navTo("Danh mục đối tượng", "/partners")}>Danh mục đối tượng</div>
@@ -76,10 +91,9 @@ export default function SidebarLayout({ children, activeKey }) {
                     </div>
                     {openGroups.chungtu && (
                         <div className="sp-nav-children">
-                            <div className={`sp-nav-child${location.pathname.startsWith("/receipts") ? " sp-child-active" : ""}`} onClick={() => { navTo("Phiếu nhập kho", "/receipts"); console.log("CLICK PHIEU NHAP KHO"); }}>Phiếu nhập kho</div>
-                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Phiếu xuất kho')}>Phiếu xuất kho</div>
-                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Kiểm kê hàng tồn kho')}>Kiểm kê hàng tồn kho</div>
-                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Phiếu xuất/ nhập điều chỉnh')}>Phiếu xuất/ nhập điều chỉnh</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/receipts") ? " sp-child-active" : ""}`} onClick={() => navTo("Phiếu nhập kho", "/receipts")}>Phiếu nhập kho</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/issues") ? " sp-child-active" : ""}`} onClick={() => navTo("Phiếu xuất kho", "/issues")}>Phiếu xuất kho</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/audits") ? " sp-child-active" : ""}`} onClick={() => navTo("Kiểm kê hàng tồn kho", "/audits")}>Kiểm kê hàng tồn kho</div>
                         </div>
                     )}
 
@@ -126,7 +140,7 @@ export default function SidebarLayout({ children, activeKey }) {
                 </div>
             </aside>
 
-            {children}
+            {children ?? <Outlet />}
         </div>
     );
 }

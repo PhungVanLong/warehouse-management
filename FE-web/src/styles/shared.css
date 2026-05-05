@@ -21,6 +21,14 @@
     height: 100vh;
     overflow: hidden;
     box-shadow: 2px 0 16px rgba(34, 84, 47, 0.07);
+    position: relative;
+    z-index: 2000;
+}
+
+.sp-main,
+.sp-content {
+    position: static !important;
+    z-index: auto !important;
 }
 
 .sp-sidebar-logo {

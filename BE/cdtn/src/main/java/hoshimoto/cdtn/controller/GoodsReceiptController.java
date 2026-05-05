@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import hoshimoto.cdtn.dto.ApiResponse;
 import hoshimoto.cdtn.dto.GoodsReceiptResponse;
+import hoshimoto.cdtn.dto.LocationDetailResponse;
 import hoshimoto.cdtn.dto.LocationSuggestionResponse;
 import hoshimoto.cdtn.dto.request.GoodsReceiptRequest;
 import hoshimoto.cdtn.service.GoodsReceiptService;
@@ -46,6 +47,19 @@ public class GoodsReceiptController {
     }
 
     /**
+     * Liệt kê TẤT CẢ vị trí còn chỗ trống (không so sánh với quantity cần nhập).
+     * Ưu tiên vị trí đã chứa cùng mã hàng (EXISTING) → trống hoàn toàn (EMPTY) → chứa hàng khác (PARTIAL).
+     * GET /api/goods-receipts/available-locations?itemId=1
+     */
+    @GetMapping("/available-locations")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ApiResponse<List<LocationDetailResponse>>> listAvailableForReceipt(
+            @RequestParam Long itemId) {
+        List<LocationDetailResponse> locations = goodsReceiptService.listAvailableForReceipt(itemId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Liệt kê vị trí khả dụng để nhập kho thành công", locations));
+    }
+
+    /**
      * Gợi ý vị trí khi nhập hàng.
      * GET /api/goods-receipts/suggest-locations?itemId=1&quantity=50
      */
@@ -56,6 +70,23 @@ public class GoodsReceiptController {
             @RequestParam BigDecimal quantity) {
         List<LocationSuggestionResponse> suggestions = goodsReceiptService.suggestLocations(itemId, quantity);
         return ResponseEntity.ok(new ApiResponse<>(true, "Gợi ý vị trí nhập kho thành công", suggestions));
+    }
+
+    /**
+     * Gợi ý phân bổ số lượng qua nhiều vị trí khi quantity > capacity một vị trí.
+     * GET /api/goods-receipts/suggest-split?itemId=1&quantity=1000
+     */
+    @GetMapping("/suggest-split")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ApiResponse<List<LocationSuggestionResponse>>> suggestSplit(
+            @RequestParam Long itemId,
+            @RequestParam BigDecimal quantity) {
+        try {
+            List<LocationSuggestionResponse> splits = goodsReceiptService.suggestSplit(itemId, quantity);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Gợi ý phân bổ vị trí nhập thành công", splits));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
+        }
     }
 
     /** Tạo phiếu nhập nháp */

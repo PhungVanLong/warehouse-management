@@ -327,6 +327,48 @@
     background: #eaf7f0;
 }
 
+/* ── Batch sub-row ───────────────────────────────────── */
+.rc-batch-subrow td {
+    border-bottom: 1.5px solid #e0ece5;
+    background: #f8fdf9;
+}
+
+.rc-batch-fields {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.rc-batch-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 240px;
+}
+
+.rc-batch-input {
+    flex: 1;
+}
+
+.rc-batch-code-preview {
+    flex: 1;
+    background: #f0fbf5 !important;
+    color: #1E854A !important;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 0.85rem !important;
+    font-weight: 600;
+    border-color: #b8dfc8 !important;
+    cursor: default;
+}
+
+.rc-batch-code-preview::placeholder {
+    color: #8ba392;
+    font-weight: 400;
+    font-family: inherit;
+}
+
 /* add row */
 .rc-add-row td {
     background: #f6fbf8;
@@ -414,7 +456,7 @@
 
 .rc-modal {
     background: #fff;
-    border-radius: 12px;
+    border-radius: 16px;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
     width: 520px;
     max-width: 100%;

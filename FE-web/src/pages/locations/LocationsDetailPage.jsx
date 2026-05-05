@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
-import SidebarLayout from "../../components/SidebarLayout";
 import { getLocationById, updateLocation } from "../../api/locationApi";
 
 const EMPTY_FORM = {
@@ -95,7 +94,7 @@ export default function LocationsDetailPage() {
     };
 
     return (
-        <SidebarLayout activeKey="locations">
+        <>
             {success && (
                 <div className="sp-toast sp-toast-success">
                     <IconCheck />
@@ -240,6 +239,6 @@ export default function LocationsDetailPage() {
                     )}
                 </div>
             </div>
-        </SidebarLayout>
+        </>
     );
 }

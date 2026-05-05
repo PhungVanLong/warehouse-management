@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "./partners.css";
-import SidebarLayout from "../../components/SidebarLayout";
 import { getCustomerById, updateCustomer } from "../../api/customerApi";
 
 const EMPTY_FORM = {
@@ -108,7 +107,7 @@ export default function PartnersDetailPage() {
     };
 
     return (
-        <SidebarLayout>
+        <>
             {success && (
                 <div className="sp-toast sp-toast-success">
                     <IconCheck />
@@ -361,6 +360,6 @@ export default function PartnersDetailPage() {
                     )}
                 </div>
             </div>
-        </SidebarLayout>
+        </>
     );
 }

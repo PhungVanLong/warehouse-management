@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import SidebarLayout from "../../components/SidebarLayout";
 import "../../styles/shared.css";
 import "./receipts.css";
-import { createReceipt, suggestLocations } from "../../api/receiptApi";
+import { createReceipt, getAvailableLocations } from "../../api/receiptApi";
 import { getAllCustomers } from "../../api/customerApi";
 import { getAllItems } from "../../api/itemApi";
+import { createBatch } from "../../api/batchApi";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 let _rowKey = 0;
@@ -17,8 +17,28 @@ const newRow = () => ({
     unitof: "",
     quantity: "",
     price: "",
+    nameBatch: "",
     selectedLocations: [], // [{locationId, locationcode, allocQty}]
 });
+
+// ─── Batch code generator ─────────────────────────────────────────────────────
+function toBatchSegment(str) {
+    if (!str) return "";
+    return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\u0111]/g, "d").replace(/[\u0110]/g, "D")
+        .replace(/[^a-zA-Z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toUpperCase();
+}
+
+function generateBatchCode(nameBatch, dateStr, itemcode) {
+    if (!nameBatch || !dateStr || !itemcode) return "";
+    const yyyymmdd = dateStr.replace(/-/g, "");
+    return `${toBatchSegment(nameBatch)}-${yyyymmdd}-${toBatchSegment(itemcode)}`;
+}
 
 function formatMoney(n) {
     if (!n && n !== 0) return "";
@@ -86,10 +106,14 @@ function LocationModal({ open, onClose, onConfirm, loading, suggestions, quantit
 
     if (!open) return null;
 
+    const qty = Number(quantity) || 0;
+    // New API: field names are remainingCapacity / usedCapacity
     const existingLocs = suggestions.filter((s) => s.type === "EXISTING");
     const emptyLocs = suggestions.filter((s) => s.type === "EMPTY");
+    const partialLocs = suggestions.filter((s) => s.type === "PARTIAL");
     const totalAllocated = Array.from(selected.values()).reduce((a, b) => a + b, 0);
-    const remaining = Math.max(0, Number(quantity) - totalAllocated);
+    const remaining = Math.max(0, qty - totalAllocated);
+    const pct = qty > 0 ? Math.min(100, Math.round((totalAllocated / qty) * 100)) : 0;
 
     const racks = ["Tất cả dãy", ...Array.from(new Set(
         suggestions.map((s) => (s.locationcode || "").split("-")[0]).filter(Boolean)
@@ -107,18 +131,14 @@ function LocationModal({ open, onClose, onConfirm, loading, suggestions, quantit
         if (next.has(loc.locationId)) {
             next.delete(loc.locationId);
         } else {
-            const rem = Math.max(0, Number(quantity) - Array.from(next.values()).reduce((a, b) => a + b, 0));
-            const alloc = Math.min(rem, loc.availableSpace);
-            if (alloc > 0) next.set(loc.locationId, alloc);
+            const cap = Number(loc.remainingCapacity) || 0;
+            const autoFill = Math.max(1, Math.min(cap, remaining));
+            next.set(loc.locationId, autoFill);
         }
         setSelected(next);
     };
 
     const selectedEntries = Array.from(selected.entries());
-    const selectedCodes = selectedEntries.map(([locId]) => {
-        const found = suggestions.find((s) => s.locationId === locId);
-        return found ? found.locationcode : locId;
-    });
     const canConfirm = remaining === 0 && selected.size > 0;
 
     const handleConfirm = () => {
@@ -129,6 +149,26 @@ function LocationModal({ open, onClose, onConfirm, loading, suggestions, quantit
         onConfirm(locs);
     };
 
+    const renderRow = (loc, extraCol) => {
+        const isSel = selected.has(loc.locationId);
+        const cap = Number(loc.remainingCapacity) || 0;
+        const isDisabled = !isSel && (remaining === 0 || cap === 0);
+        return (
+            <tr
+                key={loc.locationId}
+                className={isSel ? "rc-row-selected" : ""}
+                onClick={isDisabled ? undefined : () => handleToggle(loc)}
+                style={{ cursor: isDisabled ? "not-allowed" : "pointer", opacity: isDisabled ? 0.32 : 1, transition: "opacity 0.15s" }}
+            >
+                <td><input type="checkbox" checked={isSel} disabled={isDisabled} onChange={() => { }} onClick={(e) => e.stopPropagation()} /></td>
+                {extraCol}
+                <td>{loc.locationcode}</td>
+                <td>{loc.capacity ?? "∞"}</td>
+                <td>{cap}</td>
+            </tr>
+        );
+    };
+
     return (
         <div className="rc-modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
             <div className="rc-modal">
@@ -137,6 +177,23 @@ function LocationModal({ open, onClose, onConfirm, loading, suggestions, quantit
                     <button className="rc-modal-close" onClick={onClose}><IconClose /></button>
                 </div>
                 <div className="rc-modal-body">
+                    {/* ── Allocation progress bar ── */}
+                    <div style={{ background: "#f3faf6", border: "1px solid #c6dfd0", borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.84rem", color: "#4c6152", marginBottom: 6 }}>
+                            <span>Tổng cần nhập: <strong style={{ color: "#1E3A2F" }}>{qty}</strong></span>
+                            <span>Đã phân bổ: <strong style={{ color: "#1E854A" }}>{totalAllocated}</strong></span>
+                            <span>Còn lại: <strong style={{ color: remaining > 0 ? "#e65100" : "#1E854A" }}>{remaining}</strong></span>
+                        </div>
+                        <div style={{ background: "#d4edda", borderRadius: 4, height: 8, overflow: "hidden" }}>
+                            <div style={{ background: remaining === 0 ? "#2DBE60" : "#f9a825", width: `${pct}%`, height: "100%", borderRadius: 4, transition: "width 0.2s" }} />
+                        </div>
+                        {remaining > 0 && qty > 0 && suggestions.length > 0 && !suggestions.some((s) => (Number(s.remainingCapacity) || 0) >= qty) && (
+                            <div style={{ marginTop: 6, fontSize: "0.8rem", color: "#e65100", display: "flex", alignItems: "center", gap: 4 }}>
+                                <IconWarn /> Số lượng vượt sức chứa 1 vị trí — vui lòng chọn nhiều vị trí để phân bổ đủ.
+                            </div>
+                        )}
+                    </div>
+
                     <div className="rc-modal-search-row">
                         <input className="rc-modal-search" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
                         <select className="rc-modal-row-select" value={rackFilter} onChange={(e) => setRackFilter(e.target.value)}>
@@ -159,15 +216,9 @@ function LocationModal({ open, onClose, onConfirm, loading, suggestions, quantit
                                     <th>Mã vật tư</th><th>Vị trí</th><th>Sức chứa</th><th>Còn trống</th>
                                 </tr></thead>
                                 <tbody>
-                                    {filterLoc(existingLocs).map((loc) => (
-                                        <tr key={loc.locationId} className={selected.has(loc.locationId) ? "rc-row-selected" : ""} onClick={() => handleToggle(loc)} style={{ cursor: "pointer" }}>
-                                            <td><input type="checkbox" checked={selected.has(loc.locationId)} onChange={() => { }} onClick={(e) => e.stopPropagation()} /></td>
-                                            <td style={{ fontWeight: 600, color: "#1E854A" }}>{rowName}</td>
-                                            <td>{loc.locationcode}</td>
-                                            <td>{loc.capacity}</td>
-                                            <td>{loc.availableSpace}</td>
-                                        </tr>
-                                    ))}
+                                    {filterLoc(existingLocs).map((loc) =>
+                                        renderRow(loc, <td style={{ fontWeight: 600, color: "#1E854A" }}>{rowName}</td>)
+                                    )}
                                 </tbody>
                             </table>
                         </>
@@ -183,31 +234,41 @@ function LocationModal({ open, onClose, onConfirm, loading, suggestions, quantit
                                     <th>Vị trí</th><th>Sức chứa</th><th>Còn trống</th>
                                 </tr></thead>
                                 <tbody>
-                                    {filterLoc(emptyLocs).map((loc) => (
-                                        <tr key={loc.locationId} className={selected.has(loc.locationId) ? "rc-row-selected" : ""} onClick={() => handleToggle(loc)} style={{ cursor: "pointer" }}>
-                                            <td><input type="checkbox" checked={selected.has(loc.locationId)} onChange={() => { }} onClick={(e) => e.stopPropagation()} /></td>
-                                            <td>{loc.locationcode}</td>
-                                            <td>{loc.capacity}</td>
-                                            <td>{loc.availableSpace}</td>
-                                        </tr>
-                                    ))}
+                                    {filterLoc(emptyLocs).map((loc) => renderRow(loc, null))}
                                 </tbody>
                             </table>
                         </>
                     )}
 
-                    {/* Status message */}
+                    {/* PARTIAL locations */}
+                    {!loading && filterLoc(partialLocs).length > 0 && (
+                        <>
+                            <div className="rc-modal-section-hd" style={{ color: "#8b7020" }}>Vị trí có hàng khác (còn chỗ)</div>
+                            <table className="rc-modal-table">
+                                <thead><tr>
+                                    <th style={{ width: 36 }} />
+                                    <th>Vị trí</th><th>Sức chứa</th><th>Còn trống</th>
+                                </tr></thead>
+                                <tbody>
+                                    {filterLoc(partialLocs).map((loc) => renderRow(loc, null))}
+                                </tbody>
+                            </table>
+                        </>
+                    )}
+
                     {!loading && selected.size > 0 && (
                         <div className={`rc-modal-msg ${remaining === 0 ? "rc-modal-msg-ok" : "rc-modal-msg-warn"}`}>
                             {remaining === 0
                                 ? <><IconCheck /> Đã đủ số lượng nhập. Nhấn Xác nhận để hoàn tất.</>
-                                : <><IconWarn /> Còn thiếu {remaining} cái, vui lòng chọn thêm vị trí khác.</>}
+                                : <><IconWarn /> Còn thiếu {remaining} — chọn thêm vị trí hoặc tăng số lượng phân bổ.</>}
                         </div>
                     )}
                 </div>
                 <div className="rc-modal-footer">
                     <span className="rc-modal-selected-info">
-                        {selected.size > 0 ? `Đã chọn: ${selectedCodes.join(" / ")} (${totalAllocated} cái)` : "Chưa chọn vị trí nào"}
+                        {selected.size > 0
+                            ? `Đã chọn: ${Array.from(selected.entries()).map(([id, q]) => { const loc = suggestions.find((s) => s.locationId === id); return `${loc?.locationcode || id}(${q} cái)`; }).join(", ")}`
+                            : "Chưa chọn vị trí nào"}
                     </span>
                     <button className="sp-btn-outline" onClick={onClose}>Hủy bỏ</button>
                     <button className="sp-btn-primary" onClick={handleConfirm} disabled={!canConfirm}>Xác nhận</button>
@@ -278,7 +339,7 @@ export default function ReceiptCreatePage() {
         if (!row.quantity || Number(row.quantity) <= 0) { showToast("error", "Vui lòng nhập số lượng trước."); return; }
         setLocModal({ open: true, rowIdx: idx, suggestions: [], loading: true });
         try {
-            const data = await suggestLocations(row.itemId, row.quantity);
+            const data = await getAvailableLocations(row.itemId);
             setLocModal((prev) => ({ ...prev, suggestions: data, loading: false }));
         } catch {
             setLocModal((prev) => ({ ...prev, suggestions: [], loading: false }));
@@ -317,6 +378,29 @@ export default function ReceiptCreatePage() {
         try {
             const result = await createReceipt({ docno: form.docno.trim(), docDate: form.date, description: form.description.trim(), customerId: Number(form.customerId), details });
             if (result?.success) {
+                // Tạo lô hàng cho các dòng có nhập tên lô
+                const returnedDetails = result?.data?.details || [];
+                let detailOffset = 0;
+                const batchPromises = [];
+                for (const row of rows) {
+                    const nLocs = row.selectedLocations.length;
+                    if (row.nameBatch?.trim() && nLocs > 0) {
+                        const firstDetailId = returnedDetails[detailOffset]?.id;
+                        if (firstDetailId) {
+                            batchPromises.push(
+                                createBatch({
+                                    itemId: Number(row.itemId),
+                                    nameBatch: row.nameBatch.trim(),
+                                    receiptDetailId: firstDetailId,
+                                    unitCost: Number(row.price) || 0,
+                                    quantity: Number(row.quantity),
+                                }).catch(() => { })
+                            );
+                        }
+                    }
+                    detailOffset += nLocs;
+                }
+                if (batchPromises.length > 0) await Promise.all(batchPromises);
                 showToast("success", "Tạo phiếu nhập kho thành công!");
                 setTimeout(() => navigate("/receipts"), 1200);
             } else {
@@ -328,7 +412,7 @@ export default function ReceiptCreatePage() {
     };
 
     return (
-        <SidebarLayout>
+        <>
             {toast && (
                 <div className={`sp-toast ${toast.type === "success" ? "sp-toast-success" : "sp-toast-error"}`}>{toast.msg}</div>
             )}
@@ -413,6 +497,8 @@ export default function ReceiptCreatePage() {
                                         <th className="rc-td-stt">STT</th>
                                         <th style={{ minWidth: 100 }}>Mã hàng</th>
                                         <th style={{ minWidth: 180 }}>Tên vật tư hàng hóa</th>
+                                        <th style={{ minWidth: 150 }}>Tên lô</th>
+                                        <th style={{ minWidth: 200 }}>Mã lô (tự gen)</th>
                                         <th style={{ minWidth: 90 }}>Đơn vị tính</th>
                                         <th style={{ minWidth: 80 }}>Số lượng</th>
                                         <th style={{ minWidth: 70 }}>Chênh lệch</th>
@@ -437,6 +523,22 @@ export default function ReceiptCreatePage() {
                                                 </td>
                                                 <td>
                                                     <input className="rc-td-input" value={row.itemname} readOnly style={{ background: "#f6fbf8", color: "#4c6152" }} placeholder="Tên vật tư" />
+                                                </td>
+                                                <td>
+                                                    <input
+                                                        className="rc-td-input"
+                                                        placeholder="Tên lô (tuỳ chọn)"
+                                                        value={row.nameBatch}
+                                                        onChange={(e) => handleRowChange(idx, "nameBatch", e.target.value)}
+                                                    />
+                                                </td>
+                                                <td>
+                                                    <input
+                                                        className="rc-td-input rc-batch-code-preview"
+                                                        readOnly
+                                                        value={generateBatchCode(row.nameBatch, form.date, row.itemcode)}
+                                                        placeholder={row.nameBatch || row.itemcode ? "Nhập đủ thông tin..." : ""}
+                                                    />
                                                 </td>
                                                 <td>
                                                     <input className="rc-td-input" value={row.unitof} readOnly style={{ background: "#f6fbf8", color: "#4c6152", maxWidth: 80 }} />
@@ -472,7 +574,7 @@ export default function ReceiptCreatePage() {
                                         );
                                     })}
                                     <tr className="rc-add-row" onClick={handleAddRow}>
-                                        <td colSpan={10}>
+                                        <td colSpan={12}>
                                             <button className="rc-add-row-btn" type="button">
                                                 <IconPlus size={13} /> Thêm mới dữ liệu
                                             </button>
@@ -480,7 +582,7 @@ export default function ReceiptCreatePage() {
                                     </tr>
                                     {totalAmount > 0 && (
                                         <tr className="rc-total-row">
-                                            <td colSpan={8} style={{ textAlign: "right", paddingRight: 12 }}>Tổng cộng</td>
+                                            <td colSpan={10} style={{ textAlign: "right", paddingRight: 12 }}>Tổng cộng</td>
                                             <td className="rc-td-num" style={{ textAlign: "right" }}>{formatMoney(totalAmount)}</td>
                                             <td />
                                         </tr>
@@ -538,6 +640,6 @@ export default function ReceiptCreatePage() {
                 quantity={locModal.rowIdx !== null ? rows[locModal.rowIdx]?.quantity || 0 : 0}
                 rowName={locModal.rowIdx !== null ? rows[locModal.rowIdx]?.itemcode || "" : ""}
             />
-        </SidebarLayout>
+        </>
     );
 }

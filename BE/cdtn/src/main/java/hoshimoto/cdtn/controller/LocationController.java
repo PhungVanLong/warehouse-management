@@ -1,9 +1,6 @@
 package hoshimoto.cdtn.controller;
 
 import java.util.List;
-import java.util.stream.Collectors;
-
-import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +19,7 @@ import hoshimoto.cdtn.dto.LocationResponse;
 import hoshimoto.cdtn.dto.request.LocationRequest;
 import hoshimoto.cdtn.entity.Location;
 import hoshimoto.cdtn.service.LocationService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/locations")
@@ -33,8 +31,7 @@ public class LocationController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<List<LocationResponse>>> getAllLocations() {
-        List<LocationResponse> list = locationService.getAllLocations()
-                .stream().map(LocationResponse::fromEntity).collect(Collectors.toList());
+        List<LocationResponse> list = locationService.getAllLocations();
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách vị trí thành công", list));
     }
 
@@ -42,7 +39,7 @@ public class LocationController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<LocationResponse>> getLocationById(@PathVariable Long id) {
         return locationService.getLocationById(id)
-                .map(l -> ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết vị trí thành công", LocationResponse.fromEntity(l))))
+                .map(l -> ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết vị trí thành công", l)))
                 .orElseGet(() -> ResponseEntity.status(404).body(new ApiResponse<>(false, "Không tìm thấy vị trí", null)));
     }
 
@@ -50,7 +47,7 @@ public class LocationController {
     @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public ResponseEntity<ApiResponse<LocationResponse>> createLocation(@Valid @RequestBody LocationRequest request) {
         Location created = locationService.createLocation(request);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Tạo mới vị trí thành công", LocationResponse.fromEntity(created)));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Tạo mới vị trí thành công", locationService.toResponse(created)));
     }
 
     @PutMapping("/{id}")
@@ -60,7 +57,7 @@ public class LocationController {
             @Valid @RequestBody LocationRequest request) {
         try {
             Location updated = locationService.updateLocation(id, request);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật vị trí thành công", LocationResponse.fromEntity(updated)));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật vị trí thành công", locationService.toResponse(updated)));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(new ApiResponse<>(false, e.getMessage(), null));
         }

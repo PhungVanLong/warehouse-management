@@ -42,9 +42,14 @@ public class GoodsIssue {
     @Column(length = 20)
     private DocStatus docstatus = DocStatus.DRAFT;
 
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customerid")
     private Customer customer;
+
+    // Mã số thuế (lưu lại tại thời điểm tạo phiếu, tránh thay đổi khi khách hàng đổi MST)
+    @Column(length = 30, name = "taxcode")
+    private String taxcode;
 
     @CreationTimestamp
     @Column(updatable = false, name = "createdat")
@@ -54,10 +59,16 @@ public class GoodsIssue {
     @JoinColumn(name = "userid")
     private User user;
 
+
     @Column(name = "modifiedat")
     private LocalDateTime modifiedAt;
 
     @Column(length = 100, name = "modifiedby")
     private String modifiedBy;
+
+    // Người duyệt (User)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "approverid")
+    private User approver;
 
 }

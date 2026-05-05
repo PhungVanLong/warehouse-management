@@ -11,6 +11,7 @@ import hoshimoto.cdtn.dto.request.UserRequest;
 import hoshimoto.cdtn.dto.UserResponse;
 import hoshimoto.cdtn.entity.User;
 import hoshimoto.cdtn.repository.UserRepository;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @Service
 public class UserService {
@@ -84,6 +85,12 @@ public class UserService {
         if (request.getIsActive() != null) u.setIsActive(request.getIsActive());
         if (request.getRole() != null) {
             u.setRole(hoshimoto.cdtn.entity.Enum.Role.valueOf(request.getRole()));
+        
+        // Nếu có password (tạo mới hoặc đổi mật khẩu), hash và set
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+            u.setPasswordHash(encoder.encode(request.getPassword()));
+        }
         }
         if (request.getModifiedBy() != null) u.setModifiedBy(request.getModifiedBy());
     }
