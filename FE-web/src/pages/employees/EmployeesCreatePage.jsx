@@ -188,12 +188,15 @@ export default function EmployeesCreatePage() {
                                 <div className="sd-field sd-field-row">
                                     <div className="sd-field-half">
                                         <label className="sd-label">Bộ phận</label>
-                                        <input
+                                        <select
                                             className="sd-input"
-                                            placeholder="Nhập tên bộ phận"
                                             value={form.department}
                                             onChange={(e) => set("department", e.target.value)}
-                                        />
+                                        >
+                                            <option value="">-- Chọn bộ phận --</option>
+                                            <option value="Kho">Kho</option>
+                                            <option value="Kế Toán">Kế Toán</option>
+                                        </select>
                                     </div>
                                     <div className="sd-field-half">
                                         <label className="sd-label">Địa chỉ</label>

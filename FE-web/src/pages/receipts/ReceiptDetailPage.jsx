@@ -28,14 +28,6 @@ function formatMoney(n) {
     return Number(n).toLocaleString("vi-VN");
 }
 
-function IconChevron() {
-    return (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="6 9 12 15 18 9" />
-        </svg>
-    );
-}
-
 export default function ReceiptDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -45,7 +37,6 @@ export default function ReceiptDetailPage() {
     const [error, setError] = useState(null);
     const [toast, setToast] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
-    const [statusMenuOpen, setStatusMenuOpen] = useState(false);
     const [confirmModal, setConfirmModal] = useState(false);
 
     const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
@@ -78,7 +69,7 @@ export default function ReceiptDetailPage() {
             }
         } catch (err) {
             showToast("error", err?.response?.data?.message || "Có lỗi xảy ra.");
-        } finally { setActionLoading(false); setStatusMenuOpen(false); }
+        } finally { setActionLoading(false); }
     };
 
     const handleCancel = async () => {
@@ -93,29 +84,12 @@ export default function ReceiptDetailPage() {
             }
         } catch (err) {
             showToast("error", err?.response?.data?.message || "Có lỗi xảy ra.");
-        } finally { setActionLoading(false); setStatusMenuOpen(false); }
+        } finally { setActionLoading(false); }
     };
 
     const totalAmount = receipt?.details
         ? receipt.details.reduce((s, d) => s + (d.amount || (d.quantity || 0) * (d.unitprice || 0)), 0)
         : 0;
-
-    // Group details by itemId for display (show combined locations per item)
-    const groupedDetails = receipt?.details
-        ? Object.values(
-            receipt.details.reduce((acc, d) => {
-                const key = d.itemId;
-                if (!acc[key]) {
-                    acc[key] = { ...d, locations: [d.locationcode || d.locationId], amounts: d.amount || (d.quantity || 0) * (d.unitprice || 0), quantities: d.quantity };
-                } else {
-                    acc[key].locations.push(d.locationcode || d.locationId);
-                    acc[key].amounts += (d.amount || (d.quantity || 0) * (d.unitprice || 0));
-                    acc[key].quantities += (d.quantity || 0);
-                }
-                return acc;
-            }, {})
-        )
-        : [];
 
     return (
         <>
@@ -184,70 +158,42 @@ export default function ReceiptDetailPage() {
                             <div className="rc-header-row">
                                 <label className="rc-form-label">Ngày</label>
                                 <input type="date" className="rc-form-input" style={{ minWidth: 150 }} value={formatDateInput(receipt.docDate)} readOnly />
+                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Đối tượng</label>
+                                <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.customerName || ""} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
-                                <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.docno || ""} readOnly />
+                                <input className="rc-form-input" style={{ minWidth: 150 }} value={receipt.docno || ""} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Người lập</label>
-                                <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.createdByFullname || receipt.createdByName || ""} readOnly />
+                                <input className="rc-form-input" style={{ minWidth: 160 }} value={receipt.createdByFullname || receipt.createdByName || ""} readOnly />
+                                {/* Status pill – static badge, no dropdown */}
+                                <span className={`${STATUS_CLASS[receipt.docstatus] || "rc-status-pill"} rc-status-inline`} style={{ marginLeft: "auto", cursor: "default", pointerEvents: "none" }}>
+                                    {STATUS_LABELS[receipt.docstatus] || receipt.docstatus}
+                                </span>
+                            </div>
 
-                                {receipt.docstatus === "CANCELLED" ? (
-                                    <>
-                                        <label className="rc-form-label" style={{ marginLeft: 16 }}>Người hủy</label>
-                                        <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.cancelledByFullname || receipt.cancelledByUsername || ""} readOnly />
-                                        {receipt.cancelledAt && (
-                                            <>
-                                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Ngày hủy</label>
-                                                <input className="rc-form-input" style={{ minWidth: 170 }} value={formatDate(receipt.cancelledAt)} readOnly />
-                                            </>
-                                        )}
-                                    </>
-                                ) : (
-                                    <>
-                                        <label className="rc-form-label" style={{ marginLeft: 16 }}>Người duyệt</label>
-                                        <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.approvedByFullname || receipt.approvedByUsername || ""} readOnly />
-                                        {receipt.approvedAt && (
-                                            <>
-                                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Ngày duyệt</label>
-                                                <input className="rc-form-input" style={{ minWidth: 170 }} value={formatDate(receipt.approvedAt)} readOnly />
-                                            </>
-                                        )}
-                                    </>
-                                )}
-
-                                {/* Status pill with dropdown menu */}
-                                <div style={{ position: "relative", marginLeft: "auto" }}>
-                                    <button
-                                        className={STATUS_CLASS[receipt.docstatus] || "rc-status-pill"}
-                                        onClick={() => receipt.docstatus === "DRAFT" && setStatusMenuOpen((v) => !v)}
-                                        style={{ cursor: receipt.docstatus === "DRAFT" ? "pointer" : "default" }}
-                                        disabled={actionLoading}
-                                    >
-                                        {STATUS_LABELS[receipt.docstatus] || receipt.docstatus}
-                                        {receipt.docstatus === "DRAFT" && <IconChevron />}
-                                    </button>
-                                    {statusMenuOpen && receipt.docstatus === "DRAFT" && (
-                                        <div style={{ position: "absolute", right: 0, top: "110%", background: "#fff", border: "1.5px solid #c6dfd0", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", zIndex: 100, minWidth: 160, padding: "4px 0" }}>
-                                            <div style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#1a7f4b", fontWeight: 600 }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = "#f3faf6"}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = ""}
-                                                onClick={() => { setStatusMenuOpen(false); setConfirmModal(true); }}>
-                                                ✓ Xác nhận phiếu
-                                            </div>
-                                            <div style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#b71c1c" }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = "#fce4ec"}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = ""}
-                                                onClick={handleCancel}>
-                                                ✕ Hủy phiếu
-                                            </div>
-                                        </div>
+                            {/* ── Approver / Canceller info row ── */}
+                            {receipt.docstatus === "CANCELLED" ? (
+                                <div className="rc-header-row" style={{ marginTop: -6 }}>
+                                    <label className="rc-form-label">Người hủy</label>
+                                    <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.cancelledByFullname || receipt.cancelledByUsername || ""} readOnly />
+                                    {receipt.cancelledAt && (
+                                        <>
+                                            <label className="rc-form-label" style={{ marginLeft: 16 }}>Ngày hủy</label>
+                                            <input className="rc-form-input" style={{ minWidth: 170 }} value={formatDate(receipt.cancelledAt)} readOnly />
+                                        </>
                                     )}
                                 </div>
-                            </div>
-
-                            {/* ── Đối tượng ── */}
-                            <div className="rc-form-row">
-                                <label className="rc-form-label">Đối tượng</label>
-                                <input className="rc-form-input rc-form-full" value={receipt.customerName || ""} readOnly />
-                            </div>
+                            ) : receipt.approvedByFullname || receipt.approvedByUsername ? (
+                                <div className="rc-header-row" style={{ marginTop: -6 }}>
+                                    <label className="rc-form-label">Người duyệt</label>
+                                    <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.approvedByFullname || receipt.approvedByUsername || ""} readOnly />
+                                    {receipt.approvedAt && (
+                                        <>
+                                            <label className="rc-form-label" style={{ marginLeft: 16 }}>Ngày duyệt</label>
+                                            <input className="rc-form-input" style={{ minWidth: 170 }} value={formatDate(receipt.approvedAt)} readOnly />
+                                        </>
+                                    )}
+                                </div>
+                            ) : null}
 
                             {/* ── Diễn giải ── */}
                             <div className="rc-form-row">
@@ -263,37 +209,36 @@ export default function ReceiptDetailPage() {
                                 </div>
                             )}
 
-                            {/* ── Detail table ── */}
                             <div className="rc-detail-table-wrap">
-                                <table className="rc-detail-table" style={{ tableLayout: "auto", width: "100%" }}>
+                                <table className="rc-detail-table" style={{ tableLayout: "auto" }}>
                                     <thead>
                                         <tr>
-                                            <th className="rc-td-stt" style={{ width: 48, minWidth: 48 }}>STT</th>
-                                            <th style={{ minWidth: 90, width: "12%" }}>Mã hàng</th>
-                                            <th style={{ minWidth: 140, width: "20%" }}>Tên hàng hóa</th>
-                                            <th style={{ minWidth: 70, width: "10%" }}>Đơn vị</th>
-                                            <th style={{ minWidth: 80, width: "10%", textAlign: "right" }}>Số lượng</th>
-                                            <th style={{ minWidth: 120, width: "18%" }}>Vị trí</th>
-                                            <th style={{ minWidth: 90, width: "12%", textAlign: "right" }}>Đơn giá</th>
-                                            <th style={{ minWidth: 110, width: "14%", textAlign: "right" }}>Thành tiền</th>
+                                            <th className="rc-td-stt">STT</th>
+                                            <th style={{ width: "11%" }}>Mã hàng</th>
+                                            <th style={{ width: "22%" }}>Tên hàng hóa</th>
+                                            <th style={{ width: "12%" }}>Mã lô</th>
+                                            <th style={{ width: "8%" }}>Đơn vị</th>
+                                            <th style={{ width: "9%", textAlign: "right" }}>Số lượng</th>
+                                            <th style={{ width: "16%" }}>Vị trí</th>
+                                            <th style={{ width: "13%", textAlign: "right" }}>Đơn giá</th>
+                                            <th style={{ width: "14%", textAlign: "right" }}>Thành tiền</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {groupedDetails.map((d, idx) => (
-                                            <tr key={idx}>
+                                        {(receipt.details || []).map((d, idx) => (
+                                            <tr key={d.id || idx}>
                                                 <td className="rc-td-stt">{idx + 1}</td>
                                                 <td style={{ fontWeight: 600, color: "#1E854A" }}>{d.itemcode}</td>
                                                 <td>{d.itemname}</td>
+                                                <td>{d.batchCode || d.batchcode || d.batchId || "—"}</td>
                                                 <td>{d.unitof}</td>
-                                                <td className="rc-td-num">{d.quantities}</td>
-                                                <td style={{ color: "#1E854A", fontWeight: 500 }}>
-                                                    {Array.isArray(d.locations) ? d.locations.join(" / ") : d.locations}
-                                                </td>
+                                                <td className="rc-td-num">{d.quantity}</td>
+                                                <td style={{ color: "#1E854A", fontWeight: 500 }}>{d.locationcode || d.locationId}</td>
                                                 <td className="rc-td-num">{formatMoney(d.unitprice)}</td>
-                                                <td className="rc-td-num" style={{ fontWeight: 500 }}>{formatMoney(d.amounts)}</td>
+                                                <td className="rc-td-num" style={{ fontWeight: 500 }}>{formatMoney(d.amount || (d.quantity || 0) * (d.unitprice || 0))}</td>
                                             </tr>
                                         ))}
-                                        {groupedDetails.length === 0 && (
+                                        {(!receipt.details || receipt.details.length === 0) && (
                                             <tr><td colSpan={9} style={{ textAlign: "center", color: "#8ba392", padding: 16 }}>Không có dữ liệu chi tiết.</td></tr>
                                         )}
                                         {totalAmount > 0 && (
@@ -305,7 +250,6 @@ export default function ReceiptDetailPage() {
                                     </tbody>
                                 </table>
                             </div>
-
                             {/* ── Invoice section (display only) ── */}
                             <div className="rc-section-hd">Chi tiết</div>
                             <div className="rc-section-sub">Thông tin hóa đơn</div>
@@ -332,16 +276,16 @@ export default function ReceiptDetailPage() {
 
                             {/* ── Actions ── */}
                             <div className="rc-form-actions">
-                                <button className="sp-btn-outline" onClick={() => navigate("/receipts")}>Hủy bỏ</button>
+                                <button className="sp-btn-outline" onClick={() => navigate("/receipts")}>Quay lại</button>
                                 {receipt.docstatus === "DRAFT" && (
-                                    <button className="sp-btn-primary" onClick={() => setConfirmModal(true)} disabled={actionLoading}>
-                                        {actionLoading ? "Đang xử lý..." : "Xác nhận"}
-                                    </button>
-                                )}
-                                {receipt.docstatus !== "DRAFT" && (
-                                    <button className="sp-btn-primary" onClick={() => navigate("/receipts")} >
-                                        Lưu
-                                    </button>
+                                    <>
+                                        <button className="sp-btn-danger-outline" onClick={handleCancel} disabled={actionLoading}>
+                                            {actionLoading ? "Đang xử lý..." : "Từ chối"}
+                                        </button>
+                                        <button className="sp-btn-primary" onClick={() => setConfirmModal(true)} disabled={actionLoading}>
+                                            Xác nhận
+                                        </button>
+                                    </>
                                 )}
                             </div>
                         </div>

@@ -21,25 +21,6 @@ const newRow = () => ({
     selectedLocations: [], // [{locationId, locationcode, allocQty}]
 });
 
-// ─── Batch code generator ─────────────────────────────────────────────────────
-function toBatchSegment(str) {
-    if (!str) return "";
-    return str
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[\u0111]/g, "d").replace(/[\u0110]/g, "D")
-        .replace(/[^a-zA-Z0-9]/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "")
-        .toUpperCase();
-}
-
-function generateBatchCode(nameBatch, dateStr, itemcode) {
-    if (!nameBatch || !dateStr || !itemcode) return "";
-    const yyyymmdd = dateStr.replace(/-/g, "");
-    return `${toBatchSegment(nameBatch)}-${yyyymmdd}-${toBatchSegment(itemcode)}`;
-}
-
 function formatMoney(n) {
     if (!n && n !== 0) return "";
     return Number(n).toLocaleString("vi-VN");
@@ -363,6 +344,7 @@ export default function ReceiptCreatePage() {
         for (let i = 0; i < rows.length; i++) {
             const r = rows[i];
             if (!r.itemId) { showToast("error", `Dòng ${i + 1}: Vui lòng chọn mặt hàng.`); return; }
+            if (!r.nameBatch?.trim()) { showToast("error", `Dòng ${i + 1}: Vui lòng nhập mã lô.`); return; }
             if (!r.quantity || Number(r.quantity) <= 0) { showToast("error", `Dòng ${i + 1}: Số lượng không hợp lệ.`); return; }
             if (r.selectedLocations.length === 0) { showToast("error", `Dòng ${i + 1}: Vui lòng chọn vị trí lưu trữ.`); return; }
         }
@@ -378,22 +360,22 @@ export default function ReceiptCreatePage() {
         try {
             const result = await createReceipt({ docno: form.docno.trim(), docDate: form.date, description: form.description.trim(), customerId: Number(form.customerId), details });
             if (result?.success) {
-                // Tạo lô hàng cho các dòng có nhập tên lô
                 const returnedDetails = result?.data?.details || [];
                 let detailOffset = 0;
                 const batchPromises = [];
                 for (const row of rows) {
                     const nLocs = row.selectedLocations.length;
-                    if (row.nameBatch?.trim() && nLocs > 0) {
-                        const firstDetailId = returnedDetails[detailOffset]?.id;
-                        if (firstDetailId) {
+                    for (let i = 0; i < nLocs; i++) {
+                        const detail = returnedDetails[detailOffset + i];
+                        const allocQty = row.selectedLocations[i]?.allocQty;
+                        if (detail?.id && allocQty) {
                             batchPromises.push(
                                 createBatch({
                                     itemId: Number(row.itemId),
                                     nameBatch: row.nameBatch.trim(),
-                                    receiptDetailId: firstDetailId,
+                                    receiptDetailId: detail.id,
                                     unitCost: Number(row.price) || 0,
-                                    quantity: Number(row.quantity),
+                                    quantity: Number(allocQty),
                                 }).catch(() => { })
                             );
                         }
@@ -494,18 +476,16 @@ export default function ReceiptCreatePage() {
                             <table className="rc-detail-table">
                                 <thead>
                                     <tr>
-                                        <th className="rc-td-stt">STT</th>
-                                        <th style={{ minWidth: 100 }}>Mã hàng</th>
-                                        <th style={{ minWidth: 180 }}>Tên vật tư hàng hóa</th>
-                                        <th style={{ minWidth: 150 }}>Tên lô</th>
-                                        <th style={{ minWidth: 200 }}>Mã lô (tự gen)</th>
-                                        <th style={{ minWidth: 90 }}>Đơn vị tính</th>
-                                        <th style={{ minWidth: 80 }}>Số lượng</th>
-                                        <th style={{ minWidth: 70 }}>Chênh lệch</th>
-                                        <th style={{ minWidth: 140 }}>Vị trí</th>
-                                        <th style={{ minWidth: 100 }}>Đơn giá</th>
-                                        <th style={{ minWidth: 110 }}>Thành tiền</th>
-                                        <th style={{ width: 36 }}></th>
+                                        <th className="rc-td-stt" style={{ width: 36 }}>STT</th>
+                                        <th style={{ width: "9%" }}>Mã hàng</th>
+                                        <th style={{ width: "16%" }}>Tên vật tư hàng hóa</th>
+                                        <th style={{ width: "15%" }}>Mã lô</th>
+                                        <th style={{ width: "7%" }}>ĐVT</th>
+                                        <th style={{ width: "7%" }}>SL</th>
+                                        <th style={{ width: "12%" }}>Vị trí</th>
+                                        <th style={{ width: "9%" }}>Đơn giá</th>
+                                        <th style={{ width: "10%" }}>Thành tiền</th>
+                                        <th style={{ width: 32 }}></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -527,24 +507,16 @@ export default function ReceiptCreatePage() {
                                                 <td>
                                                     <input
                                                         className="rc-td-input"
-                                                        placeholder="Tên lô (tuỳ chọn)"
                                                         value={row.nameBatch}
                                                         onChange={(e) => handleRowChange(idx, "nameBatch", e.target.value)}
+                                                        placeholder="Nhập mã lô"
                                                     />
                                                 </td>
                                                 <td>
-                                                    <input
-                                                        className="rc-td-input rc-batch-code-preview"
-                                                        readOnly
-                                                        value={generateBatchCode(row.nameBatch, form.date, row.itemcode)}
-                                                        placeholder={row.nameBatch || row.itemcode ? "Nhập đủ thông tin..." : ""}
-                                                    />
+                                                    <input className="rc-td-input" value={row.unitof} readOnly style={{ background: "#f6fbf8", color: "#4c6152" }} />
                                                 </td>
                                                 <td>
-                                                    <input className="rc-td-input" value={row.unitof} readOnly style={{ background: "#f6fbf8", color: "#4c6152", maxWidth: 80 }} />
-                                                </td>
-                                                <td>
-                                                    <input type="number" className="rc-td-input" min="1" style={{ maxWidth: 80 }} value={row.quantity}
+                                                    <input type="number" className="rc-td-input" min="1" value={row.quantity}
                                                         onChange={(e) => {
                                                             setRows((prev) => {
                                                                 const next = [...prev];
@@ -553,14 +525,13 @@ export default function ReceiptCreatePage() {
                                                             });
                                                         }} placeholder="0" />
                                                 </td>
-                                                <td className="rc-td-num"><span style={{ color: "#8ba392" }}>0</span></td>
                                                 <td>
                                                     <button type="button" className={`rc-loc-btn${row.selectedLocations.length > 0 ? " rc-loc-btn-set" : ""}`} onClick={() => openLocationModal(idx)}>
                                                         {row.selectedLocations.length > 0 ? locLabel : "Chọn vị trí"} <IconChevron />
                                                     </button>
                                                 </td>
                                                 <td>
-                                                    <input type="number" className="rc-td-input" min="0" style={{ maxWidth: 100 }} value={row.price} onChange={(e) => handleRowChange(idx, "price", e.target.value)} placeholder="0" />
+                                                    <input type="number" className="rc-td-input" min="0" value={row.price} onChange={(e) => handleRowChange(idx, "price", e.target.value)} placeholder="0" />
                                                 </td>
                                                 <td className="rc-td-num" style={{ textAlign: "right", fontWeight: 500 }}>
                                                     {amount > 0 ? formatMoney(amount) : ""}
@@ -574,7 +545,7 @@ export default function ReceiptCreatePage() {
                                         );
                                     })}
                                     <tr className="rc-add-row" onClick={handleAddRow}>
-                                        <td colSpan={12}>
+                                        <td colSpan={10}>
                                             <button className="rc-add-row-btn" type="button">
                                                 <IconPlus size={13} /> Thêm mới dữ liệu
                                             </button>
@@ -582,7 +553,7 @@ export default function ReceiptCreatePage() {
                                     </tr>
                                     {totalAmount > 0 && (
                                         <tr className="rc-total-row">
-                                            <td colSpan={10} style={{ textAlign: "right", paddingRight: 12 }}>Tổng cộng</td>
+                                            <td colSpan={8} style={{ textAlign: "right", paddingRight: 12 }}>Tổng cộng</td>
                                             <td className="rc-td-num" style={{ textAlign: "right" }}>{formatMoney(totalAmount)}</td>
                                             <td />
                                         </tr>

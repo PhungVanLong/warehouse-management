@@ -97,7 +97,7 @@ export default function BatchDetailPage() {
                             <ReadField label="Tên lô" value={batch.nameBatch || "—"} />
                             <ReadField label="Mã vật tư" value={batch.itemcode || "—"} />
                             <ReadField label="Tên vật tư / hàng hóa" value={batch.itemname || "—"} />
-                            <ReadField label="ID dòng phiếu nhập" value={batch.receiptDetailId ?? "—"} />
+
 
                             <div className="sd-field sd-field-row">
                                 <div className="sd-field-half">
@@ -114,16 +114,7 @@ export default function BatchDetailPage() {
 
                             <ReadField label="Đơn giá nhập" value={formatNumber(batch.unitCost)} />
 
-                            <div className="sd-field sd-field-row">
-                                <div className="sd-field-half">
-                                    <label className="sd-label">Ngày sản xuất</label>
-                                    <div className="bt-read-value">{formatDate(batch.manufactureDate)}</div>
-                                </div>
-                                <div className="sd-field-half">
-                                    <label className="sd-label">Hạn sử dụng</label>
-                                    <div className="bt-read-value">{formatDate(batch.expiryDate)}</div>
-                                </div>
-                            </div>
+                            <ReadField label="Ngày sản xuất" value={formatDate(batch.manufactureDate)} />
 
                             <ReadField label="Ngày tạo" value={formatDateTime(batch.createdAt)} />
                         </div>

@@ -78,6 +78,13 @@ function IconWarn() {
         </svg>
     );
 }
+function IconChevron() {
+    return (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+        </svg>
+    );
+}
 
 // ─── Location Picker Modal (Available Stock) ──────────────────────────────────
 function LocationModal({ open, onClose, onConfirm, loading, locations, quantity, rowName, itemId }) {
@@ -244,6 +251,7 @@ export default function IssueCreatePage() {
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
     const [locModal, setLocModal] = useState({ open: false, rowIdx: null, locations: [], loading: false });
+    const [stockByItem, setStockByItem] = useState({});
 
     const loadData = useCallback(async () => {
         setLoadingData(true);
@@ -288,7 +296,28 @@ export default function IssueCreatePage() {
             }
             return next;
         });
+        if (field === "itemId" && value) {
+            fetchItemStock(value);
+        }
     };
+
+    const fetchItemStock = useCallback(async (itemId) => {
+        if (!itemId) return;
+        setStockByItem((prev) => {
+            if (prev[itemId]?.loading || prev[itemId]?.total !== undefined) return prev;
+            return { ...prev, [itemId]: { loading: true, total: undefined, error: null } };
+        });
+        try {
+            const locations = await getAvailableLocations(itemId);
+            const total = (locations || []).reduce((sum, loc) => {
+                const qty = (loc.items || []).find((it) => String(it.itemId) === String(itemId))?.quantity || 0;
+                return sum + Number(qty || 0);
+            }, 0);
+            setStockByItem((prev) => ({ ...prev, [itemId]: { loading: false, total, error: null } }));
+        } catch {
+            setStockByItem((prev) => ({ ...prev, [itemId]: { loading: false, total: undefined, error: true } }));
+        }
+    }, []);
 
     const handleAddRow = () => setRows((prev) => [...prev, newRow()]);
     const handleRemoveRow = (idx) => setRows((prev) => prev.filter((_, i) => i !== idx));
@@ -329,6 +358,7 @@ export default function IssueCreatePage() {
         const details = rows.flatMap((r) =>
             r.selectedLocations.map((loc) => ({
                 itemId: Number(r.itemId),
+                batchId: r.batchId ? Number(r.batchId) : undefined,
                 locationId: Number(loc.locationId),
                 quantity: Number(loc.allocQty),
                 unitprice: Number(r.price) || 0,
@@ -428,17 +458,18 @@ export default function IssueCreatePage() {
                             <table className="rc-detail-table">
                                 <thead>
                                     <tr>
-                                        <th className="rc-td-stt">STT</th>
-                                        <th style={{ minWidth: 100 }}>Mã hàng</th>
-                                        <th style={{ minWidth: 160 }}>Tên vật tư hàng hóa</th>
-                                        <th style={{ minWidth: 160 }}>Mã lô</th>
-                                        <th style={{ minWidth: 70 }}>Đơn vị tính</th>
-                                        <th style={{ minWidth: 70 }}>Số lượng</th>
-                                        <th style={{ minWidth: 110 }}>Vị trí xuất</th>
-                                        <th style={{ minWidth: 105 }}>Giá nhập</th>
-                                        <th style={{ minWidth: 110 }}>Đơn giá xuất</th>
-                                        <th style={{ minWidth: 110 }}>Thành tiền</th>
-                                        <th style={{ width: 36 }}></th>
+                                        <th className="rc-td-stt" style={{ width: 36 }}>STT</th>
+                                        <th style={{ width: "9%" }}>Mã hàng</th>
+                                        <th style={{ width: "15%" }}>Tên vật tư hàng hóa</th>
+                                        <th style={{ width: "14%" }}>Mã lô</th>
+                                        <th style={{ width: "6%" }}>ĐVT</th>
+                                        <th style={{ width: "6%" }}>SL</th>
+                                        <th style={{ width: "9%" }}>Tồn hiện tại</th>
+                                        <th style={{ width: "10%" }}>Vị trí xuất</th>
+                                        <th style={{ width: "9%" }}>Giá nhập</th>
+                                        <th style={{ width: "9%" }}>Đơn giá xuất</th>
+                                        <th style={{ width: "9%" }}>Thành tiền</th>
+                                        <th style={{ width: 32 }}></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -448,7 +479,6 @@ export default function IssueCreatePage() {
                                             <td>
                                                 <select
                                                     className="rc-td-select"
-                                                    style={{ minWidth: 120 }}
                                                     value={row.itemId}
                                                     onChange={(e) => handleRowChange(idx, "itemId", e.target.value)}
                                                     disabled={loadingData}
@@ -462,7 +492,6 @@ export default function IssueCreatePage() {
                                             <td>
                                                 <input
                                                     className="rc-td-input"
-                                                    style={{ minWidth: 160 }}
                                                     value={row.itemname}
                                                     readOnly
                                                     placeholder="Tên hàng"
@@ -471,7 +500,6 @@ export default function IssueCreatePage() {
                                             <td>
                                                 <select
                                                     className="rc-td-select"
-                                                    style={{ minWidth: 155 }}
                                                     value={row.batchId}
                                                     onChange={(e) => handleRowChange(idx, "batchId", e.target.value)}
                                                     disabled={!row.itemId || loadingData}
@@ -480,17 +508,16 @@ export default function IssueCreatePage() {
                                                     {batches
                                                         .filter((b) => String(b.itemId) === String(row.itemId) && (b.quantityRemaining ?? b.quantity) > 0)
                                                         .map((b) => (
-                                                            <option key={b.id} value={b.id}>{b.batchCode}</option>
+                                                            <option key={b.id} value={b.id}>{b.batchCode} (còn: {b.quantityRemaining ?? b.quantity})</option>
                                                         ))}
                                                 </select>
                                             </td>
                                             <td>
-                                                <input className="rc-td-input" style={{ width: 75 }} value={row.unitof} readOnly />
+                                                <input className="rc-td-input" value={row.unitof} readOnly />
                                             </td>
                                             <td>
                                                 <input
                                                     className="rc-td-input rc-td-num"
-                                                    style={{ width: 80 }}
                                                     type="number"
                                                     min="1"
                                                     value={row.quantity}
@@ -505,15 +532,24 @@ export default function IssueCreatePage() {
                                                     }}
                                                 />
                                             </td>
+                                            <td className="rc-td-num" style={{ color: Number(row.quantity) > (stockByItem[row.itemId]?.total ?? Number.POSITIVE_INFINITY) ? "#c62828" : "#4c6152" }}>
+                                                {!row.itemId
+                                                    ? "—"
+                                                    : stockByItem[row.itemId]?.loading
+                                                        ? "Đang tải..."
+                                                        : stockByItem[row.itemId]?.error
+                                                            ? "Lỗi"
+                                                            : (stockByItem[row.itemId]?.total ?? 0)}
+                                            </td>
                                             <td>
                                                 <button
-                                                    className={`rc-loc-btn${row.selectedLocations.length > 0 ? " rc-loc-btn-ok" : ""}`}
+                                                    className={`rc-loc-btn${row.selectedLocations.length > 0 ? " rc-loc-btn-set" : ""}`}
                                                     onClick={() => openLocationModal(idx)}
                                                     type="button"
                                                 >
                                                     {row.selectedLocations.length > 0
                                                         ? row.selectedLocations.map((l) => l.locationcode).join(" / ")
-                                                        : "+ Chọn vị trí"}
+                                                        : "Chọn vị trí"} <IconChevron />
                                                 </button>
                                             </td>
                                             <td className="rc-td-num" style={{ color: "#4c6152", fontSize: "0.87rem" }}>
@@ -522,7 +558,7 @@ export default function IssueCreatePage() {
                                             <td>
                                                 <input
                                                     className="rc-td-input rc-td-num"
-                                                    style={{ width: 100, background: row.price ? "#f0faf4" : undefined, fontWeight: row.price ? 600 : undefined, color: "#1E3A2F" }}
+                                                    style={{ background: row.price ? "#f0faf4" : undefined, fontWeight: row.price ? 600 : undefined, color: "#1E3A2F" }}
                                                     type="number"
                                                     min="0"
                                                     value={row.price}
@@ -535,27 +571,31 @@ export default function IssueCreatePage() {
                                                 {formatMoney((Number(row.quantity) || 0) * (Number(row.price) || 0))}
                                             </td>
                                             <td>
-                                                <button className="rc-row-del-btn" onClick={() => handleRemoveRow(idx)} type="button" title="Xóa dòng">
-                                                    <IconTrash />
-                                                </button>
+                                                {rows.length > 1 && (
+                                                    <button className="rc-del-btn" onClick={() => handleRemoveRow(idx)} type="button" title="Xóa dòng">
+                                                        <IconTrash />
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
+                                    <tr className="rc-add-row" onClick={handleAddRow}>
+                                        <td colSpan={12}>
+                                            <button className="rc-add-row-btn" type="button">
+                                                <IconPlus size={13} /> Thêm mới dữ liệu
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {totalAmount > 0 && (
+                                        <tr className="rc-total-row">
+                                            <td colSpan={10} style={{ textAlign: "right", paddingRight: 12 }}>Tổng cộng</td>
+                                            <td className="rc-td-num" style={{ textAlign: "right" }}>{formatMoney(totalAmount)}</td>
+                                            <td />
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
-
-                        {/* Add row */}
-                        <button className="rc-add-row-btn" onClick={handleAddRow} type="button">
-                            <IconPlus /> Thêm dòng
-                        </button>
-
-                        {/* Total */}
-                        {totalAmount > 0 && (
-                            <div style={{ textAlign: "right", fontWeight: 600, color: "#1E3A2F", padding: "8px 0 4px", fontSize: "0.95rem" }}>
-                                Tổng cộng: {formatMoney(totalAmount)}
-                            </div>
-                        )}
 
                         {/* ── Actions ── */}
                         <div className="rc-form-actions">

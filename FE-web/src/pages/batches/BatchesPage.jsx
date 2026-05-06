@@ -50,6 +50,23 @@ export default function BatchesPage() {
 
     useEffect(() => { fetchBatches(); }, [fetchBatches]);
 
+    useEffect(() => {
+        const handleRefresh = () => fetchBatches();
+        const handleFocus = () => {
+            if (localStorage.getItem("batchesNeedsRefresh")) {
+                localStorage.removeItem("batchesNeedsRefresh");
+                fetchBatches();
+            }
+        };
+        window.addEventListener("batches:refresh", handleRefresh);
+        window.addEventListener("focus", handleFocus);
+        handleFocus();
+        return () => {
+            window.removeEventListener("batches:refresh", handleRefresh);
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, [fetchBatches]);
+
     const filtered = useMemo(() => {
         const sorted = [...batches].sort((a, b) => (a.id || 0) - (b.id || 0));
         if (!search.trim()) return sorted;
@@ -171,17 +188,16 @@ export default function BatchesPage() {
                                 <th>SL còn lại <SortIcon /></th>
                                 <th>Đơn giá nhập <SortIcon /></th>
                                 <th>Ngày sản xuất <SortIcon /></th>
-                                <th>Hạn sử dụng <SortIcon /></th>
                                 <th className="sp-th-action">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={11} className="sp-status-row">Đang tải...</td></tr>
+                                <tr><td colSpan={10} className="sp-status-row">Đang tải...</td></tr>
                             ) : error ? (
-                                <tr><td colSpan={11} className="sp-status-row sp-status-error">{error}</td></tr>
+                                <tr><td colSpan={10} className="sp-status-row sp-status-error">{error}</td></tr>
                             ) : rows.length === 0 ? (
-                                <tr><td colSpan={11} className="sp-status-row">Không có dữ liệu</td></tr>
+                                <tr><td colSpan={10} className="sp-status-row">Không có dữ liệu</td></tr>
                             ) : rows.map((r) => (
                                 <tr
                                     key={r.id}
@@ -207,7 +223,6 @@ export default function BatchesPage() {
                                     </td>
                                     <td className="bt-td-number">{formatNumber(r.unitCost)}</td>
                                     <td className="bt-td-date">{formatDate(r.manufactureDate)}</td>
-                                    <td className="bt-td-date">{formatDate(r.expiryDate)}</td>
                                     <td className="sp-td-action" onClick={(e) => e.stopPropagation()}>
                                         <button className="sp-edit-btn" title="Xem chi tiết" onClick={() => navigate(`/batches/${r.id}`)}>
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
-import { getLocationById, updateLocation } from "../../api/locationApi";
+import { getLocationById, updateLocation, getItemsAtLocation } from "../../api/locationApi";
 
 const EMPTY_FORM = {
     locationcode: "", locationname: "", rackno: "", floorno: "",
@@ -28,6 +28,9 @@ export default function LocationsDetailPage() {
     const [error, setError] = useState(null);
     const [fieldErrors, setFieldErrors] = useState({});
     const [success, setSuccess] = useState(false);
+    const [storedItems, setStoredItems] = useState([]);
+    const [itemsLoading, setItemsLoading] = useState(false);
+    const [itemsError, setItemsError] = useState(null);
 
     useEffect(() => {
         setLoading(true);
@@ -40,6 +43,18 @@ export default function LocationsDetailPage() {
             })
             .catch(() => setError("Không thể tải thông tin vị trí."))
             .finally(() => setLoading(false));
+        setItemsLoading(true);
+        setItemsError(null);
+        getItemsAtLocation(id)
+            .then((data) => {
+                const items = Array.isArray(data) ? data : (data?.items || []);
+                setStoredItems(items);
+            })
+            .catch(() => {
+                setItemsError("Không thể tải danh sách vật tư.");
+                setStoredItems([]);
+            })
+            .finally(() => setItemsLoading(false));
     }, [id]);
 
     const set = (field, value) => {
@@ -220,6 +235,49 @@ export default function LocationsDetailPage() {
                                 </div>
                             </div>
 
+                            <div className="sd-card" style={{ marginTop: 16 }}>
+                                <div className="sd-section-hd">
+                                    <span className="sd-section-icon"><IconCheck /></span>
+                                    Danh sách vật tư tại vị trí
+                                </div>
+                                <div className="sp-table-wrap sp-scrollable">
+                                    <table className="sp-table">
+                                        <thead>
+                                            <tr>
+                                                <th style={{ width: 60 }}>STT</th>
+                                                <th>Mã vật tư</th>
+                                                <th>Tên vật tư</th>
+                                                <th style={{ width: 140 }}>Mã lô</th>
+                                                <th style={{ width: 120 }}>Đơn vị</th>
+                                                <th style={{ width: 140, textAlign: "right" }}>Số lượng</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {itemsLoading ? (
+                                                <tr><td colSpan={6} className="sp-status-row">Đang tải...</td></tr>
+                                            ) : itemsError ? (
+                                                <tr><td colSpan={6} className="sp-status-row sp-status-error">{itemsError}</td></tr>
+                                            ) : storedItems.length === 0 ? (
+                                                <tr><td colSpan={6} className="sp-status-row">Không có dữ liệu</td></tr>
+                                            ) : storedItems.map((item, idx) => (
+                                                <tr key={item.itemId || `${item.itemcode || "item"}-${idx}`}>
+                                                    <td>{idx + 1}</td>
+                                                    <td>{item.itemcode}</td>
+                                                    <td>{item.itemname}</td>
+                                                    <td>
+                                                        {Array.isArray(item.batchCodes) && item.batchCodes.length > 0
+                                                            ? item.batchCodes.join(", ")
+                                                            : "—"}
+                                                    </td>
+                                                    <td>{item.unitof}</td>
+                                                    <td style={{ textAlign: "right" }}>{item.quantity}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
                             <div className="sd-footer-actions">
                                 {isEditing ? (
                                     <>
@@ -235,6 +293,7 @@ export default function LocationsDetailPage() {
                                     </>
                                 )}
                             </div>
+
                         </div>
                     )}
                 </div>

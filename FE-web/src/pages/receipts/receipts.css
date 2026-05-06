@@ -91,14 +91,15 @@
     align-items: center;
     gap: 12px;
     margin-bottom: 14px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .rc-form-label {
     font-size: 0.88rem;
     font-weight: 600;
     color: #243427;
-    min-width: 80px;
+    min-width: 90px;
+    width: 90px;
     flex-shrink: 0;
 }
 
@@ -184,8 +185,10 @@
 .rc-header-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 14px;
+    flex-wrap: wrap;
+    row-gap: 10px;
 }
 
 .rc-lapphieu-btn {
@@ -216,10 +219,22 @@
     margin-bottom: 20px;
 }
 
+.rc-detail-table-wrap.rc-detail-fullwidth {
+    margin-left: -28px;
+    margin-right: -28px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: 1px solid #b8d8c5;
+    border-bottom: 1px solid #b8d8c5;
+    margin-bottom: 0;
+}
+
 .rc-detail-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
-    font-size: 0.88rem;
+    font-size: 0.87rem;
 }
 
 .rc-detail-table thead tr {
@@ -228,18 +243,21 @@
 }
 
 .rc-detail-table th {
-    padding: 10px 11px;
+    padding: 9px 7px;
     font-weight: 600;
-    font-size: 0.82rem;
-    white-space: nowrap;
+    font-size: 0.79rem;
+    white-space: normal;
+    word-break: break-word;
     text-align: left;
+    line-height: 1.25;
 }
 
 .rc-detail-table td {
-    padding: 8px 10px;
+    padding: 6px 7px;
     border-bottom: 1px solid #edf3ef;
     color: #2e4a38;
     vertical-align: middle;
+    overflow: hidden;
 }
 
 .rc-detail-table tbody tr:last-child td {
@@ -258,14 +276,14 @@
 
 .rc-td-input {
     width: 100%;
-    padding: 5px 8px;
+    padding: 4px 6px;
     border: 1.5px solid #c0deca;
     border-radius: 5px;
-    font-size: 0.87rem;
+    font-size: 0.84rem;
     color: #243427;
     background: #fff;
     outline: none;
-    min-width: 60px;
+    box-sizing: border-box;
     transition: border-color 0.15s;
 }
 
@@ -279,20 +297,19 @@
 
 .rc-td-select {
     width: 100%;
-    padding: 5px 8px;
+    padding: 4px 18px 4px 6px;
     border: 1.5px solid #c0deca;
     border-radius: 5px;
-    font-size: 0.87rem;
+    font-size: 0.84rem;
     color: #243427;
     background: #fff;
     outline: none;
     cursor: pointer;
-    min-width: 80px;
+    box-sizing: border-box;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238ba392' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 6px center;
-    padding-right: 20px;
+    background-position: right 4px center;
     transition: border-color 0.15s;
 }
 
@@ -305,15 +322,19 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 5px 10px;
+    padding: 4px 8px;
     border: 1.5px solid #2DBE60;
     border-radius: 5px;
     background: #fff;
     color: #2DBE60;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    box-sizing: border-box;
     transition: background 0.12s;
 }
 
@@ -407,6 +428,68 @@
 
 .rc-del-btn:hover {
     background: #fce4ec;
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+
+@media (max-width: 900px) {
+    .rc-form-card {
+        padding: 16px 16px 16px;
+    }
+
+    .rc-form-label {
+        min-width: 80px;
+        width: 80px;
+    }
+
+    .rc-form-actions {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 600px) {
+    .rc-form-card {
+        padding: 12px 10px 14px;
+    }
+
+    .rc-header-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rc-form-row {
+        flex-wrap: wrap;
+    }
+
+    .rc-form-label {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .rc-form-input,
+    .rc-form-select {
+        min-width: 0;
+    }
+
+    .rc-form-full {
+        width: 100%;
+    }
+
+    .rc-form-actions {
+        flex-wrap: wrap;
+        justify-content: stretch;
+    }
+
+    .rc-form-actions .sp-btn-primary,
+    .rc-form-actions .sp-btn-outline {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .rc-modal {
+        width: 100%;
+        margin: 0 8px;
+    }
 }
 
 /* ── Total row ───────────────────────────────────────── */
@@ -686,6 +769,18 @@
     background: #fce4ec;
     color: #b71c1c;
     border-color: #f48fb1;
+}
+
+/* Static inline status badge (no button behaviour) */
+.rc-status-inline {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border: 1.5px solid transparent;
+    white-space: nowrap;
 }
 
 /* ── Toast error ─────────────────────────────────────── */
