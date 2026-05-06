@@ -15,6 +15,9 @@ public class GoodsIssueDetailRequest {
     /** ID vị trí được chọn (người dùng chọn từ danh sách vị trí có hàng) */
     private Long locationId;
 
+    /** ID lô hàng (tùy chọn; nếu có, BE sẽ trừ quantityRemaining của lô khi xác nhận) */
+    private Long batchId;
+
     @NotNull(message = "Số lượng không được để trống")
     @DecimalMin(value = "0.0001", message = "Số lượng phải lớn hơn 0")
     private BigDecimal quantity;

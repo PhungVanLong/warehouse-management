@@ -17,4 +17,6 @@ public class GoodsIssueDetailResponse {
     private Long locationId;
     private String locationcode;
     private String locationname;
+    private Long batchId;
+    private String batchCode;
 }
