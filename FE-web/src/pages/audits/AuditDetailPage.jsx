@@ -306,17 +306,17 @@ export default function AuditDetailPage() {
 
                             {/* ── Detail table ── */}
                             <div className="rc-detail-table-wrap">
-                                <table className="rc-detail-table" style={{ tableLayout: "auto", width: "100%" }}>
+                                <table className="rc-detail-table" style={{ width: "100%" }}>
                                     <thead>
                                         <tr>
-                                            <th className="rc-td-stt" style={{ width: 48 }}>STT</th>
-                                            <th style={{ minWidth: 90 }}>Mã hàng</th>
-                                            <th style={{ minWidth: 160 }}>Tên vật tư hàng hóa</th>
-                                            <th style={{ minWidth: 70 }}>Đơn vị</th>
+                                            <th className="rc-td-stt" style={{ width: 36 }}>STT</th>
+                                            <th style={{ width: "10%" }}>Mã hàng</th>
+                                            <th style={{ width: "22%" }}>Tên vật tư hàng hóa</th>
+                                            <th style={{ width: "8%" }}>Đơn vị</th>
                                             <th className="au-th-book">SL hệ thống</th>
                                             <th className="au-th-actual">SL thực tế</th>
                                             <th className="au-th-diff">Chênh lệch</th>
-                                            <th style={{ minWidth: 160 }}>Đề xuất xử lý</th>
+                                            <th style={{ width: "18%" }}>Đề xuất xử lý</th>
                                         </tr>
                                     </thead>
                                     <tbody>

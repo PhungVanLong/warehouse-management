@@ -9,9 +9,13 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import hoshimoto.cdtn.dto.LocationDetailResponse;
+import hoshimoto.cdtn.dto.LocationDetailResponse.LocationItemStock;
 import hoshimoto.cdtn.dto.LocationResponse;
 import hoshimoto.cdtn.dto.request.LocationRequest;
+import hoshimoto.cdtn.entity.ItemLocation;
 import hoshimoto.cdtn.entity.Location;
+import hoshimoto.cdtn.repository.BatchRepository;
 import hoshimoto.cdtn.repository.ItemLocationRepository;
 import hoshimoto.cdtn.repository.LocationRepository;
 
@@ -23,6 +27,9 @@ public class LocationService {
     @Autowired
     private ItemLocationRepository itemLocationRepository;
 
+    @Autowired
+    private BatchRepository batchRepository;
+
     public List<LocationResponse> getAllLocations() {
         return locationRepository.findAll().stream()
                 .map(this::toResponse).collect(Collectors.toList());
@@ -30,6 +37,34 @@ public class LocationService {
 
     public Optional<LocationResponse> getLocationById(Long id) {
         return locationRepository.findById(id).map(this::toResponse);
+    }
+
+    public LocationDetailResponse getLocationDetail(Long id) {
+        Location loc = locationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy vị trí id: " + id));
+
+        BigDecimal used = itemLocationRepository.getTotalUsedCapacity(loc.getId());
+        BigDecimal cap = loc.getCapacity() != null ? BigDecimal.valueOf(loc.getCapacity()) : null;
+        BigDecimal remaining = cap != null ? cap.subtract(used) : null;
+
+        List<ItemLocation> itemsAtLoc = itemLocationRepository.findByLocationIdAndIsActiveTrue(loc.getId());
+        List<LocationItemStock> stockList = itemsAtLoc.stream()
+                .map(il -> new LocationItemStock(
+                        il.getItem().getId(),
+                        il.getItem().getItemcode(),
+                        il.getItem().getItemname(),
+                        il.getItem().getUnitof(),
+                il.getQuantity(),
+                batchRepository.findAllByReceiptDetailLocationIdAndItemId(loc.getId(), il.getItem().getId())
+                    .stream().map(b -> b.getBatchCode()).collect(Collectors.toList())))
+                .collect(Collectors.toList());
+
+        String type = itemsAtLoc.isEmpty() ? "EMPTY" : "HAS_STOCK";
+
+        return new LocationDetailResponse(
+                loc.getId(), loc.getLocationcode(), loc.getLocationname(),
+                loc.getRackno(), loc.getFloorno(), loc.getColumnno(),
+                loc.getCapacity(), used, remaining, type, stockList);
     }
 
     public LocationResponse toResponse(Location l) {

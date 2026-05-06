@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import hoshimoto.cdtn.dto.ApiResponse;
+import hoshimoto.cdtn.dto.LocationDetailResponse;
 import hoshimoto.cdtn.dto.LocationResponse;
 import hoshimoto.cdtn.dto.request.LocationRequest;
 import hoshimoto.cdtn.entity.Location;
@@ -41,6 +42,17 @@ public class LocationController {
         return locationService.getLocationById(id)
                 .map(l -> ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết vị trí thành công", l)))
                 .orElseGet(() -> ResponseEntity.status(404).body(new ApiResponse<>(false, "Không tìm thấy vị trí", null)));
+    }
+
+    @GetMapping("/{id}/items")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<ApiResponse<LocationDetailResponse>> getLocationItems(@PathVariable Long id) {
+        try {
+            LocationDetailResponse detail = locationService.getLocationDetail(id);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách hàng hóa tại vị trí thành công", detail));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(new ApiResponse<>(false, e.getMessage(), null));
+        }
     }
 
     @PostMapping

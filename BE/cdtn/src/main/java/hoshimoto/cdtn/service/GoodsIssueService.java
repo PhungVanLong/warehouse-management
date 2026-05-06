@@ -18,6 +18,7 @@ import hoshimoto.cdtn.dto.LocationDetailResponse.LocationItemStock;
 import hoshimoto.cdtn.dto.LocationSuggestionResponse;
 import hoshimoto.cdtn.dto.request.GoodsIssueDetailRequest;
 import hoshimoto.cdtn.dto.request.GoodsIssueRequest;
+import hoshimoto.cdtn.entity.Batch;
 import hoshimoto.cdtn.entity.Customer;
 import hoshimoto.cdtn.entity.Enum.DocStatus;
 import hoshimoto.cdtn.entity.GoodsIssue;
@@ -27,6 +28,7 @@ import hoshimoto.cdtn.entity.Item;
 import hoshimoto.cdtn.entity.ItemLocation;
 import hoshimoto.cdtn.entity.Location;
 import hoshimoto.cdtn.entity.User;
+import hoshimoto.cdtn.repository.BatchRepository;
 import hoshimoto.cdtn.repository.CustomerRepository;
 import hoshimoto.cdtn.repository.GoodsIssueDetailRepository;
 import hoshimoto.cdtn.repository.GoodsIssueRepository;
@@ -46,6 +48,7 @@ public class GoodsIssueService {
     @Autowired private ItemLocationRepository itemLocationRepository;
     @Autowired private InventoryBalanceRepository inventoryBalanceRepository;
     @Autowired private CustomerRepository customerRepository;
+    @Autowired private BatchRepository batchRepository;
     @Autowired private UserRepository userRepository;
 
     // ───────────────────────── CRUD ─────────────────────────
@@ -155,6 +158,19 @@ public class GoodsIssueService {
             balance.setQuantity(newBalance);
             balance.setLastUpdated(LocalDateTime.now());
             inventoryBalanceRepository.save(balance);
+
+            // Trừ quantityRemaining của lô hàng (nếu có liên kết)
+            if (detail.getBatch() != null) {
+                Batch batch = detail.getBatch();
+                BigDecimal newRemaining = batch.getQuantityRemaining().subtract(qty);
+                if (newRemaining.compareTo(BigDecimal.ZERO) < 0) {
+                    throw new RuntimeException(
+                            "Số lượng của lô '" + batch.getBatchCode() + "' không đủ để xuất "
+                            + "(cần " + qty + ", còn lại " + batch.getQuantityRemaining() + ")");
+                }
+                batch.setQuantityRemaining(newRemaining);
+                batchRepository.save(batch);
+            }
         }
 
         issue.setDocstatus(DocStatus.CONFIRMED);
@@ -208,7 +224,9 @@ public class GoodsIssueService {
                     sil.getItem().getItemcode(),
                     sil.getItem().getItemname(),
                     sil.getItem().getUnitof(),
-                    sil.getQuantity()
+                    sil.getQuantity(),
+                    batchRepository.findAllByReceiptDetailLocationIdAndItemId(loc.getId(), sil.getItem().getId())
+                        .stream().map(b -> b.getBatchCode()).collect(Collectors.toList())
             )).collect(Collectors.toList());
 
             result.add(new LocationDetailResponse(
@@ -328,6 +346,12 @@ public class GoodsIssueService {
                 detail.setLocation(location);
             }
 
+            if (req.getBatchId() != null) {
+                Batch batch = batchRepository.findById(req.getBatchId())
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy lô hàng id: " + req.getBatchId()));
+                detail.setBatch(batch);
+            }
+
             detailRepository.save(detail);
         }
     }
@@ -385,6 +409,10 @@ public class GoodsIssueService {
                 dr.setLocationId(d.getLocation().getId());
                 dr.setLocationcode(d.getLocation().getLocationcode());
                 dr.setLocationname(d.getLocation().getLocationname());
+            }
+            if (d.getBatch() != null) {
+                dr.setBatchId(d.getBatch().getId());
+                dr.setBatchCode(d.getBatch().getBatchCode());
             }
             return dr;
         }).collect(Collectors.toList()));

@@ -27,6 +27,7 @@ import hoshimoto.cdtn.entity.Item;
 import hoshimoto.cdtn.entity.ItemLocation;
 import hoshimoto.cdtn.entity.Location;
 import hoshimoto.cdtn.entity.User;
+import hoshimoto.cdtn.repository.BatchRepository;
 import hoshimoto.cdtn.repository.CustomerRepository;
 import hoshimoto.cdtn.repository.GoodsReceiptDetailRepository;
 import hoshimoto.cdtn.repository.GoodsReceiptRepository;
@@ -46,6 +47,7 @@ public class GoodsReceiptService {
     @Autowired private ItemLocationRepository itemLocationRepository;
     @Autowired private InventoryBalanceRepository inventoryBalanceRepository;
     @Autowired private CustomerRepository customerRepository;
+    @Autowired private BatchRepository batchRepository;
     @Autowired private UserRepository userRepository;
 
     // ───────────────────────── CRUD ─────────────────────────
@@ -161,6 +163,15 @@ public class GoodsReceiptService {
             balance.setQuantity(balance.getQuantity().add(qty));
             balance.setLastUpdated(LocalDateTime.now());
             inventoryBalanceRepository.save(balance);
+
+            // Cập nhật quantityRemaining của lô (nếu có liên kết receiptDetail)
+            batchRepository.findByReceiptDetailId(detail.getId()).ifPresent(batch -> {
+                BigDecimal current = batch.getQuantityRemaining();
+                if (current == null || current.compareTo(BigDecimal.ZERO) == 0) {
+                    batch.setQuantityRemaining(qty);
+                    batchRepository.save(batch);
+                }
+            });
         }
 
         receipt.setDocstatus(DocStatus.CONFIRMED);
@@ -214,7 +225,9 @@ public class GoodsReceiptService {
                     il.getItem().getItemcode(),
                     il.getItem().getItemname(),
                     il.getItem().getUnitof(),
-                    il.getQuantity()
+                    il.getQuantity(),
+                    batchRepository.findAllByReceiptDetailLocationIdAndItemId(loc.getId(), il.getItem().getId())
+                        .stream().map(b -> b.getBatchCode()).collect(Collectors.toList())
             )).collect(Collectors.toList());
 
             // Phân loại vị trí
@@ -418,6 +431,10 @@ public class GoodsReceiptService {
                 dr.setLocationcode(d.getLocation().getLocationcode());
                 dr.setLocationname(d.getLocation().getLocationname());
             }
+            batchRepository.findByReceiptDetailId(d.getId()).ifPresent(batch -> {
+                dr.setBatchId(batch.getId());
+                dr.setBatchCode(batch.getBatchCode());
+            });
             return dr;
         }).collect(Collectors.toList()));
         return res;

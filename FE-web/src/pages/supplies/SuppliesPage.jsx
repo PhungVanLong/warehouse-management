@@ -148,7 +148,7 @@ export default function SuppliesPage() {
                 </div>
 
                 {/* Table */}
-                <div className="sp-table-wrap">
+                <div className="sp-table-wrap sp-scrollable">
                     <table className="sp-table">
                         <thead>
                             <tr>

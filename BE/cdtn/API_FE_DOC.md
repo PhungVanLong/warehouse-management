@@ -249,6 +249,7 @@
 |--------|----------|-------|-------|
 | GET | `/api/locations` | Danh sách vị trí | ADMIN, STAFF |
 | GET | `/api/locations/{id}` | Chi tiết vị trí | ADMIN, STAFF |
+| GET | `/api/locations/{id}/items` | Vị trí + danh sách hàng hóa đang chứa | ADMIN, STAFF |
 | POST | `/api/locations` | Tạo mới | ADMIN, STAFF |
 | PUT | `/api/locations/{id}` | Cập nhật | ADMIN, STAFF |
 | DELETE | `/api/locations/{id}` | Xóa | ADMIN |
@@ -268,6 +269,44 @@
 ```
 
 > `capacity = null`: vị trí không giới hạn sức chứa.
+
+### 6.1 Chi tiết vị trí kèm danh sách hàng hóa
+
+**Endpoint:** `GET /api/locations/{id}/items`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Lấy danh sách hàng hóa tại vị trí thành công",
+  "data": {
+    "locationId": 3,
+    "locationcode": "A1-01",
+    "locationname": "Kệ A1, tầng 1, cột 1",
+    "rackno": "A1",
+    "floorno": "1",
+    "columnno": "1",
+    "capacity": 100,
+    "usedCapacity": 40,
+    "remainingCapacity": 60,
+    "type": "HAS_STOCK",
+    "items": [
+      {
+        "itemId": 5,
+        "itemcode": "SP001",
+        "itemname": "Sản phẩm A",
+        "unitof": "Cái",
+        "quantity": 40,
+        "batchCodes": ["LO-HANG-A-20260415-SP001"]
+      }
+    ]
+  }
+}
+```
+
+> `type`: `"HAS_STOCK"` nếu vị trí đang chứa hàng, `"EMPTY"` nếu trống hoàn toàn.  
+> `items`: danh sách hàng hóa đang chứa tại vị trí (chỉ các bản ghi `isActive = true`).  
+> `remainingCapacity`: `null` nếu vị trí không giới hạn sức chứa (`capacity = null`).
 
 ---
 
@@ -317,6 +356,7 @@
 ```
 
 > `locationId` có thể để `null` khi tạo DRAFT; phải gán trước khi confirm.
+> `batchId` / `batchCode` trong response chỉ có khi đã tạo lô gắn với `receiptDetailId`.
 
 **Response:**
 ```json
@@ -350,7 +390,9 @@
         "amount": 5000000,
         "locationId": 3,
         "locationcode": "A1-01",
-        "locationname": "Kệ A1, tầng 1"
+        "locationname": "Kệ A1, tầng 1",
+        "batchId": null,
+        "batchCode": null
       }
     ]
   }
@@ -366,7 +408,8 @@ BE thực hiện:
 2. Kiểm tra capacity từng vị trí còn đủ chỗ.
 3. Cộng `quantity` vào `ItemLocation` (tạo mới nếu chưa có).
 4. Cộng `quantity` vào `InventoryBalance`.
-5. Set `docstatus = CONFIRMED`, lưu `actionByUsername`.
+5. Nếu có lô gắn với `receiptDetailId`: cộng `quantity` vào `quantityRemaining` của lô.
+6. Set `docstatus = CONFIRMED`, lưu `actionByUsername`.
 
 **Lỗi có thể trả về:**
 - `"Phiếu nhập không có dòng chi tiết nào"`
@@ -391,7 +434,14 @@ Trả về danh sách sắp xếp: `EXISTING` → `EMPTY` → `PARTIAL`.
     "remainingCapacity": 60,
     "type": "EXISTING",
     "items": [
-      { "itemId": 5, "itemcode": "SP001", "itemname": "Sản phẩm A", "unitof": "Cái", "quantity": 40 }
+      {
+        "itemId": 5,
+        "itemcode": "SP001",
+        "itemname": "Sản phẩm A",
+        "unitof": "Cái",
+        "quantity": 40,
+        "batchCodes": ["LO-HANG-A-20260415-SP001"]
+      }
     ]
   }
 ]
@@ -449,6 +499,7 @@ Trả về danh sách sắp xếp: `EXISTING` → `EMPTY` → `PARTIAL`.
     {
       "itemId": 5,
       "locationId": 3,
+      "batchId": 1,
       "quantity": 20,
       "unitprice": 55000
     }
@@ -457,6 +508,7 @@ Trả về danh sách sắp xếp: `EXISTING` → `EMPTY` → `PARTIAL`.
 ```
 
 > `locationId` bắt buộc trước khi confirm; FE nên chọn từ `available-locations`.
+> `batchId` tùy chọn; nếu FE gửi, BE sẽ tự động trừ `quantityRemaining` của lô khi xác nhận.
 
 **Response:** cấu trúc tương tự GoodsReceipt, với `docstatus: "DRAFT"`.
 
@@ -470,13 +522,15 @@ BE thực hiện:
 3. Kiểm tra `InventoryBalance` tổng không âm sau khi trừ.
 4. Trừ `quantity` tại `ItemLocation`; tự động set `isActive = false` khi về 0.
 5. Trừ `quantity` tại `InventoryBalance`.
-6. Set `docstatus = CONFIRMED`.
+6. Nếu dòng chi tiết có `batchId`: kiểm tra và trừ `quantityRemaining` của lô tương ứng.
+7. Set `docstatus = CONFIRMED`.
 
 **Lỗi có thể trả về:**
 - `"Phiếu xuất không có dòng chi tiết nào"`
 - `"Không tìm thấy tồn kho của 'SP001' tại vị trí 'A1-01'"`
 - `"Tồn kho tại vị trí 'A1-01' không đủ số lượng để xuất (cần 50, hiện có 20)"`
 - `"Tồn kho tổng của 'SP001' không đủ số lượng để xuất"`
+- `"Số lượng của lô 'LITEM00120260506' không đủ để xuất (cần 50, còn lại 30)"`
 
 ### 8.3 API hỗ trợ chọn vị trí
 
@@ -673,13 +727,13 @@ BE thực hiện:
     "expiryDate": "2027-04-15",
     "unitCost": 12345.67890,
     "quantity": 100.00000,
-    "quantityRemaining": 100.00000,
+    "quantityRemaining": 0.00000,
     "createdAt": "2026-05-05T10:00:00"
   }
 }
 ```
 
-> `quantityRemaining` được BE khởi tạo bằng `quantity`. FE không gửi trường này.
+> `quantityRemaining` được cập nhật khi xác nhận phiếu nhập; FE không gửi trường này.
 
 ### 10.2 Danh sách lô hàng
 

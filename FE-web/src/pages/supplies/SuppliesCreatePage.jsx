@@ -8,10 +8,10 @@ const EMPTY_FORM = {
     itemcode: "",
     itemname: "",
     invoicename: "",
-    itemcatg: "",
+    itemcatg: "Hàng hóa",
     description: "",
-    unitof: "",
-    itemtype: "",
+    unitof: "Cái",
+    itemtype: "Vật tư hàng hóa",
 };
 
 export default function SuppliesCreatePage() {

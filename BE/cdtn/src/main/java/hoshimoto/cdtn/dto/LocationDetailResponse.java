@@ -40,5 +40,6 @@ public class LocationDetailResponse {
         private String itemname;
         private String unitof;
         private BigDecimal quantity;
+        private List<String> batchCodes;
     }
 }

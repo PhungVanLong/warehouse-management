@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -14,7 +13,6 @@ public class BatchRequest {
     @NotNull(message = "itemId không được để trống")
     private Long itemId;
 
-    @NotBlank(message = "Tên lô không được để trống")
     private String nameBatch;
 
     @NotNull(message = "ReceiptDetailID không được để trống")

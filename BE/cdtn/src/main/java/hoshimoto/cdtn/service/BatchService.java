@@ -1,5 +1,6 @@
 package hoshimoto.cdtn.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -49,22 +50,24 @@ public class BatchService {
 
         Batch batch = new Batch();
         batch.setItem(item);
-        batch.setNameBatch(request.getNameBatch());
+        String nameBatch = (request.getNameBatch() != null && !request.getNameBatch().isBlank())
+                ? request.getNameBatch()
+                : null;
+        batch.setNameBatch(nameBatch);
         batch.setReceiptDetail(receiptDetail);
         batch.setManufactureDate(request.getManufactureDate());
         batch.setExpiryDate(request.getExpiryDate());
         batch.setUnitCost(request.getUnitCost());
         batch.setQuantity(request.getQuantity());
-        batch.setBatchCode(generateBatchCode(request.getNameBatch(), item.getItemcode(), request.getManufactureDate()));
-        batch.setQuantityRemaining(request.getQuantity());
+        batch.setBatchCode(generateBatchCode(item.getItemcode(), request.getManufactureDate()));
+        batch.setQuantityRemaining(BigDecimal.ZERO);
         return batchRepository.save(batch);
     }
 
-    public String generateBatchCode(String nameBatch, String itemCode, LocalDate manufactureDate) {
-        String normalizedName = normalizeNameBatch(nameBatch);
+    public String generateBatchCode(String itemCode, LocalDate manufactureDate) {
         String normalizedItem = normalizeCodeSegment(itemCode);
         String datePart = manufactureDate != null ? manufactureDate.format(DATE_FORMAT) : LocalDate.now().format(DATE_FORMAT);
-        String baseCode = String.format("%s-%s-%s", normalizedName, datePart, normalizedItem);
+        String baseCode = String.format("L%s%s", normalizedItem, datePart);
 
         List<Batch> existing = batchRepository.findAllByBatchCodeStartingWithOrderByBatchCodeDesc(baseCode);
         if (existing.isEmpty()) {
@@ -82,13 +85,6 @@ public class BatchService {
         return String.format("%s-%02d", baseCode, maxSequence + 1);
     }
 
-
-    private String normalizeNameBatch(String input) {
-        if (input == null || input.isBlank()) {
-            return "UNKNOWN";
-        }
-        return normalizeCodeSegment(input);
-    }
 
     private String normalizeCodeSegment(String input) {
         if (input == null || input.isBlank()) {

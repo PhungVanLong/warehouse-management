@@ -52,4 +52,8 @@ public class GoodsIssueDetail {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "locationid")
     private Location location;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "batchid")
+    private Batch batch;
 }

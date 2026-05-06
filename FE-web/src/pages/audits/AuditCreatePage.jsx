@@ -275,15 +275,15 @@ export default function AuditCreatePage() {
                             <table className="rc-detail-table">
                                 <thead>
                                     <tr>
-                                        <th className="rc-td-stt">STT</th>
-                                        <th style={{ minWidth: 100 }}>Mã hàng</th>
-                                        <th style={{ minWidth: 180 }}>Tên vật tư hàng hóa</th>
-                                        <th style={{ minWidth: 80 }}>Đơn vị tính</th>
+                                        <th className="rc-td-stt" style={{ width: 36 }}>STT</th>
+                                        <th style={{ width: "9%" }}>Mã hàng</th>
+                                        <th style={{ width: "18%" }}>Tên vật tư hàng hóa</th>
+                                        <th style={{ width: "7%" }}>ĐVT</th>
                                         <th className="au-th-book">SL hệ thống</th>
                                         <th className="au-th-actual">SL thực tế</th>
                                         <th className="au-th-diff">Chênh lệch</th>
-                                        <th style={{ minWidth: 150 }}>Đề xuất xử lý</th>
-                                        <th style={{ width: 36 }}></th>
+                                        <th style={{ width: "14%" }}>Đề xuất xử lý</th>
+                                        <th style={{ width: 32 }}></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -315,7 +315,6 @@ export default function AuditCreatePage() {
                                                 <td>
                                                     <select
                                                         className="rc-td-select"
-                                                        style={{ minWidth: 110 }}
                                                         value={row.itemId}
                                                         onChange={(e) => handleRowChange(idx, "itemId", e.target.value)}
                                                         disabled={loadingData}
@@ -332,18 +331,18 @@ export default function AuditCreatePage() {
                                                         value={row.itemname}
                                                         readOnly
                                                         placeholder="Tên vật tư"
-                                                        style={{ background: "#f6fbf8", color: "#4c6152", minWidth: 170 }}
+                                                        style={{ background: "#f6fbf8", color: "#4c6152" }}
                                                     />
                                                 </td>
                                                 <td>
                                                     <input
                                                         className="rc-td-input"
-                                                        style={{ width: 75, background: "#f6fbf8", color: "#4c6152" }}
+                                                        style={{ background: "#f6fbf8", color: "#4c6152" }}
                                                         value={row.unitof}
                                                         readOnly
                                                     />
                                                 </td>
-                                                <td className="rc-td-num au-book-qty" style={{ textAlign: "right", minWidth: 80 }}>
+                                                <td className="rc-td-num au-book-qty" style={{ textAlign: "right" }}>
                                                     {row.loadingBook
                                                         ? <span style={{ color: "#8ba392", fontSize: "0.8rem" }}>...</span>
                                                         : bq !== null
@@ -361,7 +360,7 @@ export default function AuditCreatePage() {
                                                         placeholder="0"
                                                     />
                                                 </td>
-                                                <td className="rc-td-num" style={{ minWidth: 70, textAlign: "right" }}>
+                                                <td className="rc-td-num" style={{ textAlign: "right" }}>
                                                     {diff === null
                                                         ? <span style={{ color: "#c5cdc9", fontSize: "0.85rem" }}>—</span>
                                                         : diff > 0
@@ -370,7 +369,7 @@ export default function AuditCreatePage() {
                                                                 ? <span className="au-diff-minus">{diff}</span>
                                                                 : <span className="au-diff-zero">0</span>}
                                                 </td>
-                                                <td style={{ minWidth: 140 }}>{suggestion ?? <span style={{ color: "#c5cdc9", fontSize: "0.82rem" }}>—</span>}</td>
+                                                <td>{suggestion ?? <span style={{ color: "#c5cdc9", fontSize: "0.82rem" }}>—</span>}</td>
                                                 <td>
                                                     <button
                                                         className="rc-row-del-btn"

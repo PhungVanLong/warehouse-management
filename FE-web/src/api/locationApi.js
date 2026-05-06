@@ -22,3 +22,9 @@ export const updateLocation = async (id, body) => {
     const res = await axiosInstance.put(`${API_URL}/${id}`, body);
     return res.data.data;
 };
+
+/** GET /api/locations/{id}/items — Danh sách vật tư đang chứa tại vị trí */
+export const getItemsAtLocation = async (id) => {
+    const res = await axiosInstance.get(`${API_URL}/${id}/items`);
+    return res.data.data || null;
+};
