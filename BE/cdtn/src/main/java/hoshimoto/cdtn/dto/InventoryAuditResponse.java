@@ -20,6 +20,9 @@ public class InventoryAuditResponse {
     private LocalDateTime createdAt;
     private String createdByUsername;
     private String createdByFullname;
+    private Long assignedToUserId;
+    private String assignedToUsername;
+    private String assignedToFullname;
     private LocalDateTime modifiedAt;
     private String modifiedBy;
     private List<InventoryAuditDetailResponse> details;

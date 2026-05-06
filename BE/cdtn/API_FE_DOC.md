@@ -62,9 +62,10 @@
 ### Ràng buộc logic
 
 - Customer: nếu `iscustomer=false` thì phải có `issupplier=true`, và ngược lại.
-- User: `role` chỉ nhận `ADMIN` hoặc `STAFF`.
-- Phiếu nhập/xuất/kiểm kê: chỉ `DRAFT` mới được sửa hoặc hủy; không thể sửa sau khi `CONFIRMED` hoặc `CANCELLED`.
-- Trạng thái phiếu (`docstatus`): `DRAFT` → `CONFIRMED` hoặc `CANCELLED`.
+- User: `role` chỉ nhận `ADMIN`, `MANAGER` hoặc `STAFF`. Quy tắc tạo: **ADMIN** có thể tạo `MANAGER` hoặc `STAFF` (không tạo được `ADMIN`); **MANAGER** chỉ tạo được `STAFF`.
+- Phiếu nhập/xuất/kiểm kê: chỉ `DRAFT` mới được sửa hoặc hủy khi chưa gửi/đã xác nhận; không thể sửa sau khi `CONFIRMED` hoặc `CANCELLED`.
+- Quy trình kiểm kê (mới): Manager có thể **gán** phiếu cho một `STAFF` (gửi yêu cầu) — phiếu chuyển sang `REQUESTED`. `STAFF` nhận yêu cầu, cập nhật số lượng thực tế và **gửi** lại (`SUBMITTED`). Manager kiểm tra và `confirm` để áp điều chỉnh tồn kho (chuyển `CONFIRMED`) hoặc `cancel`.
+- Trạng thái phiếu (`docstatus`) (mở rộng): `DRAFT` → `REQUESTED` → `SUBMITTED` → `CONFIRMED` or `CANCELLED` (Manager có thể confirm trực tiếp từ `DRAFT` hoặc từ `SUBMITTED`).
 
 ### Ngày giờ
 
@@ -107,7 +108,7 @@
 }
 ```
 
-> FE lưu `token` vào localStorage/sessionStorage và gửi kèm header `Authorization: Bearer <token>` với mọi request tiếp theo.
+> FE lưu `token` vào localStorage/sessionStorage và gửi kèm header `Authorization: Bearer <token>` với mọi request tiếp theo. Token chứa `role` của người dùng — nếu nhận 403 sau khi server cập nhật, **xóa token cũ và đăng nhập lại** để lấy token mới.
 
 ---
 
@@ -161,12 +162,52 @@
 
 | Method | Endpoint | Mô tả | Quyền |
 |--------|----------|-------|-------|
-| GET | `/api/users` | Danh sách người dùng | ADMIN, STAFF |
-| GET | `/api/users/{id}` | Chi tiết người dùng | ADMIN, STAFF |
-| POST | `/api/users` | Tạo người dùng | ADMIN |
-| PUT | `/api/users/{id}` | Cập nhật người dùng | ADMIN |
+| GET | `/api/users` | Danh sách người dùng | ADMIN, MANAGER, STAFF |
+| GET | `/api/users/{id}` | Chi tiết người dùng | ADMIN, MANAGER |
+| POST | `/api/users` | Tạo người dùng | ADMIN, MANAGER |
+| PUT | `/api/users/{id}` | Cập nhật người dùng | ADMIN, MANAGER |
+| DELETE | `/api/users/{id}` | Vô hiệu hóa người dùng | ADMIN, MANAGER |
 
-**Request body tạo/sửa:**
+### Quy tắc phân quyền tạo / sửa / xóa tài khoản
+
+> **QUAN TRỌNG — FE cần ẩn/hiện trường `role` và validate trước khi gửi request.**
+
+#### Tạo tài khoản (`POST /api/users`)
+
+| Người thực hiện | `role` được phép gửi | Ghi chú |
+|-----------------|----------------------|---------|
+| **ADMIN** | `MANAGER`, `STAFF` | Không được tạo tài khoản `ADMIN` khác |
+| **MANAGER** | `STAFF` | Chỉ tạo được nhân viên cấp dưới |
+
+- Nếu FE gửi sai `role` (vd. MANAGER gửi `role: "MANAGER"`), BE trả về `400` với message `"MANAGER chỉ được tạo tài khoản STAFF"`.
+- Nếu ADMIN gửi `role: "ADMIN"`, BE trả về `400` với message `"Không thể tạo tài khoản ADMIN"`.
+
+#### Cập nhật tài khoản (`PUT /api/users/{id}`)
+
+| Người thực hiện | Được sửa tài khoản nào | `role` được phép thay đổi thành |
+|-----------------|------------------------|----------------------------------|
+| **ADMIN** | Bất kỳ | `MANAGER`, `STAFF` (không đổi thành `ADMIN`) |
+| **MANAGER** | Chỉ tài khoản `STAFF` | Chỉ `STAFF` |
+
+- MANAGER **không** được sửa tài khoản có role `MANAGER` hoặc `ADMIN` → BE trả `400`.
+- MANAGER **không** được nâng role lên `MANAGER`/`ADMIN` → BE trả `400`.
+
+#### Vô hiệu hóa tài khoản (`DELETE /api/users/{id}`)
+
+| Người thực hiện | Được vô hiệu hóa tài khoản nào |
+|-----------------|----------------------------------|
+| **ADMIN** | Bất kỳ |
+| **MANAGER** | Chỉ tài khoản `STAFF` |
+
+- MANAGER cố vô hiệu hóa tài khoản `MANAGER`/`ADMIN` → BE trả `400`.
+- Đây là **soft delete** (`isActive = false`), tài khoản không bị xóa khỏi DB.
+
+### 3.1 Tạo người dùng
+
+**Endpoint:** `POST /api/users`  
+**Header:** `Authorization: Bearer <token>`
+
+**Request body:**
 ```json
 {
   "usercode": "staff01",
@@ -175,8 +216,76 @@
   "email": "staff01@company.com",
   "password": "your_password",
   "department": "KHO",
+  "phoneNumber": "0901234567",
+  "address": "123 Đường A",
+  "gender": "Nam",
+  "bankaccount": "1234567890",
+  "bankname": "Vietcombank",
   "role": "STAFF",
   "isActive": true
+}
+```
+
+> - `password`: bắt buộc khi tạo mới, tùy chọn khi cập nhật.
+> - `role`: FE chỉ hiển thị các lựa chọn phù hợp với quyền của người dùng hiện tại (ADMIN thấy `MANAGER`/`STAFF`; MANAGER chỉ thấy `STAFF`).
+> - `usercode`, `username`, `email` phải unique trong hệ thống.
+
+**Response thành công (`200`):**
+```json
+{
+  "success": true,
+  "message": "Tạo mới nhân viên thành công",
+  "data": {
+    "id": 5,
+    "usercode": "staff01",
+    "fullname": "Nhân viên kho",
+    "username": "staff01",
+    "email": "staff01@company.com",
+    "department": "KHO",
+    "role": "STAFF",
+    "isActive": true
+  }
+}
+```
+
+**Response lỗi phân quyền (`400`):**
+```json
+{
+  "success": false,
+  "message": "MANAGER chỉ được tạo tài khoản STAFF",
+  "data": null
+}
+```
+
+### 3.2 Cập nhật người dùng
+
+**Endpoint:** `PUT /api/users/{id}`  
+**Header:** `Authorization: Bearer <token>`
+
+> Gửi chỉ các trường cần cập nhật. Bỏ qua `password` nếu không đổi mật khẩu.
+
+**Request body (ví dụ):**
+```json
+{
+  "fullname": "Nhân viên kho mới",
+  "department": "KHO2",
+  "isActive": true
+}
+```
+
+### 3.3 Vô hiệu hóa người dùng
+
+**Endpoint:** `DELETE /api/users/{id}`  
+**Header:** `Authorization: Bearer <token>`
+
+> Không xóa thật — chỉ set `isActive = false`.
+
+**Response thành công:**
+```json
+{
+  "success": true,
+  "message": "Vô hiệu hóa nhân viên thành công",
+  "data": null
 }
 ```
 
@@ -186,11 +295,11 @@
 
 | Method | Endpoint | Mô tả | Quyền |
 |--------|----------|-------|-------|
-| GET | `/api/customers` | Danh sách khách hàng | ADMIN, STAFF |
-| GET | `/api/customers/{id}` | Chi tiết khách hàng | ADMIN, STAFF |
-| POST | `/api/customers` | Tạo mới | ADMIN, STAFF |
-| PUT | `/api/customers/{id}` | Cập nhật | ADMIN, STAFF |
-| DELETE | `/api/customers/{id}` | Xóa | ADMIN |
+| GET | `/api/customers` | Danh sách khách hàng | ADMIN, MANAGER, STAFF |
+| GET | `/api/customers/{id}` | Chi tiết khách hàng | ADMIN, MANAGER, STAFF |
+| POST | `/api/customers` | Tạo mới | ADMIN, MANAGER, STAFF |
+| PUT | `/api/customers/{id}` | Cập nhật | ADMIN, MANAGER, STAFF |
+| DELETE | `/api/customers/{id}` | Xóa | ADMIN, MANAGER |
 
 **Request body:**
 ```json
@@ -219,11 +328,11 @@
 
 | Method | Endpoint | Mô tả | Quyền |
 |--------|----------|-------|-------|
-| GET | `/api/items` | Danh sách hàng hóa | ADMIN, STAFF |
-| GET | `/api/items/{id}` | Chi tiết hàng hóa | ADMIN, STAFF |
-| POST | `/api/items` | Tạo mới | ADMIN, STAFF |
-| PUT | `/api/items/{id}` | Cập nhật | ADMIN, STAFF |
-| DELETE | `/api/items/{id}` | Xóa | ADMIN |
+| GET | `/api/items` | Danh sách hàng hóa | ADMIN, MANAGER, STAFF |
+| GET | `/api/items/{id}` | Chi tiết hàng hóa | ADMIN, MANAGER, STAFF |
+| POST | `/api/items` | Tạo mới | ADMIN, MANAGER, STAFF |
+| PUT | `/api/items/{id}` | Cập nhật | ADMIN, MANAGER, STAFF |
+| DELETE | `/api/items/{id}` | Xóa | ADMIN, MANAGER |
 
 **Request body:**
 ```json
@@ -247,12 +356,12 @@
 
 | Method | Endpoint | Mô tả | Quyền |
 |--------|----------|-------|-------|
-| GET | `/api/locations` | Danh sách vị trí | ADMIN, STAFF |
-| GET | `/api/locations/{id}` | Chi tiết vị trí | ADMIN, STAFF |
-| GET | `/api/locations/{id}/items` | Vị trí + danh sách hàng hóa đang chứa | ADMIN, STAFF |
-| POST | `/api/locations` | Tạo mới | ADMIN, STAFF |
-| PUT | `/api/locations/{id}` | Cập nhật | ADMIN, STAFF |
-| DELETE | `/api/locations/{id}` | Xóa | ADMIN |
+| GET | `/api/locations` | Danh sách vị trí | ADMIN, MANAGER, STAFF |
+| GET | `/api/locations/{id}` | Chi tiết vị trí | ADMIN, MANAGER, STAFF |
+| GET | `/api/locations/{id}/items` | Vị trí + danh sách hàng hóa đang chứa | ADMIN, MANAGER, STAFF |
+| POST | `/api/locations` | Tạo mới | ADMIN, MANAGER, STAFF |
+| PUT | `/api/locations/{id}` | Cập nhật | ADMIN, MANAGER, STAFF |
+| DELETE | `/api/locations/{id}` | Xóa | ADMIN, MANAGER |
 
 **Request body:**
 ```json
@@ -319,15 +428,15 @@
 
 | Method | Endpoint | Mô tả | Quyền |
 |--------|----------|-------|-------|
-| GET | `/api/goods-receipts` | Danh sách phiếu nhập | ADMIN, STAFF |
-| GET | `/api/goods-receipts/{id}` | Chi tiết phiếu nhập | ADMIN, STAFF |
-| POST | `/api/goods-receipts` | Tạo phiếu nháp | ADMIN, STAFF |
-| PUT | `/api/goods-receipts/{id}` | Sửa phiếu DRAFT | ADMIN, STAFF |
-| POST | `/api/goods-receipts/{id}/confirm` | Xác nhận → cộng tồn | ADMIN, STAFF |
-| POST | `/api/goods-receipts/{id}/cancel` | Hủy phiếu DRAFT | ADMIN, STAFF |
-| GET | `/api/goods-receipts/available-locations?itemId=` | Vị trí còn chỗ | ADMIN, STAFF |
-| GET | `/api/goods-receipts/suggest-locations?itemId=&quantity=` | Gợi ý vị trí | ADMIN, STAFF |
-| GET | `/api/goods-receipts/suggest-split?itemId=&quantity=` | Gợi ý phân bổ nhiều vị trí | ADMIN, STAFF |
+| GET | `/api/goods-receipts` | Danh sách phiếu nhập | ADMIN, MANAGER, STAFF |
+| GET | `/api/goods-receipts/{id}` | Chi tiết phiếu nhập | ADMIN, MANAGER, STAFF |
+| POST | `/api/goods-receipts` | Tạo phiếu nháp | ADMIN, MANAGER, STAFF |
+| PUT | `/api/goods-receipts/{id}` | Sửa phiếu DRAFT | ADMIN, MANAGER, STAFF |
+| POST | `/api/goods-receipts/{id}/confirm` | Xác nhận → cộng tồn | ADMIN, MANAGER |
+| POST | `/api/goods-receipts/{id}/cancel` | Hủy phiếu DRAFT | ADMIN, MANAGER |
+| GET | `/api/goods-receipts/available-locations?itemId=` | Vị trí còn chỗ | ADMIN, MANAGER, STAFF |
+| GET | `/api/goods-receipts/suggest-locations?itemId=&quantity=` | Gợi ý vị trí | ADMIN, MANAGER, STAFF |
+| GET | `/api/goods-receipts/suggest-split?itemId=&quantity=` | Gợi ý phân bổ nhiều vị trí | ADMIN, MANAGER, STAFF |
 
 ### 7.1 Tạo / Cập nhật phiếu nhập (DRAFT)
 
@@ -477,14 +586,14 @@ Trả về danh sách sắp xếp: `EXISTING` → `EMPTY` → `PARTIAL`.
 
 | Method | Endpoint | Mô tả | Quyền |
 |--------|----------|-------|-------|
-| GET | `/api/goods-issues` | Danh sách phiếu xuất | ADMIN, STAFF |
-| GET | `/api/goods-issues/{id}` | Chi tiết phiếu xuất | ADMIN, STAFF |
-| POST | `/api/goods-issues` | Tạo phiếu nháp | ADMIN, STAFF |
-| PUT | `/api/goods-issues/{id}` | Sửa phiếu DRAFT | ADMIN, STAFF |
-| POST | `/api/goods-issues/{id}/confirm` | Xác nhận → trừ tồn | ADMIN, STAFF |
-| POST | `/api/goods-issues/{id}/cancel` | Hủy phiếu DRAFT | ADMIN, STAFF |
-| GET | `/api/goods-issues/available-locations?itemId=` | Vị trí có hàng | ADMIN, STAFF |
-| GET | `/api/goods-issues/suggest-split?itemId=&quantity=` | Gợi ý phân bổ nhiều vị trí | ADMIN, STAFF |
+| GET | `/api/goods-issues` | Danh sách phiếu xuất | ADMIN, MANAGER, STAFF |
+| GET | `/api/goods-issues/{id}` | Chi tiết phiếu xuất | ADMIN, MANAGER, STAFF |
+| POST | `/api/goods-issues` | Tạo phiếu nháp | ADMIN, MANAGER, STAFF |
+| PUT | `/api/goods-issues/{id}` | Sửa phiếu DRAFT | ADMIN, MANAGER, STAFF |
+| POST | `/api/goods-issues/{id}/confirm` | Xác nhận → trừ tồn | ADMIN, MANAGER |
+| POST | `/api/goods-issues/{id}/cancel` | Hủy phiếu DRAFT | ADMIN, MANAGER |
+| GET | `/api/goods-issues/available-locations?itemId=` | Vị trí có hàng | ADMIN, MANAGER, STAFF |
+| GET | `/api/goods-issues/suggest-split?itemId=&quantity=` | Gợi ý phân bổ nhiều vị trí | ADMIN, MANAGER, STAFF |
 
 ### 8.1 Tạo / Cập nhật phiếu xuất (DRAFT)
 
@@ -576,12 +685,15 @@ BE thực hiện:
 
 | Method | Endpoint | Mô tả | Quyền |
 |--------|----------|-------|-------|
-| GET | `/api/inventory-audits` | Danh sách phiếu kiểm kê | ADMIN, STAFF |
-| GET | `/api/inventory-audits/{id}` | Chi tiết phiếu kiểm kê | ADMIN, STAFF |
-| POST | `/api/inventory-audits` | Tạo phiếu nháp | ADMIN, STAFF |
-| PUT | `/api/inventory-audits/{id}` | Sửa phiếu DRAFT | ADMIN, STAFF |
-| POST | `/api/inventory-audits/{id}/confirm` | Xác nhận → điều chỉnh tồn | ADMIN, STAFF |
-| POST | `/api/inventory-audits/{id}/cancel` | Hủy phiếu DRAFT | ADMIN, STAFF |
+| GET | `/api/inventory-audits` | Danh sách phiếu kiểm kê | ADMIN, MANAGER, STAFF |
+| GET | `/api/inventory-audits/{id}` | Chi tiết phiếu kiểm kê | ADMIN, MANAGER, STAFF |
+| POST | `/api/inventory-audits` | Tạo phiếu nháp (Manager/Admin có thể gán cho Staff) | ADMIN, MANAGER |
+| PUT | `/api/inventory-audits/{id}` | Sửa phiếu DRAFT | ADMIN, MANAGER, STAFF |
+| POST | `/api/inventory-audits/{id}/confirm` | Xác nhận → điều chỉnh tồn | ADMIN, MANAGER |
+| POST | `/api/inventory-audits/{id}/cancel` | Hủy phiếu DRAFT | ADMIN, MANAGER |
+| GET | `/api/inventory-audits/assigned` | Danh sách phiếu được gán cho `STAFF` đang đăng nhập | STAFF |
+| PUT | `/api/inventory-audits/{id}/assigned` | `STAFF` cập nhật chi tiết phiếu được gán (trạng thái REQUESTED) | STAFF |
+| POST | `/api/inventory-audits/{id}/submit` | `STAFF` gửi kết quả kiểm kê về Manager (chuyển sang SUBMITTED) | STAFF |
 
 ### 9.1 Tạo / Cập nhật phiếu kiểm kê (DRAFT)
 
@@ -592,6 +704,8 @@ BE thực hiện:
   "docDate": "2026-05-05",
   "description": "Kiểm kê tháng 5 kệ A1",
   "locationId": 3,
+  "assignedUserId": 12,        
+  "sendToStaff": true,         
   "details": [
     {
       "itemId": 5,
@@ -608,6 +722,13 @@ BE thực hiện:
 ```
 
 > FE chỉ cần gửi `actualquantity` (số đếm thực tế); BE tự lấy `bookquantity` từ `ItemLocation` và tính `diffquantity = actualquantity - bookquantity`.
+
+**Ghi chú cho FE (gán và nhận yêu cầu):**
+- Khi Manager muốn giao nhiệm vụ kiểm kê cho nhân viên: gửi `assignedUserId` (id của `STAFF`) và `sendToStaff=true` trong body của `POST /api/inventory-audits`. BE sẽ lưu phiếu và chuyển `docstatus` thành `REQUESTED`.
+- `STAFF` gọi `GET /api/inventory-audits/assigned` để lấy danh sách yêu cầu được giao. `STAFF` cập nhật số liệu qua `PUT /api/inventory-audits/{id}/assigned` (gửi `details` với `actualquantity`), rồi gọi `POST /api/inventory-audits/{id}/submit` để gửi kết quả về Manager (BE chuyển `docstatus` thành `SUBMITTED`).
+- Manager có thể xem phiếu ở trạng thái `SUBMITTED` và gọi `POST /api/inventory-audits/{id}/confirm` để áp chênh lệch và chuyển `CONFIRMED`.
+
+**Lưu ý FE sau khi `CONFIRMED`:** Hiển nút `Tạo phiếu điều chỉnh (Nhập/Xuất)` nếu cần tạo phiếu `GoodsReceipt` hoặc `GoodsIssue` kiểu điều chỉnh từ kết quả kiểm kê; nếu muốn, BE có thể cung cấp endpoint tự động tạo phiếu điều chỉnh từ audit đã `CONFIRMED` (tôi có thể implement nếu bạn yêu cầu).
 
 **Response:**
 ```json
@@ -679,9 +800,9 @@ BE thực hiện:
 
 | Method | Endpoint | Mô tả | Quyền |
 |--------|----------|-------|-------|
-| GET | `/api/batches` | Danh sách lô hàng | ADMIN, STAFF |
-| GET | `/api/batches/{id}` | Chi tiết lô hàng | ADMIN, STAFF |
-| POST | `/api/batches` | Tạo lô hàng mới | ADMIN, STAFF |
+| GET | `/api/batches` | Danh sách lô hàng | ADMIN, MANAGER, STAFF |
+| GET | `/api/batches/{id}` | Chi tiết lô hàng | ADMIN, MANAGER, STAFF |
+| POST | `/api/batches` | Tạo lô hàng mới | ADMIN, MANAGER, STAFF |
 
 ### 10.1 Tạo lô hàng
 
@@ -768,7 +889,7 @@ BE thực hiện:
 
 ## 11. Lưu ý chung cho FE
 
-1. **Token JWT:** Gửi kèm mọi request dạng `Authorization: Bearer <token>`. Token hết hạn → 401 → FE chuyển về trang đăng nhập.
+1. **Token JWT:** Gửi kèm mọi request dạng `Authorization: Bearer <token>`. Token hết hạn → 401 → FE chuyển về trang đăng nhập. Nhận 403 dù đã đăng nhập → **xóa token cũ và đăng nhập lại** để lấy token mới chứa `role` (token cũ không có `role` claim sẽ bị từ chối bởi `@PreAuthorize`).
 2. **Validate trước khi gửi:** Kiểm tra các trường bắt buộc (xem mục 1) để tránh round-trip không cần thiết.
 3. **`locationId` khi nhập/xuất:** Chỉ gửi `locationId` lấy từ API `available-locations` hoặc `suggest-split`. Không tự tạo giá trị.
 4. **Kiểm kê:** FE chỉ gửi `actualquantity`; `bookquantity` và `diffquantity` do BE tính và trả về.
@@ -777,5 +898,7 @@ BE thực hiện:
 7. **Xử lý lỗi:** Luôn kiểm tra `success === false` → hiển thị `message` cho người dùng, không tiếp tục thao tác.
 8. **`docstatus` mapping FE:**
    - `DRAFT` → "Nháp" (badge xám)
+   - `REQUESTED` → "Đã giao" (badge vàng) — chỉ phiếu kiểm kê
+   - `SUBMITTED` → "Chờ duyệt" (badge cam) — chỉ phiếu kiểm kê
    - `CONFIRMED` → "Đã xác nhận" (badge xanh)
    - `CANCELLED` → "Đã hủy" (badge đỏ)

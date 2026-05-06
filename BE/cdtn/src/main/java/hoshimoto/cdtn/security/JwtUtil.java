@@ -21,12 +21,22 @@ public class JwtUtil {
     }
 
     public String generateToken(String username) {
-        return Jwts.builder()
+        return generateToken(username, null);
+    }
+
+    public String generateToken(String username, String role) {
+        var builder = Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION));
+        if (role != null) {
+            builder.claim("role", role);
+        }
+        return builder.signWith(getSigningKey(), SignatureAlgorithm.HS256).compact();
+    }
+
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
     public String extractUsername(String token) {

@@ -32,7 +32,7 @@ public class GoodsReceiptController {
 
     /** Lấy danh sách tất cả phiếu nhập */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<GoodsReceiptResponse>>> getAll() {
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách phiếu nhập thành công",
                 goodsReceiptService.getAll()));
@@ -40,7 +40,7 @@ public class GoodsReceiptController {
 
     /** Lấy chi tiết 1 phiếu nhập */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<GoodsReceiptResponse>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết phiếu nhập thành công",
                 goodsReceiptService.getById(id)));
@@ -52,7 +52,7 @@ public class GoodsReceiptController {
      * GET /api/goods-receipts/available-locations?itemId=1
      */
     @GetMapping("/available-locations")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<LocationDetailResponse>>> listAvailableForReceipt(
             @RequestParam Long itemId) {
         List<LocationDetailResponse> locations = goodsReceiptService.listAvailableForReceipt(itemId);
@@ -64,7 +64,7 @@ public class GoodsReceiptController {
      * GET /api/goods-receipts/suggest-locations?itemId=1&quantity=50
      */
     @GetMapping("/suggest-locations")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<LocationSuggestionResponse>>> suggestLocations(
             @RequestParam Long itemId,
             @RequestParam BigDecimal quantity) {
@@ -77,7 +77,7 @@ public class GoodsReceiptController {
      * GET /api/goods-receipts/suggest-split?itemId=1&quantity=1000
      */
     @GetMapping("/suggest-split")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<LocationSuggestionResponse>>> suggestSplit(
             @RequestParam Long itemId,
             @RequestParam BigDecimal quantity) {
@@ -91,7 +91,7 @@ public class GoodsReceiptController {
 
     /** Tạo phiếu nhập nháp */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<GoodsReceiptResponse>> create(
             @Valid @RequestBody GoodsReceiptRequest request) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Tạo phiếu nhập thành công",
@@ -100,7 +100,7 @@ public class GoodsReceiptController {
 
     /** Cập nhật phiếu nhập nháp */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<GoodsReceiptResponse>> update(
             @PathVariable Long id,
             @Valid @RequestBody GoodsReceiptRequest request) {
@@ -110,7 +110,7 @@ public class GoodsReceiptController {
 
     /** Xác nhận phiếu nhập → cập nhật tồn kho */
     @PostMapping("/{id}/confirm")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<GoodsReceiptResponse>> confirm(@PathVariable Long id) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Xác nhận phiếu nhập thành công",
                 goodsReceiptService.confirm(id)));
@@ -118,7 +118,7 @@ public class GoodsReceiptController {
 
     /** Hủy phiếu nhập */
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<GoodsReceiptResponse>> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Hủy phiếu nhập thành công",
                 goodsReceiptService.cancel(id)));

@@ -32,7 +32,7 @@ public class GoodsIssueController {
 
     /** Lấy danh sách tất cả phiếu xuất */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<GoodsIssueResponse>>> getAll() {
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách phiếu xuất thành công",
                 goodsIssueService.getAll()));
@@ -40,7 +40,7 @@ public class GoodsIssueController {
 
     /** Lấy chi tiết 1 phiếu xuất */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<GoodsIssueResponse>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết phiếu xuất thành công",
                 goodsIssueService.getById(id)));
@@ -52,7 +52,7 @@ public class GoodsIssueController {
      * GET /api/goods-issues/available-locations?itemId=1
      */
     @GetMapping("/available-locations")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<LocationDetailResponse>>> listAvailableForIssue(
             @RequestParam Long itemId) {
         List<LocationDetailResponse> locations = goodsIssueService.listAvailableForIssue(itemId);
@@ -64,7 +64,7 @@ public class GoodsIssueController {
      * GET /api/goods-issues/suggest-split?itemId=1&quantity=1000
      */
     @GetMapping("/suggest-split")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<LocationSuggestionResponse>>> suggestSplit(
             @RequestParam Long itemId,
             @RequestParam BigDecimal quantity) {
@@ -78,7 +78,7 @@ public class GoodsIssueController {
 
     /** Tạo phiếu xuất nháp */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<GoodsIssueResponse>> create(
             @Valid @RequestBody GoodsIssueRequest request) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Tạo phiếu xuất thành công",
@@ -87,7 +87,7 @@ public class GoodsIssueController {
 
     /** Cập nhật phiếu xuất nháp */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<GoodsIssueResponse>> update(
             @PathVariable Long id,
             @Valid @RequestBody GoodsIssueRequest request) {
@@ -97,7 +97,7 @@ public class GoodsIssueController {
 
     /** Xác nhận phiếu xuất → trừ tồn kho */
     @PostMapping("/{id}/confirm")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<GoodsIssueResponse>> confirm(@PathVariable Long id) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Xác nhận phiếu xuất thành công",
                 goodsIssueService.confirm(id)));
@@ -105,7 +105,7 @@ public class GoodsIssueController {
 
     /** Hủy phiếu xuất */
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<GoodsIssueResponse>> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Hủy phiếu xuất thành công",
                 goodsIssueService.cancel(id)));

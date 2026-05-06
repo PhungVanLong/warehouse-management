@@ -5,13 +5,15 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import hoshimoto.cdtn.dto.request.UserRequest;
 import hoshimoto.cdtn.dto.UserResponse;
+import hoshimoto.cdtn.dto.request.UserRequest;
 import hoshimoto.cdtn.entity.User;
 import hoshimoto.cdtn.repository.UserRepository;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @Service
 public class UserService {
@@ -27,12 +29,57 @@ public class UserService {
     }
 
     public User createUser(UserRequest request) {
+        // Bắt buộc phải có role khi tạo mới
+        if (request.getRole() == null || request.getRole().isBlank()) {
+            throw new RuntimeException("Trường role là bắt buộc khi tạo tài khoản");
+        }
+        // Validate role hợp lệ
+        try {
+            hoshimoto.cdtn.entity.Enum.Role.valueOf(request.getRole());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Role không hợp lệ: " + request.getRole() + ". Chỉ chấp nhận MANAGER hoặc STAFF");
+        }
+        // Phân quyền tạo tài khoản: ADMIN tạo MANAGER/STAFF; MANAGER chỉ tạo STAFF
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            boolean isManager = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER"));
+            if (isAdmin && request.getRole().equals("ADMIN")) {
+                throw new RuntimeException("Không thể tạo tài khoản ADMIN");
+            }
+            if (isManager && !request.getRole().equals("STAFF")) {
+                throw new RuntimeException("MANAGER chỉ được tạo tài khoản STAFF");
+            }
+        }
+
         User user = new User();
         applyRequest(user, request);
         return userRepository.save(user);
     }
 
     public User updateUser(Long id, UserRequest request) {
+        // Kiểm tra quyền khi cập nhật
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            boolean isManager = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER"));
+            if (!isAdmin && isManager) {
+                // MANAGER không được nâng role lên MANAGER/ADMIN
+                if (request.getRole() != null && !request.getRole().equals("STAFF")) {
+                    throw new RuntimeException("MANAGER chỉ được gán role STAFF");
+                }
+                // MANAGER không được sửa tài khoản MANAGER/ADMIN khác
+                User target = userRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với id: " + id));
+                if (target.getRole() != null && !target.getRole().name().equals("STAFF")) {
+                    throw new RuntimeException("MANAGER không có quyền chỉnh sửa tài khoản " + target.getRole());
+                }
+            }
+        }
         return userRepository.findById(id).map(u -> {
             applyRequest(u, request);
             u.setModifiedAt(LocalDateTime.now());
@@ -41,6 +88,21 @@ public class UserService {
     }
 
     public void deleteUser(Long id) {
+        // Kiểm tra quyền khi xóa
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            boolean isManager = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER"));
+            if (!isAdmin && isManager) {
+                User target = userRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên với id: " + id));
+                if (target.getRole() != null && !target.getRole().name().equals("STAFF")) {
+                    throw new RuntimeException("MANAGER không có quyền vô hiệu hóa tài khoản " + target.getRole());
+                }
+            }
+        }
         userRepository.findById(id).map(u -> {
             u.setIsActive(false);
             u.setModifiedAt(LocalDateTime.now());
@@ -85,12 +147,11 @@ public class UserService {
         if (request.getIsActive() != null) u.setIsActive(request.getIsActive());
         if (request.getRole() != null) {
             u.setRole(hoshimoto.cdtn.entity.Enum.Role.valueOf(request.getRole()));
-        
+        }
         // Nếu có password (tạo mới hoặc đổi mật khẩu), hash và set
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
             u.setPasswordHash(encoder.encode(request.getPassword()));
-        }
         }
         if (request.getModifiedBy() != null) u.setModifiedBy(request.getModifiedBy());
     }

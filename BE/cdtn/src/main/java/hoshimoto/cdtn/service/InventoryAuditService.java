@@ -69,7 +69,18 @@ public class InventoryAuditService {
 
         InventoryAudit audit = new InventoryAudit();
         applyHeader(audit, request, location);
-        audit.setDocstatus(DocStatus.DRAFT);
+
+        // If manager assigns and wants to send to staff -> REQUESTED, else DRAFT
+        if (request.getAssignedUserId() != null && Boolean.TRUE.equals(request.getSendToStaff())) {
+            // set assigned user
+            User assigned = userRepository.findById(request.getAssignedUserId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy user được giao id: " + request.getAssignedUserId()));
+            audit.setAssignedUser(assigned);
+            audit.setDocstatus(DocStatus.REQUESTED);
+        } else {
+            audit.setDocstatus(DocStatus.DRAFT);
+        }
+
         audit = auditRepository.save(audit);
 
         saveDetails(audit, request.getDetails(), location);
@@ -97,6 +108,59 @@ public class InventoryAuditService {
     }
 
     /**
+     * Lấy danh sách yêu cầu được giao cho user đang đăng nhập (trạng thái REQUESTED)
+     */
+    public List<InventoryAuditResponse> getAssignedForCurrentUser() {
+        var optUser = getCurrentUser();
+        if (optUser.isEmpty()) return java.util.List.of();
+        User u = optUser.get();
+        return auditRepository.findByAssignedUserIdAndDocstatusOrderByCreatedAtDesc(u.getId(), DocStatus.REQUESTED)
+                .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    /**
+     * Nhân viên cập nhật chi tiết cho phiếu được giao (chỉ khi trạng thái REQUESTED và là người được giao).
+     */
+    @Transactional
+    public InventoryAuditResponse updateByAssignedStaff(Long id, InventoryAuditRequest request) {
+        InventoryAudit audit = findOrThrow(id);
+        requireStatus(audit, DocStatus.REQUESTED, "Chỉ có thể cập nhật phiếu khi ở trạng thái REQUESTED");
+        var optUser = getCurrentUser();
+        if (optUser.isEmpty() || audit.getAssignedUser() == null || !audit.getAssignedUser().getId().equals(optUser.get().getId())) {
+            throw new RuntimeException("Bạn không có quyền cập nhật phiếu này");
+        }
+
+        Location location = locationRepository.findById(request.getLocationId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy vị trí id: " + request.getLocationId()));
+
+        applyHeader(audit, request, location);
+        audit.setModifiedAt(LocalDateTime.now());
+        audit = auditRepository.save(audit);
+
+        detailRepository.deleteByInventoryAuditId(id);
+        saveDetails(audit, request.getDetails(), location);
+        return toResponse(audit);
+    }
+
+    /**
+     * Nhân viên gửi kết quả kiểm kê cho quản lý (chuyển trạng thái sang SUBMITTED)
+     */
+    @Transactional
+    public InventoryAuditResponse submitFromStaff(Long id) {
+        InventoryAudit audit = findOrThrow(id);
+        requireStatus(audit, DocStatus.REQUESTED, "Chỉ có thể gửi phiếu khi ở trạng thái REQUESTED");
+        var optUser = getCurrentUser();
+        if (optUser.isEmpty() || audit.getAssignedUser() == null || !audit.getAssignedUser().getId().equals(optUser.get().getId())) {
+            throw new RuntimeException("Bạn không có quyền gửi phiếu này");
+        }
+        audit.setDocstatus(DocStatus.SUBMITTED);
+        audit.setModifiedAt(LocalDateTime.now());
+        getCurrentUser().ifPresent(u -> audit.setModifiedBy(u.getUsername()));
+        auditRepository.save(audit);
+        return toResponse(audit);
+    }
+
+    /**
      * Xác nhận phiếu kiểm kê.
      * Áp dụng diffquantity vào ItemLocation và InventoryBalance để điều chỉnh tồn kho.
      * diff > 0: thừa hàng → tăng tồn; diff < 0: thiếu hàng → giảm tồn; diff = 0: không đổi.
@@ -104,7 +168,10 @@ public class InventoryAuditService {
     @Transactional
     public InventoryAuditResponse confirm(Long id) {
         InventoryAudit audit = findOrThrow(id);
-        requireStatus(audit, DocStatus.DRAFT, "Chỉ có thể xác nhận phiếu ở trạng thái DRAFT");
+        // Manager có thể xác nhận phiếu ở trạng thái DRAFT hoặc SUBMITTED
+        if (audit.getDocstatus() != DocStatus.DRAFT && audit.getDocstatus() != DocStatus.SUBMITTED) {
+            throw new RuntimeException("Chỉ có thể xác nhận phiếu ở trạng thái DRAFT hoặc SUBMITTED");
+        }
 
         List<InventoryAuditDetail> details = detailRepository.findByInventoryAuditId(id);
         if (details == null || details.isEmpty()) {
@@ -265,6 +332,11 @@ public class InventoryAuditService {
         if (audit.getUser() != null) {
             res.setCreatedByUsername(audit.getUser().getUsername());
             res.setCreatedByFullname(audit.getUser().getFullname());
+        }
+        if (audit.getAssignedUser() != null) {
+            res.setAssignedToUserId(audit.getAssignedUser().getId());
+            res.setAssignedToUsername(audit.getAssignedUser().getUsername());
+            res.setAssignedToFullname(audit.getAssignedUser().getFullname());
         }
 
         List<InventoryAuditDetail> details = detailRepository.findByInventoryAuditId(audit.getId());

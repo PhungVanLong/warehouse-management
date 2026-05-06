@@ -10,4 +10,6 @@ import hoshimoto.cdtn.entity.InventoryAudit;
 public interface InventoryAuditRepository extends JpaRepository<InventoryAudit, Long> {
     Optional<InventoryAudit> findByDocno(String docno);
     List<InventoryAudit> findAllByOrderByCreatedAtDesc();
+    List<InventoryAudit> findByAssignedUserIdAndDocstatusOrderByCreatedAtDesc(Long assignedUserId, hoshimoto.cdtn.entity.Enum.DocStatus docstatus);
+    List<InventoryAudit> findByDocstatusOrderByCreatedAtDesc(hoshimoto.cdtn.entity.Enum.DocStatus docstatus);
 }

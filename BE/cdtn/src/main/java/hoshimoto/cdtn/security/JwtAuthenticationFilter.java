@@ -2,9 +2,11 @@ package hoshimoto.cdtn.security;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -39,8 +41,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             if (jwtUtil.isTokenValid(jwt, username)) {
+                String role = jwtUtil.extractRole(jwt);
+                var authorities = (role != null)
+                        ? List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                        : Collections.<SimpleGrantedAuthority>emptyList();
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        new User(username, "", Collections.emptyList()), null, Collections.emptyList()
+                        new User(username, "", authorities), null, authorities
                 );
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
