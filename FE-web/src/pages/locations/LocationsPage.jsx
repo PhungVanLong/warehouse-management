@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
-import { getAllLocations } from "../../api/locationApi";
+import { getAllLocations, getItemsAtLocation } from "../../api/locationApi";
 
 const ROWS_OPTIONS = [10, 15, 20, 50];
 
@@ -28,8 +28,28 @@ export default function LocationsPage() {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllLocations();
-            setItems(data);
+            const locations = await getAllLocations();
+            const rowsByLocation = await Promise.all(
+                locations.map(async (loc) => {
+                    try {
+                        const data = await getItemsAtLocation(loc.id);
+                        const itemsAtLoc = Array.isArray(data) ? data : (data?.items || []);
+                        if (itemsAtLoc.length === 0) return [];
+                        return itemsAtLoc.map((item, idx) => ({
+                            rowId: `${loc.id}-${item.itemId || item.itemcode || idx}`,
+                            locationId: loc.id,
+                            locationcode: loc.locationcode,
+                            locationname: loc.locationname,
+                            description: loc.description,
+                            itemcode: item.itemcode,
+                            quantity: item.quantity,
+                        }));
+                    } catch {
+                        return [];
+                    }
+                })
+            );
+            setItems(rowsByLocation.flat());
         } catch {
             setError("Không thể tải danh sách vị trí. Vui lòng thử lại.");
         } finally {
@@ -40,12 +60,17 @@ export default function LocationsPage() {
     useEffect(() => { fetchItems(); }, [fetchItems]);
 
     const filtered = useMemo(() => {
-        const sorted = [...items].sort((a, b) => (a.id || 0) - (b.id || 0));
+        const sorted = [...items].sort((a, b) => {
+            const lc = (a.locationcode || "").localeCompare(b.locationcode || "");
+            if (lc !== 0) return lc;
+            return (a.itemcode || "").localeCompare(b.itemcode || "");
+        });
         if (!search.trim()) return sorted;
         const q = search.toLowerCase();
         return sorted.filter((r) =>
             r.locationcode?.toLowerCase().includes(q) ||
             r.locationname?.toLowerCase().includes(q) ||
+            r.itemcode?.toLowerCase().includes(q) ||
             r.description?.toLowerCase().includes(q)
         );
     }, [search, items]);
@@ -55,7 +80,7 @@ export default function LocationsPage() {
     const start = (page - 1) * rowsPerPage;
     const rows = filtered.slice(start, start + rowsPerPage);
 
-    const allIds = rows.map((r) => r.id);
+    const allIds = rows.map((r) => r.rowId);
     const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
     const someChecked = allIds.some((id) => selected.has(id)) && !allChecked;
 
@@ -69,7 +94,7 @@ export default function LocationsPage() {
     const toggleAll = (checked) =>
         setSelected((prev) => {
             const next = new Set(prev);
-            rows.forEach((r) => (checked ? next.add(r.id) : next.delete(r.id)));
+            rows.forEach((r) => (checked ? next.add(r.rowId) : next.delete(r.rowId)));
             return next;
         });
 
@@ -154,43 +179,39 @@ export default function LocationsPage() {
                                 </th>
                                 <th>Mã vị trí <SortIcon /></th>
                                 <th>Tên <SortIcon /></th>
-                                <th>Dãy <SortIcon /></th>
-                                <th>Kệ <SortIcon /></th>
-                                <th>Tầng <SortIcon /></th>
-                                <th>Sức chứa <SortIcon /></th>
+                                <th>Mã vật tư <SortIcon /></th>
+                                <th>Số lượng <SortIcon /></th>
                                 <th>Diễn giải <SortIcon /></th>
                                 <th className="sp-th-action">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={9} className="sp-status-row">Đang tải...</td></tr>
+                                <tr><td colSpan={7} className="sp-status-row">Đang tải...</td></tr>
                             ) : error ? (
-                                <tr><td colSpan={9} className="sp-status-row sp-status-error">{error}</td></tr>
+                                <tr><td colSpan={7} className="sp-status-row sp-status-error">{error}</td></tr>
                             ) : rows.length === 0 ? (
-                                <tr><td colSpan={9} className="sp-status-row">Không có dữ liệu</td></tr>
+                                <tr><td colSpan={7} className="sp-status-row">Không có dữ liệu</td></tr>
                             ) : rows.map((r) => (
                                 <tr
-                                    key={r.id}
-                                    className={`sp-row-clickable${selected.has(r.id) ? " sp-row-selected" : ""}`}
-                                    onClick={() => navigate(`/locations/${r.id}`)}
+                                    key={r.rowId}
+                                    className={`sp-row-clickable${selected.has(r.rowId) ? " sp-row-selected" : ""}`}
+                                    onClick={() => navigate(`/locations/${r.locationId}`)}
                                 >
                                     <td className="sp-td-cb" onClick={(e) => e.stopPropagation()}>
                                         <input
                                             type="checkbox"
-                                            checked={selected.has(r.id)}
-                                            onChange={() => toggleRow(r.id)}
+                                            checked={selected.has(r.rowId)}
+                                            onChange={() => toggleRow(r.rowId)}
                                         />
                                     </td>
                                     <td className="sp-td-id">{r.locationcode}</td>
                                     <td>{r.locationname}</td>
-                                    <td>{r.rackno}</td>
-                                    <td>{r.floorno}</td>
-                                    <td>{r.columnno}</td>
-                                    <td>{r.capacity}</td>
+                                    <td>{r.itemcode}</td>
+                                    <td className="sp-td-num">{r.quantity}</td>
                                     <td>{r.description}</td>
                                     <td className="sp-td-action" onClick={(e) => e.stopPropagation()}>
-                                        <button className="sp-edit-btn" title="Chỉnh sửa" onClick={() => navigate(`/locations/${r.id}`)}>
+                                        <button className="sp-edit-btn" title="Chỉnh sửa" onClick={() => navigate(`/locations/${r.locationId}`)}>
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
