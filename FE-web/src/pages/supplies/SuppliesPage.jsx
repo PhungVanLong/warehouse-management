@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "./supplies.css";
 import { getAllItems } from "../../api/itemApi";
+import { getAllBatches } from "../../api/batchApi";
 
 const ROWS_OPTIONS = [10, 15, 20, 50];
 
@@ -26,14 +27,23 @@ export default function SuppliesPage() {
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(15);
     const [selected, setSelected] = useState(new Set());
+    const [stockByItem, setStockByItem] = useState({});
     const navigate = useNavigate();
 
     const fetchItems = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllItems();
+            const [data, batches] = await Promise.all([getAllItems(), getAllBatches()]);
             setItems(data);
+            const stockMap = (batches || []).reduce((acc, batch) => {
+                const key = String(batch.itemId ?? "");
+                if (!key) return acc;
+                const qty = Number(batch.quantityRemaining ?? 0);
+                acc[key] = (acc[key] || 0) + qty;
+                return acc;
+            }, {});
+            setStockByItem(stockMap);
         } catch (err) {
             setError("Không thể tải danh sách vật tư. Vui lòng thử lại.");
         } finally {
@@ -162,19 +172,20 @@ export default function SuppliesPage() {
                                 </th>
                                 <th>Mã VT <SortIcon /></th>
                                 <th>Tên vật tư / hàng hóa <SortIcon /></th>
-                                <th>Đơn vị tính <SortIcon /></th>
-                                <th>Loại vật tư <SortIcon /></th>
+                                <th>Tồn hiện tại <SortIcon /></th>
+                                <th>Tồn tối thiểu <SortIcon /></th>
+                                <th>Tồn tối đa <SortIcon /></th>
                                 <th>Mô tả / Thông số kỹ thuật <SortIcon /></th>
                                 <th className="sp-th-action">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={7} className="sp-status-row">Đang tải...</td></tr>
+                                <tr><td colSpan={8} className="sp-status-row">Đang tải...</td></tr>
                             ) : error ? (
-                                <tr><td colSpan={7} className="sp-status-row sp-status-error">{error}</td></tr>
+                                <tr><td colSpan={8} className="sp-status-row sp-status-error">{error}</td></tr>
                             ) : rows.length === 0 ? (
-                                <tr><td colSpan={7} className="sp-status-row">Không có dữ liệu</td></tr>
+                                <tr><td colSpan={8} className="sp-status-row">Không có dữ liệu</td></tr>
                             ) : rows.map((r) => (
                                 <tr
                                     key={r.id}
@@ -190,12 +201,9 @@ export default function SuppliesPage() {
                                     </td>
                                     <td className="sp-td-id">{r.itemcode}</td>
                                     <td>{r.itemname}</td>
-                                    <td>{r.unitof}</td>
-                                    <td>
-                                        <span className={r.itemtype === "Thành phẩm" ? "sp-badge-tp" : "sp-badge-vt"}>
-                                            {r.itemtype}
-                                        </span>
-                                    </td>
+                                    <td className="sp-td-num">{stockByItem[String(r.id)] || 0}</td>
+                                    <td className="sp-td-num">50</td>
+                                    <td className="sp-td-num">500</td>
                                     <td className="sp-td-desc">{r.description}</td>
                                     <td className="sp-td-action" onClick={(e) => e.stopPropagation()}>
                                         <button className="sp-edit-btn" title="Chỉnh sửa" onClick={() => navigate(`/supplies/${r.id}`)}>

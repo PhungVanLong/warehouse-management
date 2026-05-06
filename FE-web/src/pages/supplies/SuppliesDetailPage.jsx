@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "./supplies.css";
 import { getItemById, updateItem } from "../../api/itemApi";
+import { getAllBatches } from "../../api/batchApi";
 
 const EMPTY_FORM = {
     itemcode: "", itemname: "", invoicename: "",
@@ -20,14 +21,20 @@ export default function SuppliesDetailPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [fieldErrors, setFieldErrors] = useState({});
+    const [currentStock, setCurrentStock] = useState(0);
 
     useEffect(() => {
         setLoading(true);
         setError(null);
-        getItemById(id)
-            .then((data) => {
+        Promise.all([getItemById(id), getAllBatches()])
+            .then(([data, batches]) => {
                 setForm({ ...EMPTY_FORM, ...data });
                 setOriginal({ ...EMPTY_FORM, ...data });
+                const total = (batches || []).reduce((sum, batch) => {
+                    if (String(batch.itemId) !== String(id)) return sum;
+                    return sum + Number(batch.quantityRemaining ?? 0);
+                }, 0);
+                setCurrentStock(total);
             })
             .catch(() => setError("Không thể tải thông tin vật tư."))
             .finally(() => setLoading(false));
@@ -202,6 +209,21 @@ export default function SuppliesDetailPage() {
                                         {fieldErrors.itemtype && <span className="sd-error-msg">{fieldErrors.itemtype}</span>}
                                     </div>
                                 </div>
+                            </div>
+
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Tồn hiện tại</label>
+                                    <input className="sd-input" value={currentStock} readOnly />
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Tồn tối thiểu</label>
+                                    <input className="sd-input" value={50} readOnly />
+                                </div>
+                            </div>
+                            <div className="sd-field">
+                                <label className="sd-label">Tồn tối đa</label>
+                                <input className="sd-input" value={500} readOnly />
                             </div>
                         </div>
 
