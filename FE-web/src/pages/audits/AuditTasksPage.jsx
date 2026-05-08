@@ -7,7 +7,7 @@ import { getAssignedAudits, getAuditById, updateAssignedAudit, submitAudit } fro
 import { getAllLocations, getItemsAtLocation } from "../../api/locationApi";
 
 const STATUS_LABELS = {
-    REQUESTED: "Đã giao",
+    REQUESTED: "Chờ xử lý",
     SUBMITTED: "Chờ duyệt",
     CONFIRMED: "Đã xác nhận",
     CANCELLED: "Đã hủy",
@@ -81,6 +81,7 @@ function LocationModal({ open, loading, locations, initialEntries, onClose, onCo
             locationcode: found?.locationcode || found?.locationname || "",
             actualQty: actualQty === "" ? 0 : Number(actualQty || 0),
             systemQty: Number(found?.systemQty || 0),
+            batchCodes: found?.batchCodes || [],
         };
     });
     const total = entries.reduce((sum, entry) => sum + Number(entry.actualQty || 0), 0);
@@ -102,9 +103,10 @@ function LocationModal({ open, loading, locations, initialEntries, onClose, onCo
                             <thead>
                                 <tr>
                                     <th style={{ width: 36 }} />
-                                    <th>Vị trí</th>
-                                    <th style={{ width: 140 }}>SL hệ thống</th>
-                                    <th style={{ width: 160 }}>SL hiện tại</th>
+                                    <th style={{ width: "24%" }}>Vị trí</th>
+                                    <th style={{ width: "16%", textAlign: "right" }}>SL hệ thống</th>
+                                    <th style={{ width: "20%", textAlign: "right" }}>SL hiện tại</th>
+                                    <th>Số lô</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -133,6 +135,11 @@ function LocationModal({ open, loading, locations, initialEntries, onClose, onCo
                                                     onChange={(e) => updateQty(loc, e.target.value)}
                                                     style={{ width: "100%" }}
                                                 />
+                                            </td>
+                                            <td style={{ fontSize: "0.82rem", color: "#4c6152" }}>
+                                                {(loc.batchCodes || []).length > 0
+                                                    ? loc.batchCodes.join(", ")
+                                                    : "—"}
                                             </td>
                                         </tr>
                                     );
@@ -240,6 +247,7 @@ export default function AuditTasksPage() {
                     locationcode: loc.locationcode,
                     locationname: loc.locationname,
                     systemQty: matched ? Number(matched.quantity || 0) : 0,
+                    batchCodes: matched?.batchCodes || [],
                 };
             }).filter((loc) => Number(loc.systemQty || 0) > 0);
             setLocModal({ open: true, rowIdx: idx, locations: data, loading: false });
@@ -285,6 +293,7 @@ export default function AuditTasksPage() {
                         locationcode: e.locationcode,
                         actualQty: Number(e.actualQty || 0),
                         systemQty: Number(e.systemQty || 0),
+                        batchCodes: e.batchCodes || [],
                     })),
                 })),
             };
@@ -330,6 +339,7 @@ export default function AuditTasksPage() {
                         locationcode: e.locationcode,
                         actualQty: Number(e.actualQty || 0),
                         systemQty: Number(e.systemQty || 0),
+                        batchCodes: e.batchCodes || [],
                     })),
                 })),
             };
@@ -481,15 +491,15 @@ export default function AuditTasksPage() {
                                 <table className="rc-detail-table" style={{ width: "100%" }}>
                                     <thead>
                                         <tr>
-                                            <th className="rc-td-stt">STT</th>
-                                            <th style={{ width: "10%" }}>Mã hàng</th>
-                                            <th style={{ width: "24%" }}>Tên hàng hóa</th>
-                                            <th style={{ width: "8%" }}>ĐVT</th>
-                                            <th style={{ width: "16%" }}>Vị trí kiểm kê</th>
-                                            <th style={{ width: "12%", textAlign: "right" }}>SL hệ thống</th>
-                                            <th style={{ width: "14%", textAlign: "right" }}>SL thực tế</th>
-                                            <th className="au-th-diff">Chênh lệch</th>
-                                            <th style={{ width: "18%" }}>Đề xuất xử lý</th>
+                                            <th style={{ width: "4%" }}>STT</th>
+                                            <th style={{ width: "9%" }}>Mã hàng</th>
+                                            <th style={{ width: "18%" }}>Tên hàng hóa</th>
+                                            <th style={{ width: "5%" }}>ĐVT</th>
+                                            <th style={{ width: "22%" }}>Vị trí kiểm kê</th>
+                                            <th style={{ width: "9%", textAlign: "right" }}>SL hệ thống</th>
+                                            <th style={{ width: "9%", textAlign: "right" }}>SL thực tế</th>
+                                            <th style={{ width: "8%", textAlign: "right" }}>Chênh lệch</th>
+                                            <th style={{ width: "16%" }}>Đề xuất xử lý</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -506,6 +516,11 @@ export default function AuditTasksPage() {
                                                                 {d.locationEntries.map((e) => (
                                                                     <span key={`${d.itemId}-${e.locationId}`} style={{ color: "#4c6152" }}>
                                                                         {e.locationcode}: <strong>{e.actualQty}</strong> / {e.systemQty}
+                                                                        {(e.batchCodes || []).length > 0 && (
+                                                                            <span style={{ color: "#8ba392", marginLeft: 4 }}>
+                                                                                (Lô: {e.batchCodes.join(", ")})
+                                                                            </span>
+                                                                        )}
                                                                     </span>
                                                                 ))}
                                                             </div>

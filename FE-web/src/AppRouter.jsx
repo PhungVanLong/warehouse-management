@@ -29,6 +29,7 @@ import AuditsPage from "./pages/audits/AuditsPage";
 import AuditCreatePage from "./pages/audits/AuditCreatePage";
 import AuditDetailPage from "./pages/audits/AuditDetailPage";
 import AuditTasksPage from "./pages/audits/AuditTasksPage";
+import ReceiptReportPage from "./pages/reports/ReceiptReportPage";
 import SidebarLayout from "./components/SidebarLayout";
 
 export default function AppRouter() {
@@ -68,6 +69,7 @@ export default function AppRouter() {
                     <Route path="/audits/create" element={<AuditCreatePage />} />
                     <Route path="/audits/requests" element={<AuditTasksPage />} />
                     <Route path="/audits/:id" element={<AuditDetailPage />} />
+                    <Route path="/reports/receipt" element={<ReceiptReportPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>

@@ -7,7 +7,7 @@ import { getAllAudits, getAssignedAudits } from "../../api/auditApi";
 
 const STATUS_LABELS = {
     DRAFT: "Nháp",
-    REQUESTED: "Đã giao",
+    REQUESTED: "Chờ xử lý",
     SUBMITTED: "Chờ duyệt",
     CONFIRMED: "Đã xác nhận",
     CANCELLED: "Đã hủy",
@@ -201,12 +201,12 @@ export default function AuditsPage() {
                                 <th className="sp-th-cb">
                                     <input type="checkbox" checked={allChecked} onChange={toggleAll} />
                                 </th>
-                                <th>Số phiếu <IconSort /></th>
+                                <th >Số phiếu <IconSort /></th>
                                 <th>Ngày kiểm kê <IconSort /></th>
-                                <th style={{ textAlign: "center" }}>Số mặt hàng</th>
-                                <th>Diễn giải</th>
-                                <th style={{ width: 160 }}>Người lập <IconSort /></th>
-                                <th>Trạng thái <IconSort /></th>
+                                {/* <th style={{ textAlign: "center" }}>Số mặt hàng</th>
+                                <th>Diễn giải</th> */}
+                                <th style={{ width: "15%" }}>Người lập <IconSort /></th>
+                                <th style={{ width: "15%" }}>Trạng thái <IconSort /></th>
                                 <th className="sp-th-action">Thao tác</th>
                             </tr>
                         </thead>
@@ -231,10 +231,10 @@ export default function AuditsPage() {
                                     </td>
                                     <td className="sp-td-id">{r.docno}</td>
                                     <td>{formatDate(r.docDate)}</td>
-                                    <td style={{ textAlign: "center", fontWeight: 600, color: "#1E3A2F" }}>
+                                    {/* <td style={{ textAlign: "center", fontWeight: 600, color: "#1E3A2F" }}>
                                         {r.details ? r.details.length : "—"}
-                                    </td>
-                                    <td style={{ color: "#4c6152", fontSize: "0.88rem" }}>{r.description || "—"}</td>
+                                    </td> */}
+                                    {/* <td style={{ color: "#4c6152", fontSize: "0.88rem" }}>{r.description || "—"}</td> */}
                                     <td style={{ width: 160 }}>{r.createdByFullname || r.createdByName || "—"}</td>
                                     <td>
                                         <span className={STATUS_BADGE[r.docstatus] || "rc-badge"}>

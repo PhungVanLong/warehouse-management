@@ -161,11 +161,11 @@ export default function ReceiptDetailPage() {
                                 <label className="rc-form-label">Ngày</label>
                                 <input type="date" className="rc-form-input" style={{ minWidth: 150 }} value={formatDateInput(receipt.docDate)} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Đối tượng</label>
-                                <input className="rc-form-input" style={{ minWidth: 200 }} value={receipt.customerName || ""} readOnly />
+                                <input className="rc-form-input" style={{ minWidth: 250 }} value={receipt.customerName || ""} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
                                 <input className="rc-form-input" style={{ minWidth: 150 }} value={receipt.docno || ""} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Loại</label>
-                                <input className="rc-form-input" style={{ minWidth: 150 }} value={receipt.docType || receipt.doctype || "NORMAL"} readOnly />
+                                <input className="rc-form-input" style={{ minWidth: 150 }} value={receipt.docType || receipt.doctype || "Thông thường"} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Người lập</label>
                                 <input className="rc-form-input" style={{ minWidth: 160 }} value={receipt.createdByFullname || receipt.createdByName || ""} readOnly />
                                 {/* Status pill – static badge, no dropdown */}
@@ -217,7 +217,7 @@ export default function ReceiptDetailPage() {
                                 <table className="rc-detail-table" style={{ tableLayout: "auto" }}>
                                     <thead>
                                         <tr>
-                                            <th className="rc-td-stt">STT</th>
+                                            <th className="rc-td-stt" style={{ width: "5%" }}>STT</th>
                                             <th style={{ width: "11%" }}>Mã hàng</th>
                                             <th style={{ width: "22%" }}>Tên hàng hóa</th>
                                             <th style={{ width: "12%" }}>Mã lô</th>

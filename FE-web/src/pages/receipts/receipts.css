@@ -539,13 +539,14 @@
 
 .rc-modal {
     background: #fff;
-    border-radius: 16px;
+    border-radius: 12px;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
-    width: 520px;
-    max-width: 100%;
+    width: 740px;
+    max-width: calc(100vw - 32px);
     max-height: 90vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     animation: rc-modal-in 0.18s ease;
 }
 

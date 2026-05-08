@@ -215,14 +215,14 @@ export default function BatchesPage() {
                                     <td>{r.nameBatch}</td>
                                     <td className="bt-td-itemcode">{r.itemcode}</td>
                                     <td>{r.itemname}</td>
-                                    <td className="bt-td-number">{formatNumber(r.quantity)}</td>
-                                    <td>
+                                    <td className="bt-td-number" style={{ textAlign: "left" }}>{formatNumber(r.quantity)}</td>
+                                    <td style={{ textAlign: "left" }}>
                                         <span className={`bt-qty-remaining${r.quantityRemaining === 0 ? " bt-qty-zero" : ""}`}>
                                             {formatNumber(r.quantityRemaining)}
                                         </span>
                                     </td>
-                                    <td className="bt-td-number">{formatNumber(r.unitCost)}</td>
-                                    <td className="bt-td-date">{formatDate(r.manufactureDate)}</td>
+                                    <td className="bt-td-number" style={{ textAlign: "left" }}>{formatNumber(r.unitCost)}</td>
+                                    <td className="bt-td-date" style={{ textAlign: "left" }} >{formatDate(r.manufactureDate)}</td>
                                     <td className="sp-td-action" onClick={(e) => e.stopPropagation()}>
                                         <button className="sp-edit-btn" title="Xem chi tiết" onClick={() => navigate(`/batches/${r.id}`)}>
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -146,16 +146,13 @@
 
 /* ── th minwidth for audit table ─────────────────────── */
 .au-th-book {
-    width: 10%;
     text-align: right;
 }
 
 .au-th-actual {
-    width: 10%;
     text-align: right;
 }
 
 .au-th-diff {
-    width: 9%;
     text-align: right;
 }

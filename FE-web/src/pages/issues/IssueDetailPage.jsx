@@ -160,7 +160,7 @@ export default function IssueDetailPage() {
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
                                 <input className="rc-form-input" style={{ minWidth: 150 }} value={issue.docno || ""} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Loại</label>
-                                <input className="rc-form-input" style={{ minWidth: 150 }} value={issue.docType || issue.doctype || "NORMAL"} readOnly />
+                                <input className="rc-form-input" style={{ minWidth: 150 }} value={issue.docType || issue.doctype || "Thông thường"} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Người lập</label>
                                 <input className="rc-form-input" style={{ minWidth: 160 }} value={issue.createdByFullname || issue.createdByName || ""} readOnly />
                                 {/* Status pill – static badge, no dropdown */}
@@ -183,7 +183,7 @@ export default function IssueDetailPage() {
                                 </div>
                             ) : issue.approvedByFullname || issue.approvedByUsername ? (
                                 <div className="rc-header-row" style={{ marginTop: -6 }}>
-                                    <label className="rc-form-label">Người kiểm kê</label>
+                                    <label className="rc-form-label">Người duyệt</label>
                                     <input className="rc-form-input" style={{ minWidth: 200 }} value={issue.approvedByFullname || issue.approvedByUsername || ""} readOnly />
                                     {issue.approvedAt && (
                                         <>

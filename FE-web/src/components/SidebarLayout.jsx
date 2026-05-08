@@ -16,6 +16,9 @@ export default function SidebarLayout({ children, activeKey }) {
         if (path.startsWith("/receipts") || path.startsWith("/issues") || path.startsWith("/audits")) {
             return { danhmuc: false, chungtu: true, baocao: false };
         }
+        if (path.startsWith("/reports")) {
+            return { danhmuc: false, chungtu: false, baocao: true };
+        }
         return { danhmuc: false, chungtu: false, baocao: false };
     };
 
@@ -115,7 +118,7 @@ export default function SidebarLayout({ children, activeKey }) {
                     </div>
                     {openGroups.baocao && (
                         <div className="sp-nav-children">
-                            <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Bảng kê chứng từ Phiếu nhập')}>Bảng kê chứng từ Phiếu nhập</div>
+                            <div className={`sp-nav-child${location.pathname.startsWith("/reports/receipt") ? " sp-child-active" : ""}`} onClick={() => navTo("Bảng kê chứng từ Phiếu nhập", "/reports/receipt")}>Bảng kê chứng từ Phiếu nhập</div>
                             <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Bảng kê chứng từ Phiếu xuất')}>Bảng kê chứng từ Phiếu xuất</div>
                             <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Báo cáo Nhập - Xuất - Tồn')}>Báo cáo Nhập - Xuất - Tồn</div>
                             <div className="sp-nav-child" onClick={() => console.log('[Sidebar] Click: Thẻ kho')}>Thẻ kho</div>

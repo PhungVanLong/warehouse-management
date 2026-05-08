@@ -8,7 +8,7 @@ import { getAvailableLocations } from "../../api/issueApi";
 
 const STATUS_LABELS = {
     DRAFT: "Nháp",
-    REQUESTED: "Đã giao",
+    REQUESTED: "Chờ xử lý",
     SUBMITTED: "Chờ duyệt",
     CONFIRMED: "Đã xác nhận",
     CANCELLED: "Đã hủy",
@@ -320,7 +320,7 @@ export default function AuditDetailPage() {
                                 </div>
                             )}
 
-                            {/* ── Summary bar (chỉ show khi có dữ liệu diff) ── */}
+                            {/* ── Summary bar (chỉ show khi có dữ liệu diff) ──
                             {audit.docstatus !== "DRAFT" && summary && (
                                 <div className="au-summary-bar">
                                     <div className="au-summary-item">
@@ -346,7 +346,7 @@ export default function AuditDetailPage() {
                                         </span>
                                     </div>
                                 </div>
-                            )}
+                            )} */}
 
                             {/* ── DRAFT hint ── */}
                             {audit.docstatus === "DRAFT" && audit.details && audit.details.length > 0 && (
@@ -370,15 +370,15 @@ export default function AuditDetailPage() {
                                 <table className="rc-detail-table" style={{ width: "100%" }}>
                                     <thead>
                                         <tr>
-                                            <th className="rc-td-stt" style={{ width: 36 }}>STT</th>
-                                            <th style={{ width: "10%" }}>Mã hàng</th>
-                                            <th style={{ width: "22%" }}>Tên vật tư hàng hóa</th>
-                                            <th style={{ width: "20%" }}>Vị trí kiểm kê</th>
-                                            <th style={{ width: "8%" }}>Đơn vị</th>
-                                            <th className="au-th-book">SL hệ thống</th>
-                                            <th className="au-th-actual">SL thực tế</th>
-                                            <th className="au-th-diff">Chênh lệch</th>
-                                            <th style={{ width: "18%" }}>Đề xuất xử lý</th>
+                                            <th style={{ width: "4%" }}>STT</th>
+                                            <th style={{ width: "9%" }}>Mã hàng</th>
+                                            <th style={{ width: "18%" }}>Tên vật tư hàng hóa</th>
+                                            <th style={{ width: "22%" }}>Vị trí kiểm kê</th>
+                                            <th style={{ width: "5%" }}>Đơn vị</th>
+                                            <th style={{ width: "9%", textAlign: "right" }}>SL hệ thống</th>
+                                            <th style={{ width: "9%", textAlign: "right" }}>SL thực tế</th>
+                                            <th style={{ width: "8%", textAlign: "right" }}>Chênh lệch</th>
+                                            <th style={{ width: "16%" }}>Đề xuất xử lý</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -410,7 +410,12 @@ export default function AuditDetailPage() {
                                                             <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.82rem" }}>
                                                                 {d.locationEntries.map((e) => (
                                                                     <span key={`${d.itemId}-${e.locationId}`} style={{ color: "#4c6152" }}>
-                                                                        {e.locationcode}: {e.actualQty} / {e.systemQty}
+                                                                        {e.locationcode}: <strong>{e.actualQty}</strong> / {e.systemQty}
+                                                                        {(e.batchCodes || []).length > 0 && (
+                                                                            <span style={{ color: "#8ba392", marginLeft: 4 }}>
+                                                                                (Lô: {e.batchCodes.join(", ")})
+                                                                            </span>
+                                                                        )}
                                                                     </span>
                                                                 ))}
                                                             </div>

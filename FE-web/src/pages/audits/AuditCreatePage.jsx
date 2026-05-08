@@ -268,13 +268,13 @@ export default function AuditCreatePage() {
                             <table className="rc-detail-table">
                                 <thead>
                                     <tr>
-                                        <th className="rc-td-stt" style={{ width: 36 }}>STT</th>
-                                        <th style={{ width: "9%" }}>Mã hàng</th>
-                                        <th style={{ width: "18%" }}>Tên vật tư hàng hóa</th>
+                                        <th style={{ width: "4%" }}>STT</th>
+                                        <th style={{ width: "10%" }}>Mã hàng</th>
+                                        <th>Tên vật tư hàng hóa</th>
                                         <th style={{ width: "7%" }}>ĐVT</th>
-                                        <th className="au-th-book">SL hệ thống</th>
-                                        {showActual && <th className="au-th-actual">SL thực tế</th>}
-                                        <th style={{ width: 32 }}></th>
+                                        <th style={{ width: "14%", textAlign: "right" }}>SL hệ thống</th>
+                                        {showActual && <th style={{ width: "14%", textAlign: "right" }}>SL thực tế</th>}
+                                        <th style={{ width: "4%" }}></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -362,7 +362,7 @@ export default function AuditCreatePage() {
                         <div className="rc-form-actions">
                             <button className="sp-btn-outline" onClick={() => navigate("/audits")}>Hủy bỏ</button>
                             <button className="sp-btn-primary" onClick={handleSave} disabled={saving}>
-                                {saving ? "Đang lưu..." : "Lưu phiếu"}
+                                {saving ? "Đang lưu..." : "Gửi yêu cầu"}
                             </button>
                         </div>
                     </div>
