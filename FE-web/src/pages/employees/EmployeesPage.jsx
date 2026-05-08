@@ -15,6 +15,8 @@ function SortIcon() {
 }
 
 export default function EmployeesPage() {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const isStaff = user?.role === "STAFF";
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -37,7 +39,14 @@ export default function EmployeesPage() {
         }
     }, []);
 
-    useEffect(() => { fetchItems(); }, [fetchItems]);
+    useEffect(() => { if (!isStaff) fetchItems(); }, [fetchItems, isStaff]);
+
+    useEffect(() => {
+        if (isStaff) {
+            // Staff are not allowed to view employee catalog — redirect to home
+            navigate("/");
+        }
+    }, [isStaff, navigate]);
 
     const filtered = useMemo(() => {
         const sorted = [...items].sort((a, b) => (a.id || 0) - (b.id || 0));

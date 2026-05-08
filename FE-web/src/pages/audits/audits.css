@@ -1,5 +1,67 @@
 /* ── Audits module – kiểm kê hàng tồn kho ────────────── */
 
+/* ── Audit-specific status badges ────────────────────── */
+.au-badge-draft {
+    background: #eceff1;
+    color: #546e7a;
+    border: 1px solid #b0bec5;
+}
+
+.au-badge-requested {
+    background: #fff9c4;
+    color: #f57f17;
+    border: 1px solid #ffd54f;
+}
+
+.au-badge-submitted {
+    background: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffb74d;
+}
+
+.au-badge-confirmed {
+    background: #e8f5e9;
+    color: #1b5e20;
+    border: 1px solid #a5d6a7;
+}
+
+.au-badge-cancelled {
+    background: #fce4ec;
+    color: #b71c1c;
+    border: 1px solid #f48fb1;
+}
+
+/* ── Audit status pills (detail page) ────────────────── */
+.au-status-pill-draft {
+    background: #eceff1;
+    color: #546e7a;
+    border: 1.5px solid #b0bec5;
+}
+
+.au-status-pill-requested {
+    background: #fff9c4;
+    color: #f57f17;
+    border: 1.5px solid #ffd54f;
+}
+
+.au-status-pill-submitted {
+    background: #fff3e0;
+    color: #e65100;
+    border: 1.5px solid #ffb74d;
+}
+
+.au-status-pill-confirmed {
+    background: #e8f5e9;
+    color: #1b5e20;
+    border: 1.5px solid #a5d6a7;
+}
+
+.au-status-pill-cancelled {
+    background: #fce4ec;
+    color: #b71c1c;
+    border: 1.5px solid #f48fb1;
+}
+
 /* ── Diff quantity badges ─────────────────────────────── */
 .au-diff-plus {
     color: #1b5e20;

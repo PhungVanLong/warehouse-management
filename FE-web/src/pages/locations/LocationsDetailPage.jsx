@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import { getLocationById, updateLocation, getItemsAtLocation } from "../../api/locationApi";
@@ -107,6 +107,22 @@ export default function LocationsDetailPage() {
         setFieldErrors({});
         setIsEditing(false);
     };
+
+    const itemRows = useMemo(() => (
+        storedItems.flatMap((item) => {
+            const codes = Array.isArray(item.batchCodes) && item.batchCodes.length > 0
+                ? item.batchCodes
+                : [null];
+            return codes.map((code, idx) => ({
+                rowId: `${item.itemId || item.itemcode || "item"}-${code || idx}`,
+                itemcode: item.itemcode,
+                itemname: item.itemname,
+                unitof: item.unitof,
+                quantity: item.quantity,
+                batchCode: code,
+            }));
+        })
+    ), [storedItems]);
 
     return (
         <>
@@ -257,20 +273,16 @@ export default function LocationsDetailPage() {
                                                 <tr><td colSpan={6} className="sp-status-row">Đang tải...</td></tr>
                                             ) : itemsError ? (
                                                 <tr><td colSpan={6} className="sp-status-row sp-status-error">{itemsError}</td></tr>
-                                            ) : storedItems.length === 0 ? (
+                                            ) : itemRows.length === 0 ? (
                                                 <tr><td colSpan={6} className="sp-status-row">Không có dữ liệu</td></tr>
-                                            ) : storedItems.map((item, idx) => (
-                                                <tr key={item.itemId || `${item.itemcode || "item"}-${idx}`}>
+                                            ) : itemRows.map((row, idx) => (
+                                                <tr key={row.rowId}>
                                                     <td>{idx + 1}</td>
-                                                    <td>{item.itemcode}</td>
-                                                    <td>{item.itemname}</td>
-                                                    <td>
-                                                        {Array.isArray(item.batchCodes) && item.batchCodes.length > 0
-                                                            ? item.batchCodes.join(", ")
-                                                            : "—"}
-                                                    </td>
-                                                    <td>{item.unitof}</td>
-                                                    <td style={{ textAlign: "right" }}>{item.quantity}</td>
+                                                    <td>{row.itemcode}</td>
+                                                    <td>{row.itemname}</td>
+                                                    <td>{row.batchCode || "—"}</td>
+                                                    <td>{row.unitof}</td>
+                                                    <td style={{ textAlign: "right" }}>{row.quantity}</td>
                                                 </tr>
                                             ))}
                                         </tbody>

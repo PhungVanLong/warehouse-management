@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import DatePicker from "../../components/DatePicker";
@@ -31,6 +31,12 @@ function IconChevron({ open }) {
 
 export default function EmployeesCreatePage() {
     const navigate = useNavigate();
+    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const isAdmin = currentUser?.role === "ADMIN";
+
+    useEffect(() => {
+        if (currentUser?.role === "STAFF") navigate("/");
+    }, []);
 
     const [form, setForm] = useState({ ...EMPTY_FORM });
     const [saving, setSaving] = useState(false);
@@ -81,8 +87,8 @@ export default function EmployeesCreatePage() {
             });
             setShowToast(true);
             setTimeout(() => navigate("/employees"), 2000);
-        } catch {
-            setError("Thêm mới thất bại. Vui lòng thử lại.");
+        } catch (err) {
+            setError(err?.response?.data?.message || "Thêm mới thất bại. Vui lòng thử lại.");
         } finally {
             setSaving(false);
         }
@@ -299,7 +305,7 @@ export default function EmployeesCreatePage() {
                                             onChange={(e) => set("role", e.target.value)}
                                         >
                                             <option value="STAFF">STAFF</option>
-                                            <option value="ADMIN">ADMIN</option>
+                                            {isAdmin && <option value="MANAGER">MANAGER</option>}
                                         </select>
                                     </div>
                                 </div>

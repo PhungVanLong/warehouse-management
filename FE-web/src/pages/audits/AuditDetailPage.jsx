@@ -4,12 +4,21 @@ import "../../styles/shared.css";
 import "../receipts/receipts.css";
 import "./audits.css";
 import { getAuditById, confirmAudit, cancelAudit } from "../../api/auditApi";
+import { getAvailableLocations } from "../../api/issueApi";
 
-const STATUS_LABELS = { DRAFT: "Chờ duyệt", CONFIRMED: "Đã duyệt", CANCELLED: "Hủy" };
+const STATUS_LABELS = {
+    DRAFT: "Nháp",
+    REQUESTED: "Đã giao",
+    SUBMITTED: "Chờ duyệt",
+    CONFIRMED: "Đã xác nhận",
+    CANCELLED: "Đã hủy",
+};
 const STATUS_CLASS = {
-    DRAFT: "rc-status-pill rc-status-pill-draft",
-    CONFIRMED: "rc-status-pill rc-status-pill-confirmed",
-    CANCELLED: "rc-status-pill rc-status-pill-cancelled",
+    DRAFT: "rc-status-pill au-status-pill-draft",
+    REQUESTED: "rc-status-pill au-status-pill-requested",
+    SUBMITTED: "rc-status-pill au-status-pill-submitted",
+    CONFIRMED: "rc-status-pill au-status-pill-confirmed",
+    CANCELLED: "rc-status-pill au-status-pill-cancelled",
 };
 
 function formatDate(str) {
@@ -59,6 +68,14 @@ export default function AuditDetailPage() {
     const [actionLoading, setActionLoading] = useState(false);
     const [statusMenuOpen, setStatusMenuOpen] = useState(false);
     const [confirmModal, setConfirmModal] = useState(false);
+    const [locationsByItem, setLocationsByItem] = useState({});
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const isStaff = user?.role === "STAFF";
+    // Manager can confirm from DRAFT or SUBMITTED
+    const canConfirm = !isStaff && (audit?.docstatus === "DRAFT" || audit?.docstatus === "SUBMITTED");
+    const canCancel = !isStaff && audit?.docstatus === "DRAFT";
+    const canOpenMenu = canConfirm || canCancel;
+    const canCreateAdjustment = !isStaff && audit?.docstatus === "CONFIRMED";
 
     const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
 
@@ -76,6 +93,29 @@ export default function AuditDetailPage() {
     }, [id]);
 
     useEffect(() => { fetchAudit(); }, [fetchAudit]);
+
+    useEffect(() => {
+        const loadLocations = async () => {
+            if (!audit?.details || audit.details.length === 0) {
+                setLocationsByItem({});
+                return;
+            }
+            try {
+                const itemIds = Array.from(new Set(audit.details.map((d) => d.itemId).filter(Boolean)));
+                const results = await Promise.all(itemIds.map((itemId) => getAvailableLocations(itemId)));
+                const map = {};
+                itemIds.forEach((itemId, idx) => {
+                    const locs = results[idx] || [];
+                    const codes = locs.map((loc) => loc.locationcode || loc.locationname).filter(Boolean);
+                    map[String(itemId)] = Array.from(new Set(codes));
+                });
+                setLocationsByItem(map);
+            } catch {
+                setLocationsByItem({});
+            }
+        };
+        loadLocations();
+    }, [audit?.details]);
 
     const handleConfirm = async () => {
         setConfirmModal(false);
@@ -201,7 +241,7 @@ export default function AuditDetailPage() {
                                 {audit.docstatus !== "DRAFT" && (
                                     <>
                                         <label className="rc-form-label" style={{ marginLeft: 16 }}>
-                                            {audit.docstatus === "CANCELLED" ? "Người hủy" : "Người duyệt"}
+                                            {audit.docstatus === "CANCELLED" ? "Người hủy" : "Người kiểm kê"}
                                         </label>
                                         <input
                                             className="rc-form-input"
@@ -212,60 +252,71 @@ export default function AuditDetailPage() {
                                     </>
                                 )}
 
-                                {/* Status pill with dropdown */}
+                                {/* Status pill with dropdown – Manager only */}
                                 <div style={{ position: "relative", marginLeft: "auto" }}>
                                     <button
                                         className={STATUS_CLASS[audit.docstatus] || "rc-status-pill"}
-                                        onClick={() => audit.docstatus === "DRAFT" && setStatusMenuOpen((v) => !v)}
-                                        style={{ cursor: audit.docstatus === "DRAFT" ? "pointer" : "default" }}
+                                        onClick={() => canOpenMenu && setStatusMenuOpen((v) => !v)}
+                                        style={{ cursor: canOpenMenu ? "pointer" : "default" }}
                                         disabled={actionLoading}
                                     >
                                         {STATUS_LABELS[audit.docstatus] || audit.docstatus}
-                                        {audit.docstatus === "DRAFT" && <IconChevron />}
+                                        {canOpenMenu && <IconChevron />}
                                     </button>
-                                    {statusMenuOpen && audit.docstatus === "DRAFT" && (
+                                    {statusMenuOpen && canOpenMenu && (
                                         <div style={{ position: "absolute", right: 0, top: "110%", background: "#fff", border: "1.5px solid #c6dfd0", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", zIndex: 100, minWidth: 170, padding: "4px 0" }}>
-                                            <div
-                                                style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#1a7f4b", fontWeight: 600 }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = "#f3faf6"}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = ""}
-                                                onClick={() => { setStatusMenuOpen(false); setConfirmModal(true); }}
-                                            >
-                                                ✓ Xác nhận kiểm kê
-                                            </div>
-                                            <div
-                                                style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#b71c1c" }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = "#fce4ec"}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = ""}
-                                                onClick={handleCancel}
-                                            >
-                                                ✕ Hủy phiếu
-                                            </div>
+                                            {canConfirm && (
+                                                <div
+                                                    style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#1a7f4b", fontWeight: 600 }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = "#f3faf6"}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = ""}
+                                                    onClick={() => { setStatusMenuOpen(false); setConfirmModal(true); }}
+                                                >
+                                                    ✓ Xác nhận kiểm kê
+                                                </div>
+                                            )}
+                                            {canCancel && (
+                                                <div
+                                                    style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#b71c1c" }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = "#fce4ec"}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = ""}
+                                                    onClick={handleCancel}
+                                                >
+                                                    ✕ Hủy phiếu
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            {/* ── Vị trí kiểm kê ── */}
-                            <div className="rc-form-row">
-                                <label className="rc-form-label">Vị trí kiểm kê</label>
-                                <span className="au-location-badge">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                                        <circle cx="12" cy="10" r="3" />
-                                    </svg>
-                                    {audit.locationcode}
-                                </span>
-                                {audit.locationname && (
-                                    <span style={{ color: "#4c6152", fontSize: "0.9rem" }}>{audit.locationname}</span>
-                                )}
-                            </div>
+                            {/* ── Nhân viên được giao ── */}
+                            {(audit.assignedUserFullname || audit.assignedUsername) && (
+                                <div className="rc-form-row">
+                                    <label className="rc-form-label">Nhân viên kiểm kê</label>
+                                    <input className="rc-form-input" style={{ minWidth: 200 }} value={audit.assignedUserFullname || audit.assignedUsername || ""} readOnly />
+                                    <span style={{ marginLeft: 10, fontSize: "0.82rem", color: "#f57f17", fontWeight: 600 }}>
+                                        {audit.docstatus === "REQUESTED" ? "Đang chờ nhân viên xử lý" : audit.docstatus === "SUBMITTED" ? "Nhân viên đã gửi kết quả" : ""}
+                                    </span>
+                                </div>
+                            )}
 
                             {/* ── Diễn giải ── */}
                             {audit.description && (
                                 <div className="rc-form-row">
                                     <label className="rc-form-label">Diễn giải</label>
                                     <input className="rc-form-input rc-form-full" value={audit.description} readOnly />
+                                </div>
+                            )}
+
+                            {(audit.locationcode || audit.locationname) && (
+                                <div className="rc-form-row">
+                                    <label className="rc-form-label">Vị trí</label>
+                                    <input
+                                        className="rc-form-input rc-form-full"
+                                        value={audit.locationcode ? `${audit.locationcode} - ${audit.locationname || ""}` : (audit.locationname || "")}
+                                        readOnly
+                                    />
                                 </div>
                             )}
 
@@ -299,8 +350,18 @@ export default function AuditDetailPage() {
 
                             {/* ── DRAFT hint ── */}
                             {audit.docstatus === "DRAFT" && audit.details && audit.details.length > 0 && (
-                                <div style={{ background: "#fff8e1", border: "1px solid #ffe082", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#5d4037" }}>
-                                    Phiếu đang ở trạng thái <strong>Chờ duyệt</strong>. Số liệu chênh lệch sẽ được hiển thị và tồn kho sẽ được điều chỉnh sau khi xác nhận.
+                                <div style={{ background: "#eceff1", border: "1px solid #b0bec5", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#37474f" }}>
+                                    Phiếu đang ở trạng thái <strong>Nháp</strong>. Có thể giao cho nhân viên hoặc xác nhận trực tiếp.
+                                </div>
+                            )}
+                            {audit.docstatus === "REQUESTED" && (
+                                <div style={{ background: "#fff9c4", border: "1px solid #ffd54f", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#5d4037" }}>
+                                    Phiếu đã <strong>giao cho nhân viên</strong>. Đang chờ nhân viên kiểm kê và gửi kết quả.
+                                </div>
+                            )}
+                            {audit.docstatus === "SUBMITTED" && !isStaff && (
+                                <div style={{ background: "#fff3e0", border: "1px solid #ffb74d", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#5d4037" }}>
+                                    Nhân viên đã <strong>gửi kết quả kiểm kê</strong>. Vui lòng xem xét và xác nhận hoặc hủy.
                                 </div>
                             )}
 
@@ -312,6 +373,7 @@ export default function AuditDetailPage() {
                                             <th className="rc-td-stt" style={{ width: 36 }}>STT</th>
                                             <th style={{ width: "10%" }}>Mã hàng</th>
                                             <th style={{ width: "22%" }}>Tên vật tư hàng hóa</th>
+                                            <th style={{ width: "20%" }}>Vị trí kiểm kê</th>
                                             <th style={{ width: "8%" }}>Đơn vị</th>
                                             <th className="au-th-book">SL hệ thống</th>
                                             <th className="au-th-actual">SL thực tế</th>
@@ -327,14 +389,14 @@ export default function AuditDetailPage() {
                                                 suggestion = (
                                                     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#e8f5e9", color: "#1a7f4b", borderRadius: 6, padding: "3px 10px", fontSize: "0.82rem", fontWeight: 600 }}>
                                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
-                                                        Tạo phiếu xuất
+                                                        Tạo phiếu nhập
                                                     </span>
                                                 );
                                             } else if (diff !== null && diff < 0) {
                                                 suggestion = (
                                                     <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#fce4ec", color: "#c62828", borderRadius: 6, padding: "3px 10px", fontSize: "0.82rem", fontWeight: 600 }}>
                                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
-                                                        Tạo phiếu nhập
+                                                        Tạo phiếu xuất
                                                     </span>
                                                 );
                                             }
@@ -343,6 +405,21 @@ export default function AuditDetailPage() {
                                                     <td className="rc-td-stt">{idx + 1}</td>
                                                     <td style={{ fontWeight: 600, color: "#1E854A" }}>{d.itemcode}</td>
                                                     <td>{d.itemname}</td>
+                                                    <td>
+                                                        {d.locationEntries && d.locationEntries.length > 0 ? (
+                                                            <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "0.82rem" }}>
+                                                                {d.locationEntries.map((e) => (
+                                                                    <span key={`${d.itemId}-${e.locationId}`} style={{ color: "#4c6152" }}>
+                                                                        {e.locationcode}: {e.actualQty} / {e.systemQty}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            (locationsByItem[String(d.itemId)] || []).length > 0
+                                                                ? locationsByItem[String(d.itemId)].join(", ")
+                                                                : "—"
+                                                        )}
+                                                    </td>
                                                     <td>{d.unitof}</td>
                                                     <td className="rc-td-num au-book-qty">{d.bookquantity ?? "—"}</td>
                                                     <td className="rc-td-num" style={{ fontWeight: 600, color: "#1E3A2F" }}>{d.actualquantity}</td>
@@ -352,7 +429,7 @@ export default function AuditDetailPage() {
                                             );
                                         })}
                                         {(!audit.details || audit.details.length === 0) && (
-                                            <tr><td colSpan={8} style={{ textAlign: "center", color: "#8ba392", padding: 16 }}>Không có dữ liệu chi tiết.</td></tr>
+                                            <tr><td colSpan={9} style={{ textAlign: "center", color: "#8ba392", padding: 16 }}>Không có dữ liệu chi tiết.</td></tr>
                                         )}
                                     </tbody>
                                 </table>
@@ -361,9 +438,30 @@ export default function AuditDetailPage() {
                             {/* ── Actions ── */}
                             <div className="rc-form-actions">
                                 <button className="sp-btn-outline" onClick={() => navigate("/audits")}>Quay lại</button>
-                                {audit.docstatus === "DRAFT" && (
+                                {canCreateAdjustment && (
+                                    <>
+                                        <button
+                                            className="sp-btn-outline"
+                                            onClick={() => navigate(`/receipts/create?docType=ADJUSTMENT&auditId=${audit.id}`)}
+                                        >
+                                            Tạo phiếu nhập điều chỉnh
+                                        </button>
+                                        <button
+                                            className="sp-btn-outline"
+                                            onClick={() => navigate(`/issues/create?docType=ADJUSTMENT&auditId=${audit.id}`)}
+                                        >
+                                            Tạo phiếu xuất điều chỉnh
+                                        </button>
+                                    </>
+                                )}
+                                {canConfirm && (
                                     <button className="sp-btn-primary" onClick={() => setConfirmModal(true)} disabled={actionLoading}>
                                         {actionLoading ? "Đang xử lý..." : "Xác nhận kiểm kê"}
+                                    </button>
+                                )}
+                                {canCancel && (
+                                    <button className="sp-btn-danger-outline" onClick={handleCancel} disabled={actionLoading}>
+                                        {actionLoading ? "Đang xử lý..." : "Hủy phiếu"}
                                     </button>
                                 )}
                             </div>

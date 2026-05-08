@@ -228,7 +228,7 @@ export default function ReceiptsPage() {
                                 </th>
                                 <th>Số phiếu <IconSort /></th>
                                 <th>Ngày <IconSort /></th>
-                                <th>Khách hàng <IconSort /></th>
+                                <th> Nhà cung cấp <IconSort /></th>
                                 <th style={{ width: 120, textAlign: "right" }}>Tổng tiền <IconSort /></th>
                                 <th style={{ width: 160 }}>Người lập <IconSort /></th>
                                 <th>Trạng thái <IconSort /></th>

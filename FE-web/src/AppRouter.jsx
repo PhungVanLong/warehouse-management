@@ -28,6 +28,7 @@ import BatchDetailPage from "./pages/batches/BatchDetailPage";
 import AuditsPage from "./pages/audits/AuditsPage";
 import AuditCreatePage from "./pages/audits/AuditCreatePage";
 import AuditDetailPage from "./pages/audits/AuditDetailPage";
+import AuditTasksPage from "./pages/audits/AuditTasksPage";
 import SidebarLayout from "./components/SidebarLayout";
 
 export default function AppRouter() {
@@ -65,6 +66,7 @@ export default function AppRouter() {
                     <Route path="/batches/:id" element={<BatchDetailPage />} />
                     <Route path="/audits" element={<AuditsPage />} />
                     <Route path="/audits/create" element={<AuditCreatePage />} />
+                    <Route path="/audits/requests" element={<AuditTasksPage />} />
                     <Route path="/audits/:id" element={<AuditDetailPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/login" replace />} />

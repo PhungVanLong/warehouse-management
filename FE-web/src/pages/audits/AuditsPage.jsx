@@ -3,16 +3,24 @@ import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "../receipts/receipts.css";
 import "./audits.css";
-import { getAllAudits } from "../../api/auditApi";
+import { getAllAudits, getAssignedAudits } from "../../api/auditApi";
 
-const STATUS_LABELS = { DRAFT: "Chờ duyệt", CONFIRMED: "Đã duyệt", CANCELLED: "Hủy" };
-const STATUS_BADGE = {
-    DRAFT: "rc-badge rc-badge-draft",
-    CONFIRMED: "rc-badge rc-badge-confirmed",
-    CANCELLED: "rc-badge rc-badge-cancelled",
+const STATUS_LABELS = {
+    DRAFT: "Nháp",
+    REQUESTED: "Đã giao",
+    SUBMITTED: "Chờ duyệt",
+    CONFIRMED: "Đã xác nhận",
+    CANCELLED: "Đã hủy",
 };
-const TABS = ["Tất cả", "Chờ duyệt", "Đã duyệt", "Hủy"];
-const TAB_STATUS = { "Chờ duyệt": "DRAFT", "Đã duyệt": "CONFIRMED", "Hủy": "CANCELLED" };
+const STATUS_BADGE = {
+    DRAFT: "rc-badge au-badge-draft",
+    REQUESTED: "rc-badge au-badge-requested",
+    SUBMITTED: "rc-badge au-badge-submitted",
+    CONFIRMED: "rc-badge au-badge-confirmed",
+    CANCELLED: "rc-badge au-badge-cancelled",
+};
+const TABS = ["Tất cả", "Nháp", "Đã giao", "Chờ duyệt", "Đã xác nhận", "Đã hủy"];
+const TAB_STATUS = { "Nháp": "DRAFT", "Đã giao": "REQUESTED", "Chờ duyệt": "SUBMITTED", "Đã xác nhận": "CONFIRMED", "Đã hủy": "CANCELLED" };
 const ROWS_OPTIONS = [10, 15, 20, 50];
 
 function formatDate(str) {
@@ -54,6 +62,9 @@ function IconDoc() {
 }
 
 export default function AuditsPage() {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const isStaff = user?.role === "STAFF";
+    const isManager = user?.role && user.role !== "STAFF";
     const [audits, setAudits] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -68,14 +79,14 @@ export default function AuditsPage() {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllAudits();
+            const data = isStaff ? await getAssignedAudits() : await getAllAudits();
             setAudits(data);
         } catch {
-            setError("Không thể tải danh sách phiếu kiểm kê.");
+            setError(isStaff ? "Không thể tải danh sách yêu cầu kiểm kê." : "Không thể tải danh sách phiếu kiểm kê.");
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [isStaff]);
 
     useEffect(() => { fetchAudits(); }, [fetchAudits]);
 
@@ -90,8 +101,6 @@ export default function AuditsPage() {
             list = list.filter(
                 (r) =>
                     (r.docno || "").toLowerCase().includes(q) ||
-                    (r.locationcode || "").toLowerCase().includes(q) ||
-                    (r.locationname || "").toLowerCase().includes(q) ||
                     (r.description || "").toLowerCase().includes(q)
             );
         }
@@ -155,30 +164,34 @@ export default function AuditsPage() {
                         </span>
                         <input
                             className="sp-search"
-                            placeholder="Tìm số phiếu, vị trí, diễn giải..."
+                            placeholder={isStaff ? "Tìm số phiếu, diễn giải..." : "Tìm số phiếu, vị trí, diễn giải..."}
                             value={search}
                             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                         />
                     </div>
                     <div className="sp-toolbar-spacer" />
-                    <button className="sp-btn-primary" onClick={() => navigate("/audits/create")}>
-                        <IconPlus /> Thêm mới
-                    </button>
+                    {isManager && (
+                        <button className="sp-btn-primary" onClick={() => navigate("/audits/create")}>
+                            <IconPlus /> Thêm mới
+                        </button>
+                    )}
                     <button className="rc-btn-template"><IconDoc /> Thêm bản sao mới</button>
                 </div>
 
                 {/* Tabs */}
-                <div className="rc-tabs">
-                    {TABS.map((tab) => (
-                        <div
-                            key={tab}
-                            className={`rc-tab${activeTab === tab ? " rc-tab-active" : ""}`}
-                            onClick={() => { setActiveTab(tab); setPage(1); }}
-                        >
-                            {tab}
-                        </div>
-                    ))}
-                </div>
+                {!isStaff && (
+                    <div className="rc-tabs">
+                        {TABS.map((tab) => (
+                            <div
+                                key={tab}
+                                className={`rc-tab${activeTab === tab ? " rc-tab-active" : ""}`}
+                                onClick={() => { setActiveTab(tab); setPage(1); }}
+                            >
+                                {tab}
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Table */}
                 <div className="sp-table-wrap sp-scrollable">
@@ -190,7 +203,6 @@ export default function AuditsPage() {
                                 </th>
                                 <th>Số phiếu <IconSort /></th>
                                 <th>Ngày kiểm kê <IconSort /></th>
-                                <th>Vị trí kiểm kê <IconSort /></th>
                                 <th style={{ textAlign: "center" }}>Số mặt hàng</th>
                                 <th>Diễn giải</th>
                                 <th style={{ width: 160 }}>Người lập <IconSort /></th>
@@ -200,35 +212,25 @@ export default function AuditsPage() {
                         </thead>
                         <tbody>
                             {loading && (
-                                <tr><td colSpan={9} className="sp-status-row">Đang tải dữ liệu...</td></tr>
+                                <tr><td colSpan={8} className="sp-status-row">Đang tải dữ liệu...</td></tr>
                             )}
                             {!loading && error && (
-                                <tr><td colSpan={9} className="sp-status-row sp-status-error">{error}</td></tr>
+                                <tr><td colSpan={8} className="sp-status-row sp-status-error">{error}</td></tr>
                             )}
                             {!loading && !error && pageData.length === 0 && (
-                                <tr><td colSpan={9} className="sp-status-row">Không có phiếu kiểm kê nào.</td></tr>
+                                <tr><td colSpan={8} className="sp-status-row">{isStaff ? "Không có yêu cầu kiểm kê nào." : "Không có phiếu kiểm kê nào."}</td></tr>
                             )}
                             {!loading && !error && pageData.map((r) => (
                                 <tr
                                     key={r.id}
                                     className={`sp-row-clickable${selected.has(r.id) ? " sp-row-selected" : ""}`}
-                                    onClick={() => navigate(`/audits/${r.id}`)}
+                                    onClick={() => navigate(isStaff ? `/audits/requests?id=${r.id}` : `/audits/${r.id}`)}
                                 >
                                     <td className="sp-td-cb" onClick={(e) => { e.stopPropagation(); toggleOne(r.id); }}>
                                         <input type="checkbox" checked={selected.has(r.id)} onChange={() => { }} />
                                     </td>
                                     <td className="sp-td-id">{r.docno}</td>
                                     <td>{formatDate(r.docDate)}</td>
-                                    <td>
-                                        {r.locationcode ? (
-                                            <span className="au-location-badge">{r.locationcode}</span>
-                                        ) : (
-                                            <span style={{ color: "#8ba392" }}>—</span>
-                                        )}
-                                        {r.locationname && (
-                                            <span style={{ marginLeft: 6, color: "#4c6152", fontSize: "0.87rem" }}>{r.locationname}</span>
-                                        )}
-                                    </td>
                                     <td style={{ textAlign: "center", fontWeight: 600, color: "#1E3A2F" }}>
                                         {r.details ? r.details.length : "—"}
                                     </td>
@@ -239,7 +241,7 @@ export default function AuditsPage() {
                                             {STATUS_LABELS[r.docstatus] || r.docstatus}
                                         </span>
                                     </td>
-                                    <td className="sp-td-action" onClick={(e) => { e.stopPropagation(); navigate(`/audits/${r.id}`); }}>
+                                    <td className="sp-td-action" onClick={(e) => { e.stopPropagation(); navigate(isStaff ? `/audits/requests?id=${r.id}` : `/audits/${r.id}`); }}>
                                         <button className="sp-edit-btn" title="Xem chi tiết"><IconEye /></button>
                                     </td>
                                 </tr>

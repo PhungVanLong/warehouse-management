@@ -169,7 +169,7 @@ export default function BatchesPage() {
 
                 {/* Table */}
                 <div className="sp-table-wrap sp-scrollable">
-                    <table className="sp-table">
+                    <table className="sp-table bt-table">
                         <thead>
                             <tr>
                                 <th className="sp-th-cb">

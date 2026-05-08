@@ -32,6 +32,8 @@ function formatMoney(n) {
 export default function IssueDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const canConfirmCancel = user?.role === "ADMIN" || user?.role === "MANAGER";
 
     const [issue, setIssue] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -157,6 +159,8 @@ export default function IssueDetailPage() {
                                 <input className="rc-form-input" style={{ minWidth: 200 }} value={issue.customerName || ""} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
                                 <input className="rc-form-input" style={{ minWidth: 150 }} value={issue.docno || ""} readOnly />
+                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Loại</label>
+                                <input className="rc-form-input" style={{ minWidth: 150 }} value={issue.docType || issue.doctype || "NORMAL"} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Người lập</label>
                                 <input className="rc-form-input" style={{ minWidth: 160 }} value={issue.createdByFullname || issue.createdByName || ""} readOnly />
                                 {/* Status pill – static badge, no dropdown */}
@@ -179,7 +183,7 @@ export default function IssueDetailPage() {
                                 </div>
                             ) : issue.approvedByFullname || issue.approvedByUsername ? (
                                 <div className="rc-header-row" style={{ marginTop: -6 }}>
-                                    <label className="rc-form-label">Người duyệt</label>
+                                    <label className="rc-form-label">Người kiểm kê</label>
                                     <input className="rc-form-input" style={{ minWidth: 200 }} value={issue.approvedByFullname || issue.approvedByUsername || ""} readOnly />
                                     {issue.approvedAt && (
                                         <>
@@ -248,7 +252,7 @@ export default function IssueDetailPage() {
                             {/* ── Actions ── */}
                             <div className="rc-form-actions">
                                 <button className="sp-btn-outline" onClick={() => navigate("/issues")}>Quay lại</button>
-                                {issue.docstatus === "DRAFT" && (
+                                {issue.docstatus === "DRAFT" && canConfirmCancel && (
                                     <>
                                         <button className="sp-btn-danger-outline" onClick={handleCancel} disabled={actionLoading}>
                                             {actionLoading ? "Đang xử lý..." : "Từ chối"}

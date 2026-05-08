@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import DatePicker from "../../components/DatePicker";
-import { getEmployeeById, updateEmployee } from "../../api/employeeApi";
+import { getEmployeeById, updateEmployee, deleteEmployee } from "../../api/employeeApi";
 
 const EMPTY_FORM = {
     usercode: "", fullname: "", username: "", email: "",
@@ -31,17 +31,26 @@ function IconChevron({ open }) {
 export default function EmployeesDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const isStaff = user?.role === "STAFF";
+    const isAdmin = user?.role === "ADMIN";
+    const isManager = user?.role === "MANAGER";
 
     const [form, setForm] = useState({ ...EMPTY_FORM });
     const [original, setOriginal] = useState({ ...EMPTY_FORM });
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [deactivating, setDeactivating] = useState(false);
     const [error, setError] = useState(null);
     const [fieldErrors, setFieldErrors] = useState({});
+    const [toast, setToast] = useState(null);
     const [openSection, setOpenSection] = useState(true);
 
+    const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
+
     useEffect(() => {
+        if (isStaff) { navigate("/"); return; }
         setLoading(true);
         setError(null);
         getEmployeeById(id)
@@ -92,8 +101,8 @@ export default function EmployeesDetailPage() {
             setOriginal(f);
             setForm(f);
             setIsEditing(false);
-        } catch {
-            setError("Lưu thất bại. Vui lòng thử lại.");
+        } catch (err) {
+            setError(err?.response?.data?.message || "Lưu thất bại. Vui lòng thử lại.");
         } finally {
             setSaving(false);
         }
@@ -105,8 +114,36 @@ export default function EmployeesDetailPage() {
         setIsEditing(false);
     };
 
+    // canEditTarget: ADMIN can edit any; MANAGER can only edit STAFF accounts
+    const canEditTarget = isAdmin || (isManager && original.role === "STAFF");
+    // canDeactivate: ADMIN can deactivate any; MANAGER can only deactivate STAFF
+    const canDeactivate = (isAdmin || (isManager && original.role === "STAFF")) && form.isActive;
+
+    const handleDeactivate = async () => {
+        if (!window.confirm(`Bạn có chắc muốn vô hiệu hóa tài khoản "${form.fullname}" không?`)) return;
+        setDeactivating(true);
+        setError(null);
+        try {
+            const res = await deleteEmployee(id);
+            if (res?.success) {
+                showToast("success", "Vô hiệu hóa tài khoản thành công.");
+                setForm((prev) => ({ ...prev, isActive: false }));
+                setOriginal((prev) => ({ ...prev, isActive: false }));
+            } else {
+                setError(res?.message || "Vô hiệu hóa thất bại.");
+            }
+        } catch (err) {
+            setError(err?.response?.data?.message || "Vô hiệu hóa thất bại. Vui lòng thử lại.");
+        } finally {
+            setDeactivating(false);
+        }
+    };
+
     return (
         <div className="sp-main">
+            {toast && (
+                <div className={`sp-toast ${toast.type === "success" ? "sp-toast-success" : "sp-toast-error"}`}>{toast.msg}</div>
+            )}
             <div className="sp-topbar">
                 <div>
                     <div className="sp-breadcrumb">
@@ -320,7 +357,7 @@ export default function EmployeesDetailPage() {
                                             onChange={(e) => set("role", e.target.value)}
                                         >
                                             <option value="STAFF">STAFF</option>
-                                            <option value="ADMIN">ADMIN</option>
+                                            {isAdmin && <option value="MANAGER">MANAGER</option>}
                                         </select>
                                     </div>
                                 </div>
@@ -339,7 +376,19 @@ export default function EmployeesDetailPage() {
                             ) : (
                                 <>
                                     <button className="sp-btn-outline" onClick={() => navigate("/employees")}>Quay lại</button>
-                                    <button className="sp-btn-primary" onClick={() => setIsEditing(true)}>Sửa</button>
+                                    {canDeactivate && (
+                                        <button
+                                            className="sp-btn-outline"
+                                            style={{ color: "#c0392b", borderColor: "#c0392b" }}
+                                            onClick={handleDeactivate}
+                                            disabled={deactivating}
+                                        >
+                                            {deactivating ? "Đang xử lý..." : "Vô hiệu hóa"}
+                                        </button>
+                                    )}
+                                    {canEditTarget && (
+                                        <button className="sp-btn-primary" onClick={() => setIsEditing(true)}>Sửa</button>
+                                    )}
                                 </>
                             )}
                         </div>

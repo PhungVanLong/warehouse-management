@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import "../../styles/shared.css";
 import "./receipts.css";
-import { createReceipt, getAvailableLocations } from "../../api/receiptApi";
+import { createReceipt, getAvailableLocations, getAllReceipts } from "../../api/receiptApi";
+import { getAuditById } from "../../api/auditApi";
 import { getAllCustomers } from "../../api/customerApi";
 import { getAllItems } from "../../api/itemApi";
 import { createBatch } from "../../api/batchApi";
@@ -21,6 +22,36 @@ const newRow = () => ({
     selectedLocations: [], // [{locationId, locationcode, allocQty}]
 });
 
+function buildNextDocno(prefix, list) {
+    const regex = new RegExp(`^${prefix}-(\\d+)$`);
+    const maxNum = (list || []).reduce((max, r) => {
+        const m = String(r.docno || "").match(regex);
+        if (!m) return max;
+        const n = Number(m[1]);
+        return Number.isFinite(n) ? Math.max(max, n) : max;
+    }, 0);
+    const next = String(maxNum + 1).padStart(2, "0");
+    return `${prefix}-${next}`;
+}
+
+function buildAllocations(entries, totalDiff) {
+    const totalWeight = entries.reduce((sum, e) => sum + Number(e.actualQty || 0), 0);
+    if (!totalWeight) return [];
+    let remaining = totalDiff;
+    return entries.map((e, idx) => {
+        const weight = Number(e.actualQty || 0);
+        const alloc = idx === entries.length - 1
+            ? remaining
+            : Math.max(0, Math.round((totalDiff * weight) / totalWeight));
+        remaining -= alloc;
+        return {
+            locationId: e.locationId,
+            locationcode: e.locationcode,
+            allocQty: alloc,
+        };
+    }).filter((e) => e.allocQty > 0);
+}
+
 function formatMoney(n) {
     if (!n && n !== 0) return "";
     return Number(n).toLocaleString("vi-VN");
@@ -28,6 +59,35 @@ function formatMoney(n) {
 function todayStr() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// ─── Batch name/code generator ───────────────────────────────────────────────
+function toBatchSegment(str) {
+    if (!str) return "";
+    return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\u0111]/g, "d").replace(/[\u0110]/g, "D")
+        .replace(/[^a-zA-Z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toUpperCase();
+}
+
+function buildNameBatch(itemcode) {
+    // default kept for compatibility but ReceiptCreate will set 'L' as default
+    if (!itemcode) return "";
+    return `LO-HANG-${itemcode}`;
+}
+
+function buildBatchCode(nameBatch, dateStr, itemcode) {
+    if (!nameBatch || !dateStr || !itemcode) return "";
+    const yyyymmdd = dateStr.replace(/-/g, "");
+    // If nameBatch is the short default 'L', follow format L + itemcode + date (no extra separators)
+    if (String(nameBatch).trim().toUpperCase() === "L") {
+        return `L${toBatchSegment(itemcode)}${yyyymmdd}`;
+    }
+    return `${toBatchSegment(nameBatch)}-${yyyymmdd}-${toBatchSegment(itemcode)}`;
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -259,11 +319,12 @@ function LocationModal({ open, onClose, onConfirm, loading, suggestions, quantit
     );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 export default function ReceiptCreatePage() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
-    const [form, setForm] = useState({ date: todayStr(), docno: "", customerId: "", address: "", description: "" });
+    const [form, setForm] = useState({ date: todayStr(), docno: "", customerId: "", address: "", description: "", docType: "NORMAL" });
     const [rows, setRows] = useState([newRow()]);
     const [invoice, setInvoice] = useState({ date: "", taxcode: "", number: "", supplierId: "" });
     const [customers, setCustomers] = useState([]);
@@ -273,16 +334,66 @@ export default function ReceiptCreatePage() {
     const [toast, setToast] = useState(null);
     const [lapPhieuOpen, setLapPhieuOpen] = useState(false);
     const [locModal, setLocModal] = useState({ open: false, rowIdx: null, suggestions: [], loading: false });
-
+    const [prefilledFromAudit, setPrefilledFromAudit] = useState(false);
     const loadData = useCallback(async () => {
         setLoadingData(true);
         try {
-            const [cList, iList] = await Promise.all([getAllCustomers(), getAllItems()]);
+            const [cList, iList, rList] = await Promise.all([getAllCustomers(), getAllItems(), getAllReceipts()]);
             setCustomers(cList);
             setItems(iList);
+            setForm((prev) => ({
+                ...prev,
+                docno: prev.docno || buildNextDocno("PN", rList),
+            }));
         } catch { /* non-blocking */ } finally { setLoadingData(false); }
     }, []);
     useEffect(() => { loadData(); }, [loadData]);
+
+    useEffect(() => {
+        const paramType = searchParams.get("docType");
+        if (paramType === "NORMAL" || paramType === "ADJUSTMENT") {
+            setForm((prev) => ({ ...prev, docType: paramType }));
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        const auditId = searchParams.get("auditId");
+        if (!auditId || prefilledFromAudit) return;
+        const fillFromAudit = async () => {
+            try {
+                const data = await getAuditById(auditId);
+                const rowsFromAudit = (data.details || [])
+                    .filter((d) => Number(d.diffquantity) > 0)
+                    .map((d) => {
+                        const diff = Number(d.diffquantity || 0);
+                        const entries = d.locationEntries || [];
+                        const selectedLocations = entries.length > 0 ? buildAllocations(entries, diff) : [];
+                        return {
+                            ...newRow(),
+                            itemId: d.itemId,
+                            itemcode: d.itemcode,
+                            itemname: d.itemname,
+                            unitof: d.unitof,
+                            quantity: String(diff),
+                            nameBatch: "L",
+                            selectedLocations,
+                        };
+                    });
+                if (rowsFromAudit.length > 0) {
+                    setRows(rowsFromAudit);
+                }
+                setForm((prev) => ({
+                    ...prev,
+                    docType: "ADJUSTMENT",
+                    description: prev.description || `Điều chỉnh từ kiểm kê ${data.docno}`,
+                }));
+                setPrefilledFromAudit(true);
+            } catch {
+                setPrefilledFromAudit(true);
+            }
+        };
+        fillFromAudit();
+    }, [searchParams, prefilledFromAudit]);
 
     const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
 
@@ -305,6 +416,8 @@ export default function ReceiptCreatePage() {
                 next[idx].itemcode = found?.itemcode || "";
                 next[idx].itemname = found?.itemname || "";
                 next[idx].unitof = found?.unitof || "";
+                // Default batch name per requirement: 'L'
+                next[idx].nameBatch = "L";
                 next[idx].selectedLocations = [];
             }
             return next;
@@ -344,7 +457,6 @@ export default function ReceiptCreatePage() {
         for (let i = 0; i < rows.length; i++) {
             const r = rows[i];
             if (!r.itemId) { showToast("error", `Dòng ${i + 1}: Vui lòng chọn mặt hàng.`); return; }
-            if (!r.nameBatch?.trim()) { showToast("error", `Dòng ${i + 1}: Vui lòng nhập mã lô.`); return; }
             if (!r.quantity || Number(r.quantity) <= 0) { showToast("error", `Dòng ${i + 1}: Số lượng không hợp lệ.`); return; }
             if (r.selectedLocations.length === 0) { showToast("error", `Dòng ${i + 1}: Vui lòng chọn vị trí lưu trữ.`); return; }
         }
@@ -358,7 +470,7 @@ export default function ReceiptCreatePage() {
         );
         setSaving(true);
         try {
-            const result = await createReceipt({ docno: form.docno.trim(), docDate: form.date, description: form.description.trim(), customerId: Number(form.customerId), details });
+            const result = await createReceipt({ docno: form.docno.trim(), docDate: form.date, description: form.description.trim(), customerId: Number(form.customerId), docType: form.docType, details });
             if (result?.success) {
                 const returnedDetails = result?.data?.details || [];
                 let detailOffset = 0;
@@ -506,10 +618,10 @@ export default function ReceiptCreatePage() {
                                                 </td>
                                                 <td>
                                                     <input
-                                                        className="rc-td-input"
-                                                        value={row.nameBatch}
-                                                        onChange={(e) => handleRowChange(idx, "nameBatch", e.target.value)}
-                                                        placeholder="Nhập mã lô"
+                                                        className="rc-td-input rc-batch-code-preview"
+                                                        readOnly
+                                                        value={buildBatchCode(row.nameBatch, form.date, row.itemcode)}
+                                                        placeholder="Auto"
                                                     />
                                                 </td>
                                                 <td>
@@ -578,7 +690,7 @@ export default function ReceiptCreatePage() {
                         <div className="rc-form-2col">
                             <div className="rc-form-field">
                                 <label className="rc-form-label">Số</label>
-                                <input className="rc-form-input" placeholder="Nhập số chứng từ" value={invoice.number} onChange={(e) => handleInvoiceChange("number", e.target.value)} />
+                                <input className="rc-form-input" placeholder="Nhập số hóa đơn" value={invoice.number} onChange={(e) => handleInvoiceChange("number", e.target.value)} />
                             </div>
                             <div className="rc-form-field">
                                 <label className="rc-form-label">Tên NCC</label>
