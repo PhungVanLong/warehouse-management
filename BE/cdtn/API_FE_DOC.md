@@ -45,9 +45,9 @@
 | Item | `itemcode`, `itemname`, `unitof`, `itemtype`, `isActive` |
 | Location | `locationcode`, `locationname`, `isActive` |
 | User | `usercode`, `fullname`, `username`, `password` (khi tạo mới), `role`, `isActive` |
-| GoodsReceipt | `docno`, mỗi detail cần `itemId`, `quantity` |
-| GoodsIssue | `docno`, mỗi detail cần `itemId`, `quantity`, `locationId` |
-| InventoryAudit | `docno`, `locationId`, mỗi detail cần `itemId`, `actualquantity` |
+| GoodsReceipt | `doctype`, mỗi detail cần `itemId`, `quantity` ( `docno` do BE tự sinh nếu không gửi ) |
+| GoodsIssue | mỗi detail cần `itemId`, `quantity`, `locationId` ( `docno` do BE tự sinh nếu không gửi ) |
+| InventoryAudit | mỗi detail cần `itemId` (số thực tế chỉ bắt buộc khi STAFF cập nhật) ( `docno` do BE tự sinh nếu không gửi ) |
 | Batch | `itemId`, `nameBatch`, `receiptDetailId`, `unitCost`, `quantity` |
 
 ### Unique
@@ -444,6 +444,7 @@
 ```json
 {
   "docno": "PN-2026-001",
+  "doctype": "NORMAL",
   "docDate": "2026-05-05",
   "description": "Nhập hàng tháng 5",
   "customerId": 2,
@@ -463,6 +464,12 @@
   ]
 }
 ```
+
+> `docno` có thể bỏ trống để BE tự sinh theo dạng `PN-01`, `PN-02`, ...
+
+| Trường | Bắt buộc | Mô tả |
+|--------|----------|-------|
+| `doctype` | ✅ | Loại phiếu nhập. Giá trị gợi ý: `NORMAL`, `ADJUSTMENT`. |
 
 > `locationId` có thể để `null` khi tạo DRAFT; phải gán trước khi confirm.
 > `batchId` / `batchCode` trong response chỉ có khi đã tạo lô gắn với `receiptDetailId`.
@@ -616,6 +623,8 @@ Trả về danh sách sắp xếp: `EXISTING` → `EMPTY` → `PARTIAL`.
 }
 ```
 
+> `docno` có thể bỏ trống để BE tự sinh theo dạng `PX-01`, `PX-02`, ...
+
 > `locationId` bắt buộc trước khi confirm; FE nên chọn từ `available-locations`.
 > `batchId` tùy chọn; nếu FE gửi, BE sẽ tự động trừ `quantityRemaining` của lô khi xác nhận.
 
@@ -697,15 +706,60 @@ BE thực hiện:
 
 ### 9.1 Tạo / Cập nhật phiếu kiểm kê (DRAFT)
 
-**Request body:**
+**Request body (Manager tạo yêu cầu cho STAFF):**
 ```json
 {
   "docno": "KK-2026-001",
   "docDate": "2026-05-05",
-  "description": "Kiểm kê tháng 5 kệ A1",
-  "locationId": 3,
+  "description": "Kiểm kê kho tháng 5",
   "assignedUserId": 12,        
   "sendToStaff": true,         
+  "details": [
+    {
+      "itemId": 5,
+      "description": "Kiểm kê toàn kho"
+    },
+    {
+      "itemId": 6,
+      "description": null
+    }
+  ]
+}
+```
+
+**Các trường quản lý gửi khi yêu cầu kiểm kê:**
+| Trường | Bắt buộc | Mô tả |
+|--------|----------|-------|
+| `docno` | ❌ | Mã phiếu kiểm kê (BE tự sinh nếu không gửi) |
+| `docDate` | ❌ | Ngày thực hiện kiểm kê (yyyy-MM-dd) |
+| `description` | ❌ | Ghi chú |
+| `assignedUserId` | ❌ | ID nhân viên được giao |
+| `sendToStaff` | ❌ | `true` để chuyển trạng thái sang `REQUESTED` |
+| `details` | ✅ | Danh sách dòng kiểm kê |
+| `details[].itemId` | ✅ | Hàng hóa |
+| `details[].actualquantity` | ❌ | Số đếm thực tế (STAFF cập nhật ở bước sau) |
+| `details[].description` | ❌ | Ghi chú dòng |
+
+> Khi Manager tạo yêu cầu, FE chỉ gửi danh sách `itemId`. BE tự lấy `bookquantity` từ `InventoryBalance` (tổng kho) và trả về cho FE. `actualquantity` sẽ do STAFF cập nhật sau.
+
+**Ghi chú cho FE (gán và nhận yêu cầu):**
+- Khi Manager muốn giao nhiệm vụ kiểm kê cho nhân viên: gửi `assignedUserId` (id của `STAFF`) và `sendToStaff=true` trong body của `POST /api/inventory-audits`. BE sẽ lưu phiếu và chuyển `docstatus` thành `REQUESTED`.
+- `STAFF` gọi `GET /api/inventory-audits/assigned` để lấy danh sách yêu cầu được giao. `STAFF` cập nhật số liệu qua `PUT /api/inventory-audits/{id}/assigned` (gửi `details` với `actualquantity`), rồi gọi `POST /api/inventory-audits/{id}/submit` để gửi kết quả về Manager (BE chuyển `docstatus` thành `SUBMITTED`).
+- Manager có thể xem phiếu ở trạng thái `SUBMITTED` và gọi `POST /api/inventory-audits/{id}/confirm` để áp chênh lệch và chuyển `CONFIRMED`.
+
+**Lưu ý FE sau khi `CONFIRMED`:**
+- Ngày thực hiện: hiển thị từ `docDate`; nếu `docDate` null thì dùng `createdAt` (chỉ lấy phần ngày).
+- Hiển nút `Tạo phiếu nhập điều chỉnh` hoặc `Tạo phiếu xuất điều chỉnh` sau khi Admin/Manager duyệt (phiếu `CONFIRMED`). FE gắn nhãn loại phiếu là **điều chỉnh** (ví dụ: hiển thị badge/label), và đặt `description` dạng "Điều chỉnh từ kiểm kê {docno}" để dễ tra soát.
+- Bảng chi tiết thay cột "Ghi chú" thành 2 cột: **Chênh lệch** và **Đề xuất xử lý**.
+- **Chênh lệch:** `diffquantity`.
+- **Đề xuất xử lý:** `diffquantity > 0` → "Đề xuất nhập điều chỉnh"; `diffquantity < 0` → "Đề xuất xuất điều chỉnh"; `diffquantity = 0` → "Không cần điều chỉnh".
+
+**Request body (STAFF cập nhật kết quả kiểm kê):**
+```json
+{
+  "docno": "KK-2026-001",
+  "docDate": "2026-05-05",
+  "description": "Kiểm kê kho tháng 5",
   "details": [
     {
       "itemId": 5,
@@ -721,16 +775,10 @@ BE thực hiện:
 }
 ```
 
-> FE chỉ cần gửi `actualquantity` (số đếm thực tế); BE tự lấy `bookquantity` từ `ItemLocation` và tính `diffquantity = actualquantity - bookquantity`.
-
-**Ghi chú cho FE (gán và nhận yêu cầu):**
-- Khi Manager muốn giao nhiệm vụ kiểm kê cho nhân viên: gửi `assignedUserId` (id của `STAFF`) và `sendToStaff=true` trong body của `POST /api/inventory-audits`. BE sẽ lưu phiếu và chuyển `docstatus` thành `REQUESTED`.
-- `STAFF` gọi `GET /api/inventory-audits/assigned` để lấy danh sách yêu cầu được giao. `STAFF` cập nhật số liệu qua `PUT /api/inventory-audits/{id}/assigned` (gửi `details` với `actualquantity`), rồi gọi `POST /api/inventory-audits/{id}/submit` để gửi kết quả về Manager (BE chuyển `docstatus` thành `SUBMITTED`).
-- Manager có thể xem phiếu ở trạng thái `SUBMITTED` và gọi `POST /api/inventory-audits/{id}/confirm` để áp chênh lệch và chuyển `CONFIRMED`.
-
-**Lưu ý FE sau khi `CONFIRMED`:** Hiển nút `Tạo phiếu điều chỉnh (Nhập/Xuất)` nếu cần tạo phiếu `GoodsReceipt` hoặc `GoodsIssue` kiểu điều chỉnh từ kết quả kiểm kê; nếu muốn, BE có thể cung cấp endpoint tự động tạo phiếu điều chỉnh từ audit đã `CONFIRMED` (tôi có thể implement nếu bạn yêu cầu).
+> `docno` có thể bỏ trống để BE tự sinh theo dạng `PKK-01`, `PKK-02`, ...
 
 **Response:**
+> Nếu gửi `sendToStaff=true` và có `assignedUserId`, BE sẽ trả `docstatus = REQUESTED` và đi kèm các trường `assignedToUserId`, `assignedToUsername`, `assignedToFullname`. Nếu không gửi yêu cầu cho nhân viên, `docstatus = DRAFT` và các trường gán sẽ là `null`. Khi vừa tạo yêu cầu, `actualquantity` và `diffquantity` sẽ là `null` cho đến khi STAFF cập nhật.
 ```json
 {
   "success": true,
@@ -739,14 +787,14 @@ BE thực hiện:
     "id": 1,
     "docno": "KK-2026-001",
     "docDate": "2026-05-05",
-    "description": "Kiểm kê tháng 5 kệ A1",
-    "docstatus": "DRAFT",
-    "locationId": 3,
-    "locationcode": "A1-01",
-    "locationname": "Kệ A1, tầng 1",
+    "description": "Kiểm kê kho tháng 5",
+    "docstatus": "REQUESTED",
     "createdAt": "2026-05-05T09:00:00",
     "createdByUsername": "admin",
     "createdByFullname": "Admin hệ thống",
+    "assignedToUserId": 12,
+    "assignedToUsername": "staff01",
+    "assignedToFullname": "Nhân viên kho",
     "modifiedAt": null,
     "modifiedBy": null,
     "details": [
@@ -757,9 +805,9 @@ BE thực hiện:
         "itemname": "Sản phẩm A",
         "unitof": "Cái",
         "bookquantity": 100,
-        "actualquantity": 95,
-        "diffquantity": -5,
-        "description": "Đếm thực tế 95 cái"
+        "actualquantity": null,
+        "diffquantity": null,
+        "description": "Kiểm kê toàn kho"
       }
     ]
   }
@@ -773,13 +821,12 @@ BE thực hiện:
 BE thực hiện:
 1. Kiểm tra phiếu có dòng chi tiết.
 2. Với mỗi dòng có `diffquantity ≠ 0`:
-   - Nếu `diff > 0` (thừa hàng): cộng tồn `ItemLocation` + `InventoryBalance`.
-   - Nếu `diff < 0` (thiếu hàng): trừ tồn (validate không âm).
+  - Nếu `diff > 0` (thừa hàng): cộng tồn `InventoryBalance`.
+  - Nếu `diff < 0` (thiếu hàng): trừ tồn (validate không âm).
 3. Set `docstatus = CONFIRMED`.
 
 **Lỗi có thể trả về:**
 - `"Phiếu kiểm kê không có dòng chi tiết nào"`
-- `"Tồn kho tại vị trí 'A1-01' của 'SP001' không đủ sau kiểm kê (sổ sách: 10, chênh lệch: -15)"`
 - `"Tồn kho tổng của 'SP001' không đủ sau kiểm kê"`
 
 > **Lưu ý FE:** Nên hiển thị `diffquantity` khi preview để người dùng kiểm tra trước khi confirm. `diff < 0` (đỏ – thiếu hàng), `diff > 0` (xanh – thừa hàng), `diff = 0` (không đổi).
@@ -803,6 +850,7 @@ BE thực hiện:
 | GET | `/api/batches` | Danh sách lô hàng | ADMIN, MANAGER, STAFF |
 | GET | `/api/batches/{id}` | Chi tiết lô hàng | ADMIN, MANAGER, STAFF |
 | POST | `/api/batches` | Tạo lô hàng mới | ADMIN, MANAGER, STAFF |
+| GET | `/api/batches/by-location?locationId=` | Danh sách lô theo vị trí (trả `batchId` + `quantity`) | ADMIN, MANAGER, STAFF |
 
 ### 10.1 Tạo lô hàng
 
@@ -885,14 +933,38 @@ BE thực hiện:
 }
 ```
 
+### 10.3 Danh sách lô theo vị trí
+
+**Endpoint:** `GET /api/batches/by-location?locationId={id}`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Lấy danh sách lô theo vị trí thành công",
+  "data": [
+    {
+      "batchId": 1,
+      "batchCode": "LO-HANG-A-20260415-SP001",
+      "itemId": 5,
+      "itemcode": "SP001",
+      "itemname": "Sản phẩm A",
+      "locationId": 3,
+      "locationcode": "A1-01",
+      "quantity": 40.00000
+    }
+  ]
+}
+```
+
 ---
 
 ## 11. Lưu ý chung cho FE
 
-1. **Token JWT:** Gửi kèm mọi request dạng `Authorization: Bearer <token>`. Token hết hạn → 401 → FE chuyển về trang đăng nhập. Nhận 403 dù đã đăng nhập → **xóa token cũ và đăng nhập lại** để lấy token mới chứa `role` (token cũ không có `role` claim sẽ bị từ chối bởi `@PreAuthorize`).
+1. **Token JWT:** Gửi kèm mọi request dạng `Authorization: Bearer <token>`. Token hết hạn → 401 → FE chuyển về trang đăng nhập. Nhận 403 dù đã đăng nhập → **xóa token cũ và đăng nhập lại** để lấy token mới chứa `role` (token cũ không có `role` claim sẽ bị từ chối bởi `@PreAuthorize`). `role` trong JWT có giá trị `ADMIN`/`MANAGER`/`STAFF` (không cần tiền tố `ROLE_`).
 2. **Validate trước khi gửi:** Kiểm tra các trường bắt buộc (xem mục 1) để tránh round-trip không cần thiết.
 3. **`locationId` khi nhập/xuất:** Chỉ gửi `locationId` lấy từ API `available-locations` hoặc `suggest-split`. Không tự tạo giá trị.
-4. **Kiểm kê:** FE chỉ gửi `actualquantity`; `bookquantity` và `diffquantity` do BE tính và trả về.
+4. **Kiểm kê:** Manager chỉ gửi danh sách `itemId`; `bookquantity` do BE trả về. STAFF cập nhật `actualquantity`, BE tính `diffquantity`.
 5. **`batchCode`:** FE không gửi; BE tự sinh và trả về trong response.
 6. **Phiếu CONFIRMED / CANCELLED:** Không gọi PUT để sửa; BE sẽ trả lỗi.
 7. **Xử lý lỗi:** Luôn kiểm tra `success === false` → hiển thị `message` cho người dùng, không tiếp tục thao tác.

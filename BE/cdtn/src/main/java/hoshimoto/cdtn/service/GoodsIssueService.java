@@ -68,12 +68,13 @@ public class GoodsIssueService {
      */
     @Transactional
     public GoodsIssueResponse createDraft(GoodsIssueRequest request) {
-        if (issueRepository.findByDocno(request.getDocno()).isPresent()) {
-            throw new RuntimeException("Mã phiếu '" + request.getDocno() + "' đã tồn tại");
-        }
-
         GoodsIssue issue = new GoodsIssue();
         applyHeader(issue, request);
+        if (issue.getDocno() == null || issue.getDocno().isBlank()) {
+            issue.setDocno(generateNextDocno("PX-", issueRepository.findDocnosByPrefix("PX-")));
+        } else if (issueRepository.findByDocno(issue.getDocno()).isPresent()) {
+            throw new RuntimeException("Mã phiếu '" + issue.getDocno() + "' đã tồn tại");
+        }
         issue.setDocstatus(DocStatus.DRAFT);
         issue = issueRepository.save(issue);
 
@@ -302,7 +303,10 @@ public class GoodsIssueService {
     // ───────────────────────── PRIVATE HELPERS ─────────────────────────
 
     private void applyHeader(GoodsIssue issue, GoodsIssueRequest request) {
-        issue.setDocno(request.getDocno());
+        String docno = request.getDocno();
+        if (docno != null && !docno.isBlank()) {
+            issue.setDocno(docno.trim());
+        }
         issue.setDocDate(request.getDocDate());
         issue.setDescription(request.getDescription());
         if (request.getCustomerId() != null) {
@@ -365,6 +369,22 @@ public class GoodsIssueService {
         if (issue.getDocstatus() != required) {
             throw new RuntimeException(message);
         }
+    }
+
+    private String generateNextDocno(String prefix, List<String> existingDocnos) {
+        int max = existingDocnos.stream()
+                .mapToInt(docno -> extractSequence(docno, prefix))
+                .max()
+                .orElse(0);
+        int next = max + 1;
+        return String.format("%s%02d", prefix, next);
+    }
+
+    private int extractSequence(String docno, String prefix) {
+        if (docno == null || !docno.startsWith(prefix)) return -1;
+        String numeric = docno.substring(prefix.length());
+        if (!numeric.matches("\\d+")) return -1;
+        return Integer.parseInt(numeric);
     }
 
     public GoodsIssueResponse toResponse(GoodsIssue issue) {

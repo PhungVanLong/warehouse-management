@@ -14,9 +14,6 @@ public class InventoryAuditResponse {
     private LocalDate docDate;
     private String description;
     private DocStatus docstatus;
-    private Long locationId;
-    private String locationcode;
-    private String locationname;
     private LocalDateTime createdAt;
     private String createdByUsername;
     private String createdByFullname;

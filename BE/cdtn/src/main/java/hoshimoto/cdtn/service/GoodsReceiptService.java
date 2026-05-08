@@ -68,12 +68,13 @@ public class GoodsReceiptService {
      */
     @Transactional
     public GoodsReceiptResponse createDraft(GoodsReceiptRequest request) {
-        if (receiptRepository.findByDocno(request.getDocno()).isPresent()) {
-            throw new RuntimeException("Mã phiếu '" + request.getDocno() + "' đã tồn tại");
-        }
-
         GoodsReceipt receipt = new GoodsReceipt();
         applyHeader(receipt, request);
+        if (receipt.getDocno() == null || receipt.getDocno().isBlank()) {
+            receipt.setDocno(generateNextDocno("PN-", receiptRepository.findDocnosByPrefix("PN-")));
+        } else if (receiptRepository.findByDocno(receipt.getDocno()).isPresent()) {
+            throw new RuntimeException("Mã phiếu '" + receipt.getDocno() + "' đã tồn tại");
+        }
         receipt.setDocstatus(DocStatus.DRAFT);
         receipt = receiptRepository.save(receipt);
 
@@ -329,7 +330,10 @@ public class GoodsReceiptService {
     }
 
     private void applyHeader(GoodsReceipt receipt, GoodsReceiptRequest request) {
-        receipt.setDocno(request.getDocno());
+        String docno = request.getDocno();
+        if (docno != null && !docno.isBlank()) {
+            receipt.setDocno(docno.trim());
+        }
         receipt.setDocDate(request.getDocDate());
         receipt.setDescription(request.getDescription());
         if (request.getCustomerId() != null) {
@@ -386,6 +390,22 @@ public class GoodsReceiptService {
         if (receipt.getDocstatus() != required) {
             throw new RuntimeException(message);
         }
+    }
+
+    private String generateNextDocno(String prefix, List<String> existingDocnos) {
+        int max = existingDocnos.stream()
+                .mapToInt(docno -> extractSequence(docno, prefix))
+                .max()
+                .orElse(0);
+        int next = max + 1;
+        return String.format("%s%02d", prefix, next);
+    }
+
+    private int extractSequence(String docno, String prefix) {
+        if (docno == null || !docno.startsWith(prefix)) return -1;
+        String numeric = docno.substring(prefix.length());
+        if (!numeric.matches("\\d+")) return -1;
+        return Integer.parseInt(numeric);
     }
 
     public GoodsReceiptResponse toResponse(GoodsReceipt receipt) {
