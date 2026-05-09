@@ -18,6 +18,7 @@ function SortIcon() {
 export default function EmployeesPage() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     const isStaff = user?.role === "STAFF";
+    const isManager = user?.role === "MANAGER";
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -50,7 +51,10 @@ export default function EmployeesPage() {
     }, [isStaff, navigate]);
 
     const filtered = useMemo(() => {
-        const sorted = [...items].sort((a, b) => (a.id || 0) - (b.id || 0));
+        let sorted = [...items].sort((a, b) => (a.id || 0) - (b.id || 0));
+        if (isManager) {
+            sorted = sorted.filter((r) => r.role !== "ADMIN");
+        }
         if (!search.trim()) return sorted;
         const q = search.toLowerCase();
         return sorted.filter((r) =>

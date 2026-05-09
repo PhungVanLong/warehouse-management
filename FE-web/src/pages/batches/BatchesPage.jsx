@@ -223,18 +223,12 @@ export default function BatchesPage() {
 
                 {/* Toolbar */}
                 <div className="sp-toolbar">
-                    <div className="sp-search-wrap">
-                        <svg className="sp-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        </svg>
-                        <input
-                            className="sp-search"
-                            type="text"
-                            placeholder="Search"
-                            value={search}
-                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                        />
-                    </div>
+                    <input
+                        className="sp-search"
+                        placeholder="Search (mã lô, mã vật tư, tên vật tư)"
+                        value={search}
+                        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                    />
                     <div className="sp-toolbar-spacer" />
                     <button className="sp-btn-primary" onClick={() => navigate("/receipts/create")} title="Tạo lô hàng qua phiếu nhập kho">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -249,7 +243,6 @@ export default function BatchesPage() {
                         Export
                     </button>
                 </div>
-
                 {/* Table */}
                 <div className="sp-table-wrap sp-scrollable">
                     <table className="sp-table bt-table">

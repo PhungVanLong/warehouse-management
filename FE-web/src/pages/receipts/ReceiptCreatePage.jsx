@@ -82,11 +82,11 @@ function buildNameBatch(itemcode) {
 }
 
 function buildBatchCode(nameBatch, dateStr, itemcode) {
-    if (!nameBatch || !dateStr || !itemcode) return "";
+    if (!dateStr || !itemcode) return "";
     const yyyymmdd = dateStr.replace(/-/g, "");
-    // If nameBatch is the short default 'L', follow format L + itemcode + date (no extra separators)
-    if (String(nameBatch).trim().toUpperCase() === "L") {
-        return `L${toBatchSegment(itemcode)}${yyyymmdd}`;
+    // If nameBatch is the short default 'L' or empty, follow BE format: itemcode + date
+    if (!nameBatch || String(nameBatch).trim().toUpperCase() === "L") {
+        return `${toBatchSegment(itemcode)}${yyyymmdd}`;
     }
     return `${toBatchSegment(nameBatch)}-${yyyymmdd}-${toBatchSegment(itemcode)}`;
 }
@@ -531,7 +531,18 @@ export default function ReceiptCreatePage() {
         );
         setSaving(true);
         try {
-            const result = await createReceipt({ docno: form.docno.trim(), docDate: form.date, description: form.description.trim(), customerId: Number(form.customerId), docType: form.docType, details });
+            const result = await createReceipt({
+                docno: form.docno.trim(),
+                docDate: form.date,
+                description: form.description.trim(),
+                customerId: Number(form.customerId),
+                docType: form.docType,
+                invoiceDate: invoice.date || undefined,
+                taxcode: invoice.taxcode || undefined,
+                invoiceNo: invoice.number || undefined,
+                supplierId: invoice.supplierId ? Number(invoice.supplierId) : undefined,
+                details,
+            });
             if (result?.success) {
                 const returnedDetails = result?.data?.details || [];
                 let detailOffset = 0;
@@ -545,7 +556,6 @@ export default function ReceiptCreatePage() {
                             batchPromises.push(
                                 createBatch({
                                     itemId: Number(row.itemId),
-                                    nameBatch: row.nameBatch.trim(),
                                     receiptDetailId: detail.id,
                                     unitCost: Number(row.price) || 0,
                                     quantity: Number(allocQty),
@@ -730,7 +740,7 @@ export default function ReceiptCreatePage() {
                         </div>
                         <div className="rc-form-2col">
                             <div className="rc-form-field">
-                                <label className="rc-form-label">Số</label>
+                                <label className="rc-form-label">Số hóa đơn</label>
                                 <input className="rc-form-input" placeholder="Nhập số hóa đơn" value={invoice.number} onChange={(e) => handleInvoiceChange("number", e.target.value)} />
                             </div>
                             <div className="rc-form-field">

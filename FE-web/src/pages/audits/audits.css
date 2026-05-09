@@ -156,3 +156,54 @@
 .au-th-diff {
     text-align: right;
 }
+
+/* ── Status filter bar (staff list) ───────────────────── */
+.au-status-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.au-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #d6e6db;
+    background: #f7fbf9;
+    color: #4c6152;
+    padding: 6px 12px;
+    border-radius: 18px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.au-status-chip:hover {
+    background: #eef7f2;
+    border-color: #c6dfd0;
+}
+
+.au-status-chip-active {
+    background: #1E854A;
+    border-color: #1E854A;
+    color: #ffffff;
+}
+
+.au-status-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    padding: 2px 6px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.75);
+    color: #1E3A2F;
+    font-weight: 700;
+    font-size: 0.78rem;
+}
+
+.au-status-chip-active .au-status-count {
+    background: rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+}

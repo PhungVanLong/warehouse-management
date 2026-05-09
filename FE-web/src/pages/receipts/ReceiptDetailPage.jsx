@@ -269,7 +269,7 @@ export default function ReceiptDetailPage() {
     </div>
 
     <div class="info">- Họ và tên người giao: ${escapeHtml(deliverer || "____________________")}</div>
-    <div class="info">- Theo hóa đơn số ${escapeHtml(receipt.invoiceNo || "________")} ngày ${escapeHtml(invoiceDate || "____/____/____")} của ${escapeHtml(supplierName || "____________________")}</div>
+    <div class="info">- Theo hóa đơn số ${escapeHtml(receipt.invoiceNo || receipt.invoiceNumber || "________")} ngày ${escapeHtml(invoiceDate || "____/____/____")} của ${escapeHtml(supplierName || "____________________")}</div>
     <div class="info">- Nhập tại kho: ${escapeHtml(warehouseName)} &nbsp;&nbsp; Địa điểm: ${escapeHtml(address || "____________________")}</div>
 
     <table>
@@ -519,7 +519,7 @@ export default function ReceiptDetailPage() {
                             <div className="rc-form-2col">
                                 <div className="rc-form-field">
                                     <label className="rc-form-label">Số hóa đơn</label>
-                                    <input className="rc-form-input" value={receipt.invoiceNo || receipt.docno || ""} readOnly />
+                                    <input className="rc-form-input" value={receipt.invoiceNo || receipt.invoiceNumber || receipt.invoiceNum || ""} readOnly />
                                 </div>
                                 <div className="rc-form-field">
                                     <label className="rc-form-label">Tên NCC/Khách hàng</label>

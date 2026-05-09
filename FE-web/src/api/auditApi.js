@@ -50,6 +50,18 @@ export const getAssignedAudits = async () => {
     return res.data.data || [];
 };
 
+/** GET /api/inventory-audits/assigned/pending — Danh sách phiếu kiểm kê chưa làm */
+export const getAssignedAuditsPending = async () => {
+    const res = await axiosInstance.get(`${BASE}/assigned/pending`);
+    return res.data.data || [];
+};
+
+/** GET /api/inventory-audits/assigned/done — Danh sách phiếu kiểm kê đã làm */
+export const getAssignedAuditsDone = async () => {
+    const res = await axiosInstance.get(`${BASE}/assigned/done`);
+    return res.data.data || [];
+};
+
 /**
  * PUT /api/inventory-audits/{id}/assigned — STAFF cập nhật số liệu thực tế
  * body: { docno, docDate, description, details: [{ itemId, actualquantity, description }] }

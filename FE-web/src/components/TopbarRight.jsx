@@ -100,7 +100,10 @@ function TopbarRightContent() {
         if (note.targetUrl) return note.targetUrl;
         if (note.targetType === "GOODS_RECEIPT") return `/receipts/${note.targetId}`;
         if (note.targetType === "GOODS_ISSUE") return `/issues/${note.targetId}`;
-        if (note.targetType === "INVENTORY_AUDIT") return `/audits/${note.targetId}`;
+        if (note.targetType === "INVENTORY_AUDIT") {
+            if (user?.role === "STAFF") return `/audits/requests?id=${note.targetId}`;
+            return `/audits/${note.targetId}`;
+        }
         return "/overview";
     };
 
