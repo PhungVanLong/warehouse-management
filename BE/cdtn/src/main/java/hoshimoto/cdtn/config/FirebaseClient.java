@@ -39,13 +39,14 @@ public class FirebaseClient {
                 return firestore;
             }
             initAttempted = true;
-            String credentialsPath = resolveCredentialsPath();
-            if (credentialsPath == null || credentialsPath.isBlank()) {
+            CredentialsConfig config = resolveCredentialsPath();
+            if (config == null || config.path == null || config.path.isBlank()) {
                 logger.warn("Firebase disabled: missing {} property or {} env var", CREDENTIALS_PROP, CREDENTIALS_ENV);
                 return null;
             }
+            logger.info("Firebase init: using {} (path={})", config.source, redactPath(config.path));
 
-            try (InputStream input = new FileInputStream(credentialsPath)) {
+            try (InputStream input = new FileInputStream(config.path)) {
                 GoogleCredentials credentials = GoogleCredentials.fromStream(input);
                 FirebaseOptions options = FirebaseOptions.builder()
                         .setCredentials(credentials)
@@ -68,15 +69,41 @@ public class FirebaseClient {
         }
     }
 
-    private String resolveCredentialsPath() {
+    private CredentialsConfig resolveCredentialsPath() {
         String fromProperty = environment.getProperty(CREDENTIALS_PROP);
         if (fromProperty != null && !fromProperty.isBlank()) {
-            return fromProperty;
+            return new CredentialsConfig(CREDENTIALS_PROP, fromProperty);
         }
         String fromSystem = System.getProperty(CREDENTIALS_PROP);
         if (fromSystem != null && !fromSystem.isBlank()) {
-            return fromSystem;
+            return new CredentialsConfig("-D" + CREDENTIALS_PROP, fromSystem);
         }
-        return System.getenv(CREDENTIALS_ENV);
+        String fromEnv = System.getenv(CREDENTIALS_ENV);
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            return new CredentialsConfig(CREDENTIALS_ENV, fromEnv);
+        }
+        return null;
+    }
+
+    private static String redactPath(String path) {
+        if (path == null || path.isBlank()) {
+            return "<empty>";
+        }
+        String normalized = path.replace('\\', '/');
+        int lastSlash = normalized.lastIndexOf('/');
+        if (lastSlash >= 0 && lastSlash + 1 < normalized.length()) {
+            return ".../" + normalized.substring(lastSlash + 1);
+        }
+        return path;
+    }
+
+    private static final class CredentialsConfig {
+        private final String source;
+        private final String path;
+
+        private CredentialsConfig(String source, String path) {
+            this.source = source;
+            this.path = path;
+        }
     }
 }

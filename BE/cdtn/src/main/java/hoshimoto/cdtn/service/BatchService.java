@@ -50,24 +50,26 @@ public class BatchService {
 
         Batch batch = new Batch();
         batch.setItem(item);
-        String nameBatch = (request.getNameBatch() != null && !request.getNameBatch().isBlank())
-                ? request.getNameBatch()
-                : null;
-        batch.setNameBatch(nameBatch);
+        LocalDate manufactureDate = request.getManufactureDate();
+        String datePart = getDatePart(manufactureDate);
+        String itemName = (item.getItemname() != null && !item.getItemname().isBlank())
+            ? item.getItemname()
+            : item.getItemcode();
+        batch.setNameBatch(String.format("Lo %s dot %s", itemName, datePart));
         batch.setReceiptDetail(receiptDetail);
-        batch.setManufactureDate(request.getManufactureDate());
+        batch.setManufactureDate(manufactureDate);
         batch.setExpiryDate(request.getExpiryDate());
         batch.setUnitCost(request.getUnitCost());
         batch.setQuantity(request.getQuantity());
-        batch.setBatchCode(generateBatchCode(item.getItemcode(), request.getManufactureDate()));
+        batch.setBatchCode(generateBatchCode(item.getItemcode(), manufactureDate));
         batch.setQuantityRemaining(BigDecimal.ZERO);
         return batchRepository.save(batch);
     }
 
     public String generateBatchCode(String itemCode, LocalDate manufactureDate) {
         String normalizedItem = normalizeCodeSegment(itemCode);
-        String datePart = manufactureDate != null ? manufactureDate.format(DATE_FORMAT) : LocalDate.now().format(DATE_FORMAT);
-        String baseCode = String.format("L%s%s", normalizedItem, datePart);
+        String datePart = getDatePart(manufactureDate);
+        String baseCode = String.format("%s-%s", normalizedItem, datePart);
 
         List<Batch> existing = batchRepository.findAllByBatchCodeStartingWithOrderByBatchCodeDesc(baseCode);
         if (existing.isEmpty()) {
@@ -83,6 +85,10 @@ public class BatchService {
                 .orElse(0);
 
         return String.format("%s-%02d", baseCode, maxSequence + 1);
+    }
+
+    private String getDatePart(LocalDate manufactureDate) {
+        return manufactureDate != null ? manufactureDate.format(DATE_FORMAT) : LocalDate.now().format(DATE_FORMAT);
     }
 
 
