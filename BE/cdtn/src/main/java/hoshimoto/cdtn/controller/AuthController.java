@@ -30,7 +30,7 @@ public class AuthController {
                 .map(user -> {
                     UserResponse res = UserResponse.fromEntity(user);
                     // Sinh JWT token
-                    String token = jwtUtil.generateToken(user.getUsername());
+                    String token = jwtUtil.generateToken(user.getUsername(), user.getRole() != null ? user.getRole().name() : null);
                     res.setToken(token);
                     return ResponseEntity.ok(new ApiResponse<>(true, "Đăng nhập thành công", res));
                 })

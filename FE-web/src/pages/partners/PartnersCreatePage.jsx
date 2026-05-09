@@ -1,8 +1,9 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "./partners.css";
 import { createCustomer } from "../../api/customerApi";
+import TopbarRight from "../../components/TopbarRight";
 
 const EMPTY_FORM = {
     customercode: "", customername: "", address: "",
@@ -31,6 +32,7 @@ function IconChevron({ open }) {
 
 export default function PartnersCreatePage() {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [form, setForm] = useState({ ...EMPTY_FORM });
     const [saving, setSaving] = useState(false);
@@ -39,6 +41,30 @@ export default function PartnersCreatePage() {
     const [fieldErrors, setFieldErrors] = useState({});
     const [openBasic, setOpenBasic] = useState(true);
     const [openDetail, setOpenDetail] = useState(true);
+    const [prefilledFromClone, setPrefilledFromClone] = useState(false);
+
+    useEffect(() => {
+        const clone = location.state?.clone;
+        if (!clone || prefilledFromClone) return;
+        setForm({
+            ...EMPTY_FORM,
+            customercode: clone.customercode || "",
+            customername: clone.customername || "",
+            address: clone.address || "",
+            email: clone.email || "",
+            mobile: clone.mobile || "",
+            partnername: clone.partnername || "",
+            partnermobile: clone.partnermobile || "",
+            ownername: clone.ownername || "",
+            taxcode: clone.taxcode || "",
+            itemcatg: clone.itemcatg || "",
+            bankaccount: clone.bankaccount || "",
+            bankname: clone.bankname || "",
+            iscustomer: !!clone.iscustomer,
+            issupplier: !!clone.issupplier,
+        });
+        setPrefilledFromClone(true);
+    }, [location.state, prefilledFromClone]);
 
     const set = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -100,16 +126,7 @@ export default function PartnersCreatePage() {
                         <span className="sp-breadcrumb-active">Thêm mới đối tượng</span>
                     </div>
                 </div>
-                <div className="sp-topbar-right">
-                    <button className="sp-icon-btn">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                        <span className="sp-notif-dot" />
-                    </button>
-                    <div className="sp-avatar" />
-                </div>
+                <TopbarRight />
             </div>
 
             {/* Toast */}

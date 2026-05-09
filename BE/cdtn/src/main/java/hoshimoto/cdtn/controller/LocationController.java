@@ -30,14 +30,14 @@ public class LocationController {
     private LocationService locationService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<LocationResponse>>> getAllLocations() {
         List<LocationResponse> list = locationService.getAllLocations();
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách vị trí thành công", list));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<LocationResponse>> getLocationById(@PathVariable Long id) {
         return locationService.getLocationById(id)
                 .map(l -> ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết vị trí thành công", l)))
@@ -45,7 +45,7 @@ public class LocationController {
     }
 
     @GetMapping("/{id}/items")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<LocationDetailResponse>> getLocationItems(@PathVariable Long id) {
         try {
             LocationDetailResponse detail = locationService.getLocationDetail(id);
@@ -56,14 +56,14 @@ public class LocationController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<LocationResponse>> createLocation(@Valid @RequestBody LocationRequest request) {
         Location created = locationService.createLocation(request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Tạo mới vị trí thành công", locationService.toResponse(created)));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<LocationResponse>> updateLocation(
             @PathVariable Long id,
             @Valid @RequestBody LocationRequest request) {
@@ -76,7 +76,7 @@ public class LocationController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteLocation(@PathVariable Long id) {
         try {
             locationService.deleteLocation(id);

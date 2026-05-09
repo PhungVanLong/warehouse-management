@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import { createLocation } from "../../api/locationApi";
+import TopbarRight from "../../components/TopbarRight";
 
 const EMPTY_FORM = {
     locationcode: "", locationname: "", rackno: "", floorno: "",
@@ -18,12 +19,31 @@ function IconCheck() {
 
 export default function LocationsCreatePage() {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [form, setForm] = useState({ ...EMPTY_FORM });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [fieldErrors, setFieldErrors] = useState({});
     const [toast, setToast] = useState(false);
+    const [prefilledFromClone, setPrefilledFromClone] = useState(false);
+
+    useEffect(() => {
+        const clone = location.state?.clone;
+        if (!clone || prefilledFromClone) return;
+        setForm({
+            ...EMPTY_FORM,
+            locationcode: clone.locationcode || "",
+            locationname: clone.locationname || "",
+            rackno: clone.rackno || "",
+            floorno: clone.floorno || "",
+            columnno: clone.columnno || "",
+            capacity: clone.capacity || "",
+            description: clone.description || "",
+            isActive: typeof clone.isActive === "boolean" ? clone.isActive : true,
+        });
+        setPrefilledFromClone(true);
+    }, [location.state, prefilledFromClone]);
 
     const set = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -80,16 +100,7 @@ export default function LocationsCreatePage() {
                         <span className="sp-breadcrumb-active">Thêm mới vị trí</span>
                     </div>
                 </div>
-                <div className="sp-topbar-right">
-                    <button className="sp-icon-btn">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                        <span className="sp-notif-dot" />
-                    </button>
-                    <div className="sp-avatar" />
-                </div>
+                <TopbarRight />
             </div>
 
             <div className="sp-content">

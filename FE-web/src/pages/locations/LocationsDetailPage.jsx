@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import { getLocationById, updateLocation, getItemsAtLocation } from "../../api/locationApi";
+import TopbarRight from "../../components/TopbarRight";
 
 const EMPTY_FORM = {
     locationcode: "", locationname: "", rackno: "", floorno: "",
@@ -108,6 +109,22 @@ export default function LocationsDetailPage() {
         setIsEditing(false);
     };
 
+    const itemRows = useMemo(() => (
+        storedItems.flatMap((item) => {
+            const codes = Array.isArray(item.batchCodes) && item.batchCodes.length > 0
+                ? item.batchCodes
+                : [null];
+            return codes.map((code, idx) => ({
+                rowId: `${item.itemId || item.itemcode || "item"}-${code || idx}`,
+                itemcode: item.itemcode,
+                itemname: item.itemname,
+                unitof: item.unitof,
+                quantity: item.quantity,
+                batchCode: code,
+            }));
+        })
+    ), [storedItems]);
+
     return (
         <>
             {success && (
@@ -128,16 +145,7 @@ export default function LocationsDetailPage() {
                             <span className="sp-breadcrumb-active">Chi tiết vị trí</span>
                         </div>
                     </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
-                    </div>
+                    <TopbarRight />
                 </div>
 
                 <div className="sp-content">
@@ -257,20 +265,16 @@ export default function LocationsDetailPage() {
                                                 <tr><td colSpan={6} className="sp-status-row">Đang tải...</td></tr>
                                             ) : itemsError ? (
                                                 <tr><td colSpan={6} className="sp-status-row sp-status-error">{itemsError}</td></tr>
-                                            ) : storedItems.length === 0 ? (
+                                            ) : itemRows.length === 0 ? (
                                                 <tr><td colSpan={6} className="sp-status-row">Không có dữ liệu</td></tr>
-                                            ) : storedItems.map((item, idx) => (
-                                                <tr key={item.itemId || `${item.itemcode || "item"}-${idx}`}>
+                                            ) : itemRows.map((row, idx) => (
+                                                <tr key={row.rowId}>
                                                     <td>{idx + 1}</td>
-                                                    <td>{item.itemcode}</td>
-                                                    <td>{item.itemname}</td>
-                                                    <td>
-                                                        {Array.isArray(item.batchCodes) && item.batchCodes.length > 0
-                                                            ? item.batchCodes.join(", ")
-                                                            : "—"}
-                                                    </td>
-                                                    <td>{item.unitof}</td>
-                                                    <td style={{ textAlign: "right" }}>{item.quantity}</td>
+                                                    <td>{row.itemcode}</td>
+                                                    <td>{row.itemname}</td>
+                                                    <td>{row.batchCode || "—"}</td>
+                                                    <td>{row.unitof}</td>
+                                                    <td style={{ textAlign: "right" }}>{row.quantity}</td>
                                                 </tr>
                                             ))}
                                         </tbody>

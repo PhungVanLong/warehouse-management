@@ -28,7 +28,7 @@ public class InventoryAuditController {
 
     /** Lấy danh sách tất cả phiếu kiểm kê */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<InventoryAuditResponse>>> getAll() {
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách phiếu kiểm kê thành công",
                 inventoryAuditService.getAll()));
@@ -36,7 +36,7 @@ public class InventoryAuditController {
 
     /** Lấy chi tiết 1 phiếu kiểm kê */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<InventoryAuditResponse>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết phiếu kiểm kê thành công",
                 inventoryAuditService.getById(id)));
@@ -44,16 +44,37 @@ public class InventoryAuditController {
 
     /** Tạo phiếu kiểm kê nháp */
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<InventoryAuditResponse>> create(
             @Valid @RequestBody InventoryAuditRequest request) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Tạo phiếu kiểm kê thành công",
                 inventoryAuditService.createDraft(request)));
     }
 
+    /** Lấy danh sách phiếu được giao cho nhân viên đăng nhập */
+    @GetMapping("/assigned")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<List<InventoryAuditResponse>>> getAssigned() {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Danh sách yêu cầu kiểm kê được giao", inventoryAuditService.getAssignedForCurrentUser()));
+    }
+
+    /** Nhân viên cập nhật chi tiết phiếu được giao */
+    @PutMapping("/{id}/assigned")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<InventoryAuditResponse>> updateAssigned(@PathVariable Long id, @Valid @RequestBody InventoryAuditRequest request) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật phiếu kiểm kê thành công", inventoryAuditService.updateByAssignedStaff(id, request)));
+    }
+
+    /** Nhân viên gửi kết quả kiểm kê cho quản lý */
+    @PostMapping("/{id}/submit")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<InventoryAuditResponse>> submitAssigned(@PathVariable Long id) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Gửi kết quả kiểm kê thành công", inventoryAuditService.submitFromStaff(id)));
+    }
+
     /** Cập nhật phiếu kiểm kê nháp */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<InventoryAuditResponse>> update(
             @PathVariable Long id,
             @Valid @RequestBody InventoryAuditRequest request) {
@@ -63,7 +84,7 @@ public class InventoryAuditController {
 
     /** Xác nhận phiếu kiểm kê → điều chỉnh tồn kho */
     @PostMapping("/{id}/confirm")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<InventoryAuditResponse>> confirm(@PathVariable Long id) {
         try {
             return ResponseEntity.ok(new ApiResponse<>(true, "Xác nhận phiếu kiểm kê thành công",
@@ -75,7 +96,7 @@ public class InventoryAuditController {
 
     /** Hủy phiếu kiểm kê */
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<InventoryAuditResponse>> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Hủy phiếu kiểm kê thành công",
                 inventoryAuditService.cancel(id)));

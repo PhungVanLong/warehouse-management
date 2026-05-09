@@ -69,6 +69,12 @@
     color: #277d4b;
 }
 
+.sp-nav-standalone.sp-nav-active {
+    background: #eaf7f0;
+    color: #277d4b;
+    font-weight: 600;
+}
+
 .sp-nav-group-hd {
     display: flex;
     align-items: center;
@@ -179,6 +185,8 @@
     display: flex;
     align-items: center;
     gap: 14px;
+    margin-left: auto;
+    justify-content: flex-end;
 }
 
 .sp-icon-btn {
@@ -213,7 +221,104 @@
     height: 34px;
     border-radius: 50%;
     background: linear-gradient(135deg, #b8ebd0 0%, #7dd8a8 100%);
+    border: 2px solid #cfead8;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1e5f3d;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.sp-avatar-btn {
+    border: none;
+    padding: 0;
+    background: none;
+}
+
+.sp-avatar-text {
+    line-height: 1;
+}
+
+.sp-notif-wrap {
+    position: relative;
+}
+
+.sp-notif-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: #2DBE60;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+    box-sizing: border-box;
+}
+
+.sp-notif-panel {
+    position: absolute;
+    right: 0;
+    top: 42px;
+    width: 320px;
+    max-height: 360px;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #e0ece5;
+    border-radius: 12px;
+    box-shadow: 0 16px 36px rgba(34, 84, 47, 0.15);
+    z-index: 50;
+}
+
+.sp-notif-head {
+    padding: 10px 14px;
+    font-weight: 700;
+    color: #243427;
+    border-bottom: 1px solid #eef4ef;
+}
+
+.sp-notif-empty {
+    padding: 14px;
+    font-size: 0.8rem;
+    color: #7b8a81;
+}
+
+.sp-notif-item {
+    width: 100%;
+    text-align: left;
+    background: #fff;
+    border: none;
+    border-bottom: 1px solid #f0f4f1;
+    padding: 10px 14px;
+    cursor: pointer;
+}
+
+.sp-notif-item:hover {
+    background: #f3faf6;
+}
+
+.sp-notif-item.sp-notif-unread {
+    background: #eef8f1;
+}
+
+.sp-notif-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #243427;
+    margin-bottom: 4px;
+}
+
+.sp-notif-msg {
+    font-size: 0.75rem;
+    color: #6b7c72;
 }
 
 .sp-content {

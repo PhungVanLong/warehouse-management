@@ -76,12 +76,8 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setDepartment(department);
         user.setIsActive(true);
-        // Nếu username chứa 'admin' thì set ADMIN, ngược lại STAFF
-        if (username != null && username.toLowerCase().contains("admin")) {
-            user.setRole(hoshimoto.cdtn.entity.Enum.Role.ADMIN);
-        } else {
-            user.setRole(hoshimoto.cdtn.entity.Enum.Role.STAFF);
-        }
+        // Register public luôn tạo STAFF. Tạo MANAGER phải dùng POST /api/users (cần auth)
+        user.setRole(hoshimoto.cdtn.entity.Enum.Role.STAFF);
         userRepository.save(user);
         return true;
     }

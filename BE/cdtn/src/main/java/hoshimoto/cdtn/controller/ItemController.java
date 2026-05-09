@@ -3,8 +3,6 @@ package hoshimoto.cdtn.controller;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import jakarta.validation.Valid;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,6 +20,7 @@ import hoshimoto.cdtn.dto.ItemResponse;
 import hoshimoto.cdtn.dto.request.ItemRequest;
 import hoshimoto.cdtn.entity.Item;
 import hoshimoto.cdtn.service.ItemService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/items")
@@ -32,7 +31,7 @@ public class ItemController {
 
     /** Tất cả authenticated user có thể xem danh sách */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<ItemResponse>>> getAllItems() {
         List<ItemResponse> items = itemService.getAllItems()
                 .stream().map(ItemController::toDto).collect(Collectors.toList());
@@ -40,7 +39,7 @@ public class ItemController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<ItemResponse>> getItemById(@PathVariable Long id) {
         return itemService.getItemById(id)
                 .map(item -> ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết hàng hóa thành công", toDto(item))))
@@ -48,14 +47,14 @@ public class ItemController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<ItemResponse>> createItem(@Valid @RequestBody ItemRequest request) {
         Item created = itemService.createItem(request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Tạo mới hàng hóa thành công", toDto(created)));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<ItemResponse>> updateItem(
             @PathVariable Long id,
             @Valid @RequestBody ItemRequest request) {
@@ -68,7 +67,7 @@ public class ItemController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteItem(@PathVariable Long id) {
         try {
             itemService.deleteItem(id);

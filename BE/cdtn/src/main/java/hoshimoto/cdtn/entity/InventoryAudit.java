@@ -43,12 +43,12 @@ public class InventoryAudit {
     private DocStatus docstatus = DocStatus.DRAFT;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "locationid")
-    private Location location;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "userid")
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_userid")
+    private User assignedUser;
 
     @CreationTimestamp
     @Column(updatable = false, name = "createdat")

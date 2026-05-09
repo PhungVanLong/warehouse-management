@@ -38,7 +38,7 @@ public class UserRequest {
 
     private Boolean isActive;
 
-    /** Chỉ ADMIN được phép set role */
+    /** ADMIN: gán MANAGER hoặc STAFF; MANAGER: chỉ gán STAFF. Bắt buộc khi tạo mới */
     private String role;
 
     private String modifiedBy;

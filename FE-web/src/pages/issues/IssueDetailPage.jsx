@@ -4,6 +4,11 @@ import "../../styles/shared.css";
 import "../receipts/receipts.css";
 import "./issues.css";
 import { getIssueById, confirmIssue, cancelIssue } from "../../api/issueApi";
+import TopbarRight from "../../components/TopbarRight";
+
+const COMPANY_NAME = "CÔNG TY TNHH HOSHIMOTO VIỆT NAM";
+const COMPANY_ADDRESS_LINE1 = "Căn số 49-TT5, Khu nhà ở Đài phát sóng phát thanh Mễ Trì,";
+const COMPANY_ADDRESS_LINE2 = "Phường Đại Mỗ, TP Hà Nội";
 
 const STATUS_LABELS = { DRAFT: "Chờ duyệt", CONFIRMED: "Đã duyệt", CANCELLED: "Hủy" };
 const STATUS_CLASS = {
@@ -29,9 +34,20 @@ function formatMoney(n) {
     return Number(n).toLocaleString("vi-VN");
 }
 
+function escapeHtml(str) {
+    return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 export default function IssueDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const canConfirmCancel = user?.role === "ADMIN" || user?.role === "MANAGER";
 
     const [issue, setIssue] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -94,6 +110,141 @@ export default function IssueDetailPage() {
         ? issue.details.reduce((s, d) => s + (d.amount || (d.quantity || 0) * (d.unitprice || 0)), 0)
         : 0;
 
+    const handleExportPdf = () => {
+        if (!issue) return;
+
+        const docDate = formatDate(issue.docDate) || "____/____/____";
+        const buyerName = issue.customerName || "";
+        const sellerName = issue.createdByFullname || issue.createdByName || "";
+
+        const rowsHtml = (issue.details || []).map((d, idx) => {
+            const qty = Number(d.quantity || 0);
+            const unitPrice = Number(d.unitprice || 0);
+            const amount = d.amount || qty * unitPrice;
+            return `
+                <tr>
+                    <td class="center">${idx + 1}</td>
+                    <td class="center">${escapeHtml(d.itemcode || "")}</td>
+                    <td>${escapeHtml(d.itemname || "")}</td>
+                    <td class="center">${escapeHtml(d.unitof || "")}</td>
+                    <td class="right">${formatMoney(qty)}</td>
+                    <td class="right">${formatMoney(unitPrice)}</td>
+                    <td class="right">${formatMoney(amount)}</td>
+                    <td class="center"></td>
+                    <td class="right"></td>
+                    <td></td>
+                </tr>
+            `;
+        }).join("");
+
+        const html = `
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <title>Bang ke hang hoa dich vu</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: "Times New Roman", serif; color: #111; margin: 24px 28px; }
+        .company { font-size: 14px; line-height: 1.4; }
+        .company .name { font-weight: 700; text-transform: uppercase; }
+        .doc-title { text-align: center; margin: 18px 0 6px; }
+        .doc-title h1 { margin: 0; font-size: 20px; letter-spacing: 0.4px; }
+        .doc-title .date { font-style: italic; margin-top: 4px; font-size: 14px; }
+        .doc-sub { text-align: center; font-size: 14px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border: 1px solid #000; padding: 6px 6px; vertical-align: middle; }
+        th { text-align: center; font-weight: 700; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .total-row td { font-weight: 700; }
+        .signature { margin-top: 18px; font-size: 14px; }
+        .sign-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; text-align: center; }
+        .sign-title { font-weight: 700; }
+        .sign-sub { font-style: italic; font-size: 13px; }
+        .sign-space { height: 70px; }
+        @media print {
+            body { margin: 0; }
+            @page { size: A4 portrait; margin: 18mm 16mm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="company">
+        <div class="name">${escapeHtml(COMPANY_NAME)}</div>
+        <div>${escapeHtml(COMPANY_ADDRESS_LINE1)}<br/>${escapeHtml(COMPANY_ADDRESS_LINE2)}</div>
+    </div>
+
+    <div class="doc-title">
+        <h1>BẢNG KÊ HÀNG HÓA, DỊCH VỤ</h1>
+        <div class="date">Ngày ${escapeHtml(docDate)}</div>
+    </div>
+    <div class="doc-sub">Số: ${escapeHtml(issue.docno || "")}</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>STT</th>
+                <th>Mã hàng</th>
+                <th>Tên hàng hóa, dịch vụ</th>
+                <th>Đơn vị tính</th>
+                <th>Số lượng</th>
+                <th>Đơn giá</th>
+                <th>Thành tiền</th>
+                <th>Thuế suất GTGT</th>
+                <th>Tiền thuế GTGT</th>
+                <th>Ghi chú</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rowsHtml || ""}
+            <tr class="total-row">
+                <td class="center" colspan="6">Cộng</td>
+                <td class="right">${formatMoney(totalAmount)}</td>
+                <td></td>
+                <td class="right"></td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="signature">
+        <div class="sign-row">
+            <div>
+                <div class="sign-title">Người mua hàng</div>
+                <div class="sign-sub">(Ký, họ tên)</div>
+                <div class="sign-space"></div>
+                <div>${escapeHtml(buyerName)}</div>
+            </div>
+            <div>
+                <div class="sign-title">Người bán hàng</div>
+                <div class="sign-sub">(Ký, họ tên)</div>
+                <div class="sign-space"></div>
+                <div>${escapeHtml(sellerName)}</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        const win = window.open("", "_blank", "width=900,height=1200");
+        if (!win) return;
+        win.document.write(html);
+        win.document.close();
+
+        let printed = false;
+        const triggerPrint = () => {
+            if (printed || win.closed) return;
+            printed = true;
+            win.focus();
+            win.print();
+        };
+
+        win.onload = triggerPrint;
+        setTimeout(triggerPrint, 600);
+    };
+
     return (
         <>
             {confirmModal && (
@@ -129,16 +280,7 @@ export default function IssueDetailPage() {
                             <span className="sp-breadcrumb-active">Chi tiết phiếu xuất kho</span>
                         </div>
                     </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
-                    </div>
+                    <TopbarRight />
                 </div>
 
                 <div className="sp-content">
@@ -150,15 +292,15 @@ export default function IssueDetailPage() {
                     {!loading && !error && issue && (
                         <div className="rc-form-card">
                             {/* ── Header ── */}
-                            <div className="rc-header-row">
+                            <div className="rc-header-row rc-header-row-wrap">
                                 <label className="rc-form-label">Ngày</label>
-                                <input type="date" className="rc-form-input" style={{ minWidth: 150 }} value={formatDateInput(issue.docDate)} readOnly />
-                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Đối tượng</label>
-                                <input className="rc-form-input" style={{ minWidth: 200 }} value={issue.customerName || ""} readOnly />
-                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
-                                <input className="rc-form-input" style={{ minWidth: 150 }} value={issue.docno || ""} readOnly />
+                                <input type="date" className="rc-form-input rc-input-auto" value={formatDateInput(issue.docDate)} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Người lập</label>
-                                <input className="rc-form-input" style={{ minWidth: 160 }} value={issue.createdByFullname || issue.createdByName || ""} readOnly />
+                                <input className="rc-form-input rc-input-auto" value={issue.createdByFullname || issue.createdByName || ""} readOnly />
+                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
+                                <input className="rc-form-input rc-input-auto" value={issue.docno || ""} readOnly />
+                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Loại</label>
+                                <input className="rc-form-input rc-input-auto" value={issue.docType || issue.doctype || "Thông thường"} readOnly />
                                 {/* Status pill – static badge, no dropdown */}
                                 <span className={`${STATUS_CLASS[issue.docstatus] || "rc-status-pill"} rc-status-inline`} style={{ marginLeft: "auto", cursor: "default", pointerEvents: "none" }}>
                                     {STATUS_LABELS[issue.docstatus] || issue.docstatus}
@@ -191,9 +333,13 @@ export default function IssueDetailPage() {
                             ) : null}
 
                             {/* ── Diễn giải ── */}
-                            <div className="rc-form-row">
+                            <div className="rc-form-row rc-form-row-wrap">
                                 <label className="rc-form-label">Diễn giải</label>
                                 <input className="rc-form-input rc-form-full" value={issue.description || ""} readOnly />
+                            </div>
+                            <div className="rc-form-row">
+                                <label className="rc-form-label">Đối tượng</label>
+                                <input className="rc-form-input rc-form-full" value={issue.customerName || ""} readOnly />
                             </div>
 
                             {/* ── Địa chỉ ── */}
@@ -208,7 +354,7 @@ export default function IssueDetailPage() {
                                 <table className="rc-detail-table" style={{ tableLayout: "auto" }}>
                                     <thead>
                                         <tr>
-                                            <th className="rc-td-stt">STT</th>
+                                            <th className="rc-td-stt" style={{ width: "10%" }}>STT</th>
                                             <th style={{ width: "11%" }}>Mã hàng</th>
                                             <th style={{ width: "22%" }}>Tên hàng hóa</th>
                                             <th style={{ width: "12%" }}>Mã lô</th>
@@ -247,8 +393,9 @@ export default function IssueDetailPage() {
                             </div>
                             {/* ── Actions ── */}
                             <div className="rc-form-actions">
+                                <button className="rc-btn-template" onClick={handleExportPdf}>Xuất PDF</button>
                                 <button className="sp-btn-outline" onClick={() => navigate("/issues")}>Quay lại</button>
-                                {issue.docstatus === "DRAFT" && (
+                                {issue.docstatus === "DRAFT" && canConfirmCancel && (
                                     <>
                                         <button className="sp-btn-danger-outline" onClick={handleCancel} disabled={actionLoading}>
                                             {actionLoading ? "Đang xử lý..." : "Từ chối"}

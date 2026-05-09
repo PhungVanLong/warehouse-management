@@ -25,6 +25,65 @@
 }
 
 /* Table cell styles */
+.bt-table {
+    table-layout: fixed;
+}
+
+.bt-table th,
+.bt-table td {
+    vertical-align: middle;
+}
+
+.bt-table th:nth-child(1),
+.bt-table td:nth-child(1) {
+    width: 44px;
+}
+
+.bt-table th:nth-child(2),
+.bt-table td:nth-child(2) {
+    width: 14%;
+}
+
+.bt-table th:nth-child(3),
+.bt-table td:nth-child(3) {
+    width: 12%;
+}
+
+.bt-table th:nth-child(4),
+.bt-table td:nth-child(4) {
+    width: 9%;
+}
+
+.bt-table th:nth-child(5),
+.bt-table td:nth-child(5) {
+    width: 16%;
+}
+
+.bt-table th:nth-child(6),
+.bt-table td:nth-child(6) {
+    width: 10%;
+}
+
+.bt-table th:nth-child(7),
+.bt-table td:nth-child(7) {
+    width: 10%;
+}
+
+.bt-table th:nth-child(8),
+.bt-table td:nth-child(8) {
+    width: 10%;
+}
+
+.bt-table th:nth-child(9),
+.bt-table td:nth-child(9) {
+    width: 11%;
+}
+
+.bt-table th:nth-child(10),
+.bt-table td:nth-child(10) {
+    width: 60px;
+}
+
 .bt-td-itemcode {
     font-weight: 600;
     color: #4c6152;

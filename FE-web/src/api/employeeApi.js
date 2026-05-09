@@ -22,3 +22,8 @@ export const updateEmployee = async (id, body) => {
     const res = await axiosInstance.put(`${API_URL}/${id}`, body);
     return res.data.data;
 };
+
+export const deleteEmployee = async (id) => {
+    const res = await axiosInstance.delete(`${API_URL}/${id}`);
+    return res.data;
+};

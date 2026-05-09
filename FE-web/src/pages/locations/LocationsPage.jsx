@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import { getAllLocations, getItemsAtLocation } from "../../api/locationApi";
+import TopbarRight from "../../components/TopbarRight";
 
 const ROWS_OPTIONS = [10, 15, 20, 50];
 
@@ -14,6 +15,15 @@ function SortIcon() {
     );
 }
 
+function escapeHtml(str) {
+    return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 export default function LocationsPage() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -22,34 +32,15 @@ export default function LocationsPage() {
     const [page, setPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(15);
     const [selected, setSelected] = useState(new Set());
+    const [locationItemsMap, setLocationItemsMap] = useState({});
     const navigate = useNavigate();
 
     const fetchItems = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const locations = await getAllLocations();
-            const rowsByLocation = await Promise.all(
-                locations.map(async (loc) => {
-                    try {
-                        const data = await getItemsAtLocation(loc.id);
-                        const itemsAtLoc = Array.isArray(data) ? data : (data?.items || []);
-                        if (itemsAtLoc.length === 0) return [];
-                        return itemsAtLoc.map((item, idx) => ({
-                            rowId: `${loc.id}-${item.itemId || item.itemcode || idx}`,
-                            locationId: loc.id,
-                            locationcode: loc.locationcode,
-                            locationname: loc.locationname,
-                            description: loc.description,
-                            itemcode: item.itemcode,
-                            quantity: item.quantity,
-                        }));
-                    } catch {
-                        return [];
-                    }
-                })
-            );
-            setItems(rowsByLocation.flat());
+            const data = await getAllLocations();
+            setItems(data);
         } catch {
             setError("Không thể tải danh sách vị trí. Vui lòng thử lại.");
         } finally {
@@ -60,17 +51,12 @@ export default function LocationsPage() {
     useEffect(() => { fetchItems(); }, [fetchItems]);
 
     const filtered = useMemo(() => {
-        const sorted = [...items].sort((a, b) => {
-            const lc = (a.locationcode || "").localeCompare(b.locationcode || "");
-            if (lc !== 0) return lc;
-            return (a.itemcode || "").localeCompare(b.itemcode || "");
-        });
+        const sorted = [...items].sort((a, b) => (a.id || 0) - (b.id || 0));
         if (!search.trim()) return sorted;
         const q = search.toLowerCase();
         return sorted.filter((r) =>
             r.locationcode?.toLowerCase().includes(q) ||
             r.locationname?.toLowerCase().includes(q) ||
-            r.itemcode?.toLowerCase().includes(q) ||
             r.description?.toLowerCase().includes(q)
         );
     }, [search, items]);
@@ -80,23 +66,139 @@ export default function LocationsPage() {
     const start = (page - 1) * rowsPerPage;
     const rows = filtered.slice(start, start + rowsPerPage);
 
-    const allIds = rows.map((r) => r.rowId);
+    // Fetch items summary for visible rows
+    useEffect(() => {
+        let cancelled = false;
+        const ids = rows.map((r) => r.id);
+        if (ids.length === 0) return;
+        const fetchFor = async () => {
+            const map = {};
+            await Promise.all(ids.map(async (id) => {
+                try {
+                    const data = await getItemsAtLocation(id);
+                    const items = Array.isArray(data) ? data : (data?.items || []);
+                    if (!items || items.length === 0) {
+                        map[id] = "—";
+                        return;
+                    }
+                    // build short summary: up to 3 items 'CODE(qty)'
+                    const parts = items.slice(0, 3).map((it) => `${it.itemcode || ""}(${it.quantity ?? 0})`);
+                    if (items.length > 3) parts.push("...");
+                    map[id] = parts.join(", ");
+                } catch {
+                    map[id] = "—";
+                }
+            }));
+            if (!cancelled) setLocationItemsMap((prev) => ({ ...prev, ...map }));
+        };
+        fetchFor();
+        return () => { cancelled = true; };
+    }, [rows]);
+
+    const allIds = rows.map((r) => r.id);
     const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
     const someChecked = allIds.some((id) => selected.has(id)) && !allChecked;
 
     const toggleRow = (id) =>
         setSelected((prev) => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+            const next = new Set();
+            if (!prev.has(id)) next.add(id);
             return next;
         });
 
     const toggleAll = (checked) =>
-        setSelected((prev) => {
-            const next = new Set(prev);
-            rows.forEach((r) => (checked ? next.add(r.rowId) : next.delete(r.rowId)));
+        setSelected(() => {
+            const next = new Set();
+            if (checked && rows[0]) next.add(rows[0].id);
             return next;
         });
+
+    const handleClone = () => {
+        if (selected.size !== 1) {
+            window.alert("Vui lòng chọn 1 dòng để tạo bản sao.");
+            return;
+        }
+        const id = Array.from(selected)[0];
+        const item = items.find((r) => r.id === id);
+        if (!item) return;
+        navigate("/locations/create", { state: { clone: item } });
+    };
+
+    const handleExportPdf = () => {
+        const now = new Date();
+        const title = "DANH MỤC VỊ TRÍ";
+        const getTotalQty = (locId) => {
+            const summary = locationItemsMap[locId];
+            if (!summary || summary === "—" || summary === "...") return "—";
+            try {
+                return summary.split(",").reduce((s, part) => {
+                    const m = part.match(/\(([-0-9]+)\)/);
+                    return s + (m ? Number(m[1]) : 0);
+                }, 0);
+            } catch { return "—"; }
+        };
+
+        const rowsHtml = filtered.map((r, idx) => `
+            <tr>
+                <td class="center">${idx + 1}</td>
+                <td>${escapeHtml(r.locationcode || "")}</td>
+                <td>${escapeHtml(r.locationname || "")}</td>
+                <td>${escapeHtml(r.description || "")}</td>
+                <td>${escapeHtml(locationItemsMap[r.id] ?? "")}</td>
+                <td class="right">${getTotalQty(r.id)}</td>
+            </tr>
+        `).join("");
+
+        const html = `
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  <style>
+    body { font-family: "Times New Roman", serif; margin: 24px 28px; color: #111; }
+    h1 { text-align: center; margin: 0 0 6px; font-size: 20px; }
+    .sub { text-align: center; margin-bottom: 12px; font-style: italic; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #000; padding: 6px; }
+    th { text-align: center; font-weight: 700; }
+    .center { text-align: center; }
+    .right { text-align: right; }
+  </style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <div class="sub">Ngày ${now.toLocaleDateString("vi-VN")}</div>
+  <table>
+    <thead>
+      <tr>
+        <th>STT</th>
+        <th>Mã vị trí</th>
+        <th>Tên</th>
+        <th>Diễn giải</th>
+        <th>Mã vật tư</th>
+        <th>Số lượng</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+</body>
+</html>`;
+
+        const win = window.open("", "_blank", "width=900,height=1200");
+        if (!win) return;
+        win.document.write(html);
+        win.document.close();
+        let printed = false;
+        const triggerPrint = () => {
+            if (printed || win.closed) return;
+            printed = true;
+            win.focus();
+            win.print();
+        };
+        win.onload = triggerPrint;
+        setTimeout(triggerPrint, 600);
+    };
 
     function getPages() {
         if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -115,18 +217,9 @@ export default function LocationsPage() {
                     <div className="sp-breadcrumb">
                         Danh mục &rsaquo; <span className="sp-breadcrumb-active">Danh mục vị trí</span>
                     </div>
-                    <div className="sp-breadcrumb-sub">Vị trí</div>
+                    {/* <div className="sp-breadcrumb-sub">Vị trí</div> */}
                 </div>
-                <div className="sp-topbar-right">
-                    <button className="sp-icon-btn">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                        <span className="sp-notif-dot" />
-                    </button>
-                    <div className="sp-avatar" />
-                </div>
+                <TopbarRight />
             </div>
 
             <div className="sp-content">
@@ -151,13 +244,13 @@ export default function LocationsPage() {
                         </svg>
                         Thêm mới
                     </button>
-                    <button className="sp-btn-outline">
+                    <button className="sp-btn-outline" onClick={handleClone}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                         </svg>
                         Thêm bản sao mới
                     </button>
-                    <button className="sp-btn-outline">
+                    <button className="sp-btn-outline" onClick={handleExportPdf}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                         </svg>
@@ -179,9 +272,9 @@ export default function LocationsPage() {
                                 </th>
                                 <th>Mã vị trí <SortIcon /></th>
                                 <th>Tên <SortIcon /></th>
-                                <th>Mã vật tư <SortIcon /></th>
-                                <th>Số lượng <SortIcon /></th>
                                 <th>Diễn giải <SortIcon /></th>
+                                <th>Mã vật tư</th>
+                                <th style={{ textAlign: "right" }}>Số lượng</th>
                                 <th className="sp-th-action">Thao tác</th>
                             </tr>
                         </thead>
@@ -194,24 +287,37 @@ export default function LocationsPage() {
                                 <tr><td colSpan={7} className="sp-status-row">Không có dữ liệu</td></tr>
                             ) : rows.map((r) => (
                                 <tr
-                                    key={r.rowId}
-                                    className={`sp-row-clickable${selected.has(r.rowId) ? " sp-row-selected" : ""}`}
-                                    onClick={() => navigate(`/locations/${r.locationId}`)}
+                                    key={r.id}
+                                    className={`sp-row-clickable${selected.has(r.id) ? " sp-row-selected" : ""}`}
+                                    onClick={() => navigate(`/locations/${r.id}`)}
                                 >
                                     <td className="sp-td-cb" onClick={(e) => e.stopPropagation()}>
                                         <input
                                             type="checkbox"
-                                            checked={selected.has(r.rowId)}
-                                            onChange={() => toggleRow(r.rowId)}
+                                            checked={selected.has(r.id)}
+                                            onChange={() => toggleRow(r.id)}
                                         />
                                     </td>
                                     <td className="sp-td-id">{r.locationcode}</td>
                                     <td>{r.locationname}</td>
-                                    <td>{r.itemcode}</td>
-                                    <td className="sp-td-num">{r.quantity}</td>
                                     <td>{r.description}</td>
+                                    <td style={{ fontSize: "0.9rem", color: "#234", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>{locationItemsMap[r.id] ?? "..."}</td>
+                                    <td style={{ textAlign: "right", fontWeight: 600 }}>{
+                                        // compute total quantity for this location if available
+                                        (() => {
+                                            const summary = locationItemsMap[r.id];
+                                            if (!summary || summary === "—" || summary === "...") return "—";
+                                            // summary like 'CODE(qty), ...' -> sum the numbers
+                                            try {
+                                                return summary.split(",").reduce((s, part) => {
+                                                    const m = part.match(/\(([-0-9]+)\)/);
+                                                    return s + (m ? Number(m[1]) : 0);
+                                                }, 0);
+                                            } catch { return "—"; }
+                                        })()
+                                    }</td>
                                     <td className="sp-td-action" onClick={(e) => e.stopPropagation()}>
-                                        <button className="sp-edit-btn" title="Chỉnh sửa" onClick={() => navigate(`/locations/${r.locationId}`)}>
+                                        <button className="sp-edit-btn" title="Chỉnh sửa" onClick={() => navigate(`/locations/${r.id}`)}>
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />

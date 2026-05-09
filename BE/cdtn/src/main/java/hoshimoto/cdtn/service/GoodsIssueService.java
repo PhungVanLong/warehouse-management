@@ -21,6 +21,9 @@ import hoshimoto.cdtn.dto.request.GoodsIssueRequest;
 import hoshimoto.cdtn.entity.Batch;
 import hoshimoto.cdtn.entity.Customer;
 import hoshimoto.cdtn.entity.Enum.DocStatus;
+import hoshimoto.cdtn.entity.Enum.NotificationTargetType;
+import hoshimoto.cdtn.entity.Enum.NotificationType;
+import hoshimoto.cdtn.entity.Enum.Role;
 import hoshimoto.cdtn.entity.GoodsIssue;
 import hoshimoto.cdtn.entity.GoodsIssueDetail;
 import hoshimoto.cdtn.entity.InventoryBalance;
@@ -50,6 +53,7 @@ public class GoodsIssueService {
     @Autowired private CustomerRepository customerRepository;
     @Autowired private BatchRepository batchRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private NotificationService notificationService;
 
     // ───────────────────────── CRUD ─────────────────────────
 
@@ -68,14 +72,16 @@ public class GoodsIssueService {
      */
     @Transactional
     public GoodsIssueResponse createDraft(GoodsIssueRequest request) {
-        if (issueRepository.findByDocno(request.getDocno()).isPresent()) {
-            throw new RuntimeException("Mã phiếu '" + request.getDocno() + "' đã tồn tại");
-        }
-
         GoodsIssue issue = new GoodsIssue();
         applyHeader(issue, request);
+        if (issue.getDocno() == null || issue.getDocno().isBlank()) {
+            issue.setDocno(generateNextDocno("PX-", issueRepository.findDocnosByPrefix("PX-")));
+        } else if (issueRepository.findByDocno(issue.getDocno()).isPresent()) {
+            throw new RuntimeException("Mã phiếu '" + issue.getDocno() + "' đã tồn tại");
+        }
         issue.setDocstatus(DocStatus.DRAFT);
         issue = issueRepository.save(issue);
+        notifyManagersIfStaffCreated(issue);
 
         saveDetails(issue, request.getDetails());
         return toResponse(issue);
@@ -180,6 +186,7 @@ public class GoodsIssueService {
             issue.setModifiedBy(u.getUsername());
         });
         issueRepository.save(issue);
+        notifyCreatorApproved(issue);
         return toResponse(issue);
     }
 
@@ -302,7 +309,10 @@ public class GoodsIssueService {
     // ───────────────────────── PRIVATE HELPERS ─────────────────────────
 
     private void applyHeader(GoodsIssue issue, GoodsIssueRequest request) {
-        issue.setDocno(request.getDocno());
+        String docno = request.getDocno();
+        if (docno != null && !docno.isBlank()) {
+            issue.setDocno(docno.trim());
+        }
         issue.setDocDate(request.getDocDate());
         issue.setDescription(request.getDescription());
         if (request.getCustomerId() != null) {
@@ -315,6 +325,35 @@ public class GoodsIssueService {
         if (issue.getUser() == null) {
             getCurrentUser().ifPresent(issue::setUser);
         }
+    }
+
+    private void notifyManagersIfStaffCreated(GoodsIssue issue) {
+        User creator = issue.getUser();
+        if (creator == null || creator.getRole() != Role.STAFF) return;
+        String docno = issue.getDocno();
+        notificationService.notifyManagers(
+                NotificationType.APPROVAL_REQUIRED,
+                NotificationTargetType.GOODS_ISSUE,
+                issue.getId(),
+                docno,
+                "Phieu xuat can duyet",
+                "Phieu xuat " + docno + " can duyet"
+        );
+    }
+
+    private void notifyCreatorApproved(GoodsIssue issue) {
+        User creator = issue.getUser();
+        if (creator == null || creator.getRole() != Role.STAFF) return;
+        String docno = issue.getDocno();
+        notificationService.notifyUser(
+                creator,
+                NotificationType.APPROVED,
+                NotificationTargetType.GOODS_ISSUE,
+                issue.getId(),
+                docno,
+                "Phieu xuat da duyet",
+                "Phieu xuat " + docno + " da duyet"
+        );
     }
 
     private java.util.Optional<User> getCurrentUser() {
@@ -365,6 +404,22 @@ public class GoodsIssueService {
         if (issue.getDocstatus() != required) {
             throw new RuntimeException(message);
         }
+    }
+
+    private String generateNextDocno(String prefix, List<String> existingDocnos) {
+        int max = existingDocnos.stream()
+                .mapToInt(docno -> extractSequence(docno, prefix))
+                .max()
+                .orElse(0);
+        int next = max + 1;
+        return String.format("%s%02d", prefix, next);
+    }
+
+    private int extractSequence(String docno, String prefix) {
+        if (docno == null || !docno.startsWith(prefix)) return -1;
+        String numeric = docno.substring(prefix.length());
+        if (!numeric.matches("\\d+")) return -1;
+        return Integer.parseInt(numeric);
     }
 
     public GoodsIssueResponse toResponse(GoodsIssue issue) {

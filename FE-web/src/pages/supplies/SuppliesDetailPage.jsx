@@ -4,6 +4,7 @@ import "../../styles/shared.css";
 import "./supplies.css";
 import { getItemById, updateItem } from "../../api/itemApi";
 import { getAllBatches } from "../../api/batchApi";
+import TopbarRight from "../../components/TopbarRight";
 
 const EMPTY_FORM = {
     itemcode: "", itemname: "", invoicename: "",
@@ -93,16 +94,7 @@ export default function SuppliesDetailPage() {
                         {" "}&rsaquo; <span className="sp-breadcrumb-active">Chi tiết vật tư hàng hóa</span>
                     </div>
                 </div>
-                <div className="sp-topbar-right">
-                    <button className="sp-icon-btn">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                        <span className="sp-notif-dot" />
-                    </button>
-                    <div className="sp-avatar" />
-                </div>
+                <TopbarRight />
             </div>
 
             {/* Content */}

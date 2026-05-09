@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import { getAllEmployees } from "../../api/employeeApi";
+import TopbarRight from "../../components/TopbarRight";
 
 const ROWS_OPTIONS = [10, 15, 20, 50];
 
@@ -15,6 +16,8 @@ function SortIcon() {
 }
 
 export default function EmployeesPage() {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const isStaff = user?.role === "STAFF";
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -37,7 +40,14 @@ export default function EmployeesPage() {
         }
     }, []);
 
-    useEffect(() => { fetchItems(); }, [fetchItems]);
+    useEffect(() => { if (!isStaff) fetchItems(); }, [fetchItems, isStaff]);
+
+    useEffect(() => {
+        if (isStaff) {
+            // Staff are not allowed to view employee catalog — redirect to home
+            navigate("/");
+        }
+    }, [isStaff, navigate]);
 
     const filtered = useMemo(() => {
         const sorted = [...items].sort((a, b) => (a.id || 0) - (b.id || 0));
@@ -61,17 +71,102 @@ export default function EmployeesPage() {
 
     const toggleRow = (id) =>
         setSelected((prev) => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+            const next = new Set();
+            if (!prev.has(id)) next.add(id);
             return next;
         });
 
     const toggleAll = (checked) =>
-        setSelected((prev) => {
-            const next = new Set(prev);
-            rows.forEach((r) => (checked ? next.add(r.id) : next.delete(r.id)));
+        setSelected(() => {
+            const next = new Set();
+            if (checked && rows[0]) next.add(rows[0].id);
             return next;
         });
+
+    const handleClone = () => {
+        if (selected.size !== 1) {
+            window.alert("Vui lòng chọn 1 dòng để tạo bản sao.");
+            return;
+        }
+        const id = Array.from(selected)[0];
+        const item = items.find((r) => r.id === id);
+        if (!item) return;
+        navigate("/employees/create", { state: { clone: item } });
+    };
+
+    const handleExportPdf = () => {
+        const now = new Date();
+        const title = "DANH MỤC NHÂN VIÊN";
+        const rowsHtml = filtered.map((r, idx) => `
+            <tr>
+                <td class="center">${idx + 1}</td>
+                <td>${r.usercode || ""}</td>
+                <td>${r.fullname || ""}</td>
+                <td>${r.username || ""}</td>
+                <td>${r.gender || ""}</td>
+                <td>${r.birthdate ? r.birthdate.slice(0, 10) : ""}</td>
+                <td>${r.address || ""}</td>
+                <td>${r.phoneNumber || ""}</td>
+                <td>${r.email || ""}</td>
+                <td>${r.isActive ? "Đang làm" : "Nghỉ việc"}</td>
+                <td>${r.firstworkingdate ? r.firstworkingdate.slice(0, 10) : ""}</td>
+            </tr>
+        `).join("");
+
+        const html = `
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  <style>
+    body { font-family: "Times New Roman", serif; margin: 24px 28px; color: #111; }
+    h1 { text-align: center; margin: 0 0 6px; font-size: 20px; }
+    .sub { text-align: center; margin-bottom: 12px; font-style: italic; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #000; padding: 6px; }
+    th { text-align: center; font-weight: 700; }
+    .center { text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <div class="sub">Ngày ${now.toLocaleDateString("vi-VN")}</div>
+  <table>
+    <thead>
+      <tr>
+        <th>STT</th>
+        <th>Mã nhân viên</th>
+        <th>Họ và tên</th>
+        <th>Tên đăng nhập</th>
+        <th>Giới tính</th>
+        <th>Ngày sinh</th>
+        <th>Địa chỉ</th>
+        <th>Số điện thoại</th>
+        <th>Email</th>
+        <th>Trạng thái</th>
+        <th>Ngày vào làm</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+</body>
+</html>`;
+
+        const win = window.open("", "_blank", "width=900,height=1200");
+        if (!win) return;
+        win.document.write(html);
+        win.document.close();
+        let printed = false;
+        const triggerPrint = () => {
+            if (printed || win.closed) return;
+            printed = true;
+            win.focus();
+            win.print();
+        };
+        win.onload = triggerPrint;
+        setTimeout(triggerPrint, 600);
+    };
 
     function getPages() {
         if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -90,18 +185,9 @@ export default function EmployeesPage() {
                     <div className="sp-breadcrumb">
                         Danh mục &rsaquo; <span className="sp-breadcrumb-active">Danh mục nhân viên</span>
                     </div>
-                    <div className="sp-breadcrumb-sub">Nhân viên</div>
+                    {/* <div className="sp-breadcrumb-sub">Nhân viên</div> */}
                 </div>
-                <div className="sp-topbar-right">
-                    <button className="sp-icon-btn">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                        <span className="sp-notif-dot" />
-                    </button>
-                    <div className="sp-avatar" />
-                </div>
+                <TopbarRight />
             </div>
 
             <div className="sp-content">
@@ -127,19 +213,13 @@ export default function EmployeesPage() {
                         </svg>
                         Thêm mới
                     </button>
-                    <button className="sp-btn-outline">
+                    <button className="sp-btn-outline" onClick={handleClone}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                         </svg>
                         Thêm bản sao mới
                     </button>
-                    <button className="sp-btn-outline">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-                        </svg>
-                        Mẫu in
-                    </button>
-                    <button className="sp-btn-outline">
+                    <button className="sp-btn-outline" onClick={handleExportPdf}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                         </svg>

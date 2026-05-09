@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import "../../styles/shared.css";
 import "../receipts/receipts.css";
 import "./issues.css";
-import { createIssue, getAvailableLocations } from "../../api/issueApi";
+import { createIssue, getAvailableLocations, getAllIssues } from "../../api/issueApi";
+import { getAuditById } from "../../api/auditApi";
 import { getAllCustomers } from "../../api/customerApi";
 import { getAllItems } from "../../api/itemApi";
 import { getAllBatches } from "../../api/batchApi";
+import TopbarRight from "../../components/TopbarRight";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 let _rowKey = 0;
@@ -24,12 +26,42 @@ const newRow = () => ({
     selectedLocations: [], // [{locationId, locationcode, allocQty}]
 });
 
+function buildNextDocno(prefix, list) {
+    const regex = new RegExp(`^${prefix}-(\\d+)$`);
+    const maxNum = (list || []).reduce((max, r) => {
+        const m = String(r.docno || "").match(regex);
+        if (!m) return max;
+        const n = Number(m[1]);
+        return Number.isFinite(n) ? Math.max(max, n) : max;
+    }, 0);
+    const next = String(maxNum + 1).padStart(2, "0");
+    return `${prefix}-${next}`;
+}
+
 /** Tính giá xuất dựa trên giá nhập */
 function calcSalePrice(unitCost) {
     const cost = Number(unitCost);
     if (!cost) return "";
     const multiplier = cost < 50000 ? 1.5 : cost <= 500000 ? 1.3 : 1.2;
     return String(Math.round(cost * multiplier));
+}
+
+function buildAllocations(entries, totalDiff) {
+    const totalWeight = entries.reduce((sum, e) => sum + Number(e.actualQty || 0), 0);
+    if (!totalWeight) return [];
+    let remaining = totalDiff;
+    return entries.map((e, idx) => {
+        const weight = Number(e.actualQty || 0);
+        const alloc = idx === entries.length - 1
+            ? remaining
+            : Math.max(0, Math.round((totalDiff * weight) / totalWeight));
+        remaining -= alloc;
+        return {
+            locationId: e.locationId,
+            locationcode: e.locationcode,
+            allocQty: alloc,
+        };
+    }).filter((e) => e.allocQty > 0);
 }
 
 function formatMoney(n) {
@@ -241,8 +273,10 @@ function LocationModal({ open, onClose, onConfirm, loading, locations, quantity,
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function IssueCreatePage() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const [searchParams] = useSearchParams();
 
-    const [form, setForm] = useState({ date: todayStr(), docno: "", customerId: "", address: "", description: "" });
+    const [form, setForm] = useState({ date: todayStr(), docno: "", customerId: "", address: "", description: "", docType: "NORMAL" });
     const [rows, setRows] = useState([newRow()]);
     const [customers, setCustomers] = useState([]);
     const [items, setItems] = useState([]);
@@ -252,17 +286,103 @@ export default function IssueCreatePage() {
     const [toast, setToast] = useState(null);
     const [locModal, setLocModal] = useState({ open: false, rowIdx: null, locations: [], loading: false });
     const [stockByItem, setStockByItem] = useState({});
+    const [prefilledFromAudit, setPrefilledFromAudit] = useState(false);
+    const [prefilledFromClone, setPrefilledFromClone] = useState(false);
 
     const loadData = useCallback(async () => {
         setLoadingData(true);
         try {
-            const [cList, iList, bList] = await Promise.all([getAllCustomers(), getAllItems(), getAllBatches()]);
+            const [cList, iList, bList, iDocList] = await Promise.all([
+                getAllCustomers(),
+                getAllItems(),
+                getAllBatches(),
+                getAllIssues(),
+            ]);
             setCustomers(cList);
             setItems(iList);
             setBatches(bList);
+            setForm((prev) => ({
+                ...prev,
+                docno: prev.docno || buildNextDocno("PX", iDocList),
+            }));
         } catch { /* non-blocking */ } finally { setLoadingData(false); }
     }, []);
     useEffect(() => { loadData(); }, [loadData]);
+
+    useEffect(() => {
+        const paramType = searchParams.get("docType");
+        if (paramType === "NORMAL" || paramType === "ADJUSTMENT") {
+            setForm((prev) => ({ ...prev, docType: paramType }));
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        const clone = location.state?.clone;
+        if (!clone || prefilledFromClone) return;
+        const toDateOnly = (val) => (val ? String(val).slice(0, 10) : "");
+        const rowsFromClone = (clone.details || []).map((d) => ({
+            ...newRow(),
+            itemId: d.itemId ?? d.itemid ?? "",
+            itemcode: d.itemcode || "",
+            itemname: d.itemname || "",
+            unitof: d.unitof || "",
+            batchId: d.batchId ?? "",
+            batchCode: d.batchCode || d.nameBatch || "",
+            unitCost: d.unitCost != null ? String(d.unitCost) : d.unitprice != null ? String(d.unitprice) : "",
+            quantity: d.quantity != null ? String(d.quantity) : d.qty != null ? String(d.qty) : "",
+            price: d.price != null ? String(d.price) : "",
+            selectedLocations: [],
+        }));
+        if (rowsFromClone.length > 0) setRows(rowsFromClone);
+        setForm((prev) => ({
+            ...prev,
+            date: toDateOnly(clone.docDate) || prev.date,
+            customerId: clone.customerId || "",
+            address: clone.address || "",
+            description: clone.description || "",
+            docType: clone.docType || prev.docType || "NORMAL",
+        }));
+        setPrefilledFromClone(true);
+        setPrefilledFromAudit(true);
+    }, [location.state, prefilledFromClone]);
+
+    useEffect(() => {
+        const auditId = searchParams.get("auditId");
+        if (!auditId || prefilledFromAudit) return;
+        const fillFromAudit = async () => {
+            try {
+                const data = await getAuditById(auditId);
+                const rowsFromAudit = (data.details || [])
+                    .filter((d) => Number(d.diffquantity) < 0)
+                    .map((d) => {
+                        const diff = Math.abs(Number(d.diffquantity || 0));
+                        const entries = d.locationEntries || [];
+                        const selectedLocations = entries.length > 0 ? buildAllocations(entries, diff) : [];
+                        return {
+                            ...newRow(),
+                            itemId: d.itemId,
+                            itemcode: d.itemcode,
+                            itemname: d.itemname,
+                            unitof: d.unitof,
+                            quantity: String(diff),
+                            selectedLocations,
+                        };
+                    });
+                if (rowsFromAudit.length > 0) {
+                    setRows(rowsFromAudit);
+                }
+                setForm((prev) => ({
+                    ...prev,
+                    docType: "ADJUSTMENT",
+                    description: prev.description || `Điều chỉnh từ kiểm kê ${data.docno}`,
+                }));
+                setPrefilledFromAudit(true);
+            } catch {
+                setPrefilledFromAudit(true);
+            }
+        };
+        fillFromAudit();
+    }, [searchParams, prefilledFromAudit]);
 
     const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
 
@@ -366,7 +486,7 @@ export default function IssueCreatePage() {
         );
         setSaving(true);
         try {
-            const result = await createIssue({ docno: form.docno.trim(), docDate: form.date, description: form.description.trim(), customerId: Number(form.customerId), details });
+            const result = await createIssue({ docno: form.docno.trim(), docDate: form.date, description: form.description.trim(), customerId: Number(form.customerId), docType: form.docType, details });
             if (result?.success) {
                 showToast("success", "Tạo phiếu xuất kho thành công!");
                 const newId = result?.data?.id;
@@ -406,16 +526,7 @@ export default function IssueCreatePage() {
                             <span className="sp-breadcrumb-active">Thêm mới phiếu xuất kho</span>
                         </div>
                     </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
-                    </div>
+                    <TopbarRight />
                 </div>
 
                 <div className="sp-content">
@@ -428,6 +539,11 @@ export default function IssueCreatePage() {
                             <input type="date" className="rc-form-input" style={{ minWidth: 150 }} value={form.date} onChange={(e) => handleFormChange("date", e.target.value)} />
                             <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
                             <input className="rc-form-input" style={{ minWidth: 200 }} placeholder="Nhập số chứng từ" value={form.docno} onChange={(e) => handleFormChange("docno", e.target.value)} />
+                            <label className="rc-form-label" style={{ marginLeft: 16 }}>Loại</label>
+                            <select className="rc-form-select" value={form.docType} onChange={(e) => handleFormChange("docType", e.target.value)}>
+                                <option value="NORMAL">Thông thường</option>
+                                <option value="ADJUSTMENT">Điều chỉnh</option>
+                            </select>
                         </div>
 
                         {/* ── Đối tượng ── */}

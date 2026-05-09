@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "./batches.css";
 import { getAllBatches } from "../../api/batchApi";
+import TopbarRight from "../../components/TopbarRight";
+import { getAllReceipts } from "../../api/receiptApi";
 
 const ROWS_OPTIONS = [10, 15, 20, 50];
 
@@ -13,6 +15,15 @@ function SortIcon() {
             <path d="M4 8.5L6 11L8 8.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
     );
+}
+
+function escapeHtml(str) {
+    return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 function formatDate(str) {
@@ -27,6 +38,7 @@ function formatNumber(val) {
 
 export default function BatchesPage() {
     const [batches, setBatches] = useState([]);
+    const [receiptStatusByDetailId, setReceiptStatusByDetailId] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [search, setSearch] = useState("");
@@ -39,8 +51,15 @@ export default function BatchesPage() {
         setLoading(true);
         setError(null);
         try {
-            const data = await getAllBatches();
-            setBatches(data);
+            const [batchData, receiptData] = await Promise.all([getAllBatches(), getAllReceipts()]);
+            const statusByDetailId = {};
+            (receiptData || []).forEach((receipt) => {
+                (receipt.details || []).forEach((detail) => {
+                    if (detail?.id) statusByDetailId[detail.id] = receipt.docstatus;
+                });
+            });
+            setReceiptStatusByDetailId(statusByDetailId);
+            setBatches(batchData || []);
         } catch {
             setError("Không thể tải danh sách lô hàng. Vui lòng thử lại.");
         } finally {
@@ -68,7 +87,9 @@ export default function BatchesPage() {
     }, [fetchBatches]);
 
     const filtered = useMemo(() => {
-        const sorted = [...batches].sort((a, b) => (a.id || 0) - (b.id || 0));
+        const sorted = [...batches]
+            .filter((batch) => receiptStatusByDetailId[batch.receiptDetailId] === "CONFIRMED")
+            .sort((a, b) => (a.id || 0) - (b.id || 0));
         if (!search.trim()) return sorted;
         const q = search.toLowerCase();
         return sorted.filter((r) =>
@@ -77,7 +98,7 @@ export default function BatchesPage() {
             r.itemcode?.toLowerCase().includes(q) ||
             r.itemname?.toLowerCase().includes(q)
         );
-    }, [search, batches]);
+    }, [search, batches, receiptStatusByDetailId]);
 
     const totalRows = filtered.length;
     const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
@@ -87,6 +108,77 @@ export default function BatchesPage() {
     const allIds = rows.map((r) => r.id);
     const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
     const someChecked = allIds.some((id) => selected.has(id)) && !allChecked;
+
+    const handleExportPdf = () => {
+        const now = new Date();
+        const title = "DANH MỤC LÔ HÀNG";
+        const rowsHtml = filtered.map((r, idx) => `
+                        <tr>
+                                <td class="center">${idx + 1}</td>
+                        <td>${escapeHtml(r.batchCode || r.batchcode || "")}</td>
+                        <td>${escapeHtml(r.nameBatch || "")}</td>
+                        <td>${escapeHtml(r.itemcode || "")}</td>
+                        <td>${escapeHtml(r.itemname || "")}</td>
+                        <td class="right">${formatNumber(r.quantity)}</td>
+                        <td class="right">${formatNumber(r.quantityRemaining)}</td>
+                        <td class="right">${formatNumber(r.unitCost)}</td>
+                        <td>${escapeHtml(formatDate(r.manufactureDate) || "")}</td>
+                        </tr>
+                `).join("");
+
+        const html = `
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <title>${title}</title>
+    <style>
+        body { font-family: "Times New Roman", serif; margin: 24px 28px; color: #111; }
+        h1 { text-align: center; margin: 0 0 6px; font-size: 20px; }
+        .sub { text-align: center; margin-bottom: 12px; font-style: italic; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border: 1px solid #000; padding: 6px; }
+        th { text-align: center; font-weight: 700; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+    </style>
+</head>
+<body>
+    <h1>${title}</h1>
+    <div class="sub">Ngày ${now.toLocaleDateString("vi-VN")}</div>
+    <table>
+        <thead>
+            <tr>
+                <th>STT</th>
+                <th>Mã lô</th>
+                <th>Tên lô</th>
+                <th>Mã vật tư</th>
+                <th>Tên vật tư</th>
+                <th>Số lượng</th>
+                <th>Số lượng còn</th>
+                <th>Giá</th>
+                <th>Ngày sản xuất</th>
+            </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+    </table>
+</body>
+</html>`;
+
+        const win = window.open("", "_blank", "width=900,height=1200");
+        if (!win) return;
+        win.document.write(html);
+        win.document.close();
+        let printed = false;
+        const triggerPrint = () => {
+            if (printed || win.closed) return;
+            printed = true;
+            win.focus();
+            win.print();
+        };
+        win.onload = triggerPrint;
+        setTimeout(triggerPrint, 600);
+    };
 
     const toggleRow = (id) =>
         setSelected((prev) => {
@@ -120,18 +212,9 @@ export default function BatchesPage() {
                     <div className="sp-breadcrumb">
                         Danh mục &rsaquo; <span className="sp-breadcrumb-active">Danh mục lô vật tư hàng hóa</span>
                     </div>
-                    <div className="sp-breadcrumb-sub">Batches</div>
+                    {/* <div className="sp-breadcrumb-sub">Batches</div> */}
                 </div>
-                <div className="sp-topbar-right">
-                    <button className="sp-icon-btn">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                        <span className="sp-notif-dot" />
-                    </button>
-                    <div className="sp-avatar" />
-                </div>
+                <TopbarRight />
             </div>
 
             {/* Content */}
@@ -159,7 +242,7 @@ export default function BatchesPage() {
                         </svg>
                         Thêm qua phiếu nhập
                     </button>
-                    <button className="sp-btn-outline">
+                    <button className="sp-btn-outline" onClick={handleExportPdf}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
                         </svg>
@@ -169,7 +252,7 @@ export default function BatchesPage() {
 
                 {/* Table */}
                 <div className="sp-table-wrap sp-scrollable">
-                    <table className="sp-table">
+                    <table className="sp-table bt-table">
                         <thead>
                             <tr>
                                 <th className="sp-th-cb">
@@ -215,14 +298,14 @@ export default function BatchesPage() {
                                     <td>{r.nameBatch}</td>
                                     <td className="bt-td-itemcode">{r.itemcode}</td>
                                     <td>{r.itemname}</td>
-                                    <td className="bt-td-number">{formatNumber(r.quantity)}</td>
-                                    <td>
+                                    <td className="bt-td-number" style={{ textAlign: "left" }}>{formatNumber(r.quantity)}</td>
+                                    <td style={{ textAlign: "left" }}>
                                         <span className={`bt-qty-remaining${r.quantityRemaining === 0 ? " bt-qty-zero" : ""}`}>
                                             {formatNumber(r.quantityRemaining)}
                                         </span>
                                     </td>
-                                    <td className="bt-td-number">{formatNumber(r.unitCost)}</td>
-                                    <td className="bt-td-date">{formatDate(r.manufactureDate)}</td>
+                                    <td className="bt-td-number" style={{ textAlign: "left" }}>{formatNumber(r.unitCost)}</td>
+                                    <td className="bt-td-date" style={{ textAlign: "left" }} >{formatDate(r.manufactureDate)}</td>
                                     <td className="sp-td-action" onClick={(e) => e.stopPropagation()}>
                                         <button className="sp-edit-btn" title="Xem chi tiết" onClick={() => navigate(`/batches/${r.id}`)}>
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

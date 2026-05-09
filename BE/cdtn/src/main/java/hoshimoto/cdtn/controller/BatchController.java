@@ -28,7 +28,7 @@ public class BatchController {
     private BatchService batchService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<BatchResponse>>> getAll() {
         List<BatchResponse> batches = batchService.getAll().stream()
                 .map(this::toResponse)
@@ -37,14 +37,14 @@ public class BatchController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<BatchResponse>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết lô hàng thành công",
                 toResponse(batchService.getById(id))));
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<BatchResponse>> create(@Valid @RequestBody BatchRequest request) {
         Batch batch = batchService.createBatch(request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Tạo lô hàng thành công", toResponse(batch)));

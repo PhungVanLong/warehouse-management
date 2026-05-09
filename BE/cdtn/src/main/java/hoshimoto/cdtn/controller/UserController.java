@@ -28,35 +28,35 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    /** ADMIN & STAFF đều xem được danh sách */
+    /** ADMIN, MANAGER, STAFF đều xem được danh sách */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
         List<UserResponse> list = userService.getAllUsers()
                 .stream().map(UserResponse::fromEntity).collect(Collectors.toList());
         return ResponseEntity.ok(new ApiResponse<>(true, "Lấy danh sách nhân viên thành công", list));
     }
 
-    /** Chỉ ADMIN xem chi tiết */
+    /** ADMIN và MANAGER xem chi tiết */
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
         return userService.getUserById(id)
                 .map(u -> ResponseEntity.ok(new ApiResponse<>(true, "Lấy chi tiết nhân viên thành công", UserResponse.fromEntity(u))))
                 .orElseGet(() -> ResponseEntity.status(404).body(new ApiResponse<>(false, "Không tìm thấy nhân viên", null)));
     }
 
-    /** Chỉ ADMIN tạo mới */
+    /** ADMIN và MANAGER tạo mới (ADMIN: tạo MANAGER/STAFF; MANAGER: chỉ tạo STAFF) */
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<UserResponse>> createUser(@Valid @RequestBody UserRequest request) {
         var created = userService.createUser(request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Tạo mới nhân viên thành công", UserResponse.fromEntity(created)));
     }
 
-    /** Chỉ ADMIN cập nhật */
+    /** ADMIN và MANAGER cập nhật */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @PathVariable Long id,
             @Valid @RequestBody UserRequest request) {
@@ -68,9 +68,9 @@ public class UserController {
         }
     }
 
-    /** Chỉ ADMIN xóa (soft delete) */
+    /** ADMIN và MANAGER xóa (soft delete) */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
         try {
             userService.deleteUser(id);

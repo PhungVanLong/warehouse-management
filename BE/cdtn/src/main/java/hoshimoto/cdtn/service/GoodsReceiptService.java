@@ -20,6 +20,9 @@ import hoshimoto.cdtn.dto.request.GoodsReceiptDetailRequest;
 import hoshimoto.cdtn.dto.request.GoodsReceiptRequest;
 import hoshimoto.cdtn.entity.Customer;
 import hoshimoto.cdtn.entity.Enum.DocStatus;
+import hoshimoto.cdtn.entity.Enum.NotificationTargetType;
+import hoshimoto.cdtn.entity.Enum.NotificationType;
+import hoshimoto.cdtn.entity.Enum.Role;
 import hoshimoto.cdtn.entity.GoodsReceipt;
 import hoshimoto.cdtn.entity.GoodsReceiptDetail;
 import hoshimoto.cdtn.entity.InventoryBalance;
@@ -49,6 +52,7 @@ public class GoodsReceiptService {
     @Autowired private CustomerRepository customerRepository;
     @Autowired private BatchRepository batchRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private NotificationService notificationService;
 
     // ───────────────────────── CRUD ─────────────────────────
 
@@ -68,14 +72,16 @@ public class GoodsReceiptService {
      */
     @Transactional
     public GoodsReceiptResponse createDraft(GoodsReceiptRequest request) {
-        if (receiptRepository.findByDocno(request.getDocno()).isPresent()) {
-            throw new RuntimeException("Mã phiếu '" + request.getDocno() + "' đã tồn tại");
-        }
-
         GoodsReceipt receipt = new GoodsReceipt();
         applyHeader(receipt, request);
+        if (receipt.getDocno() == null || receipt.getDocno().isBlank()) {
+            receipt.setDocno(generateNextDocno("PN-", receiptRepository.findDocnosByPrefix("PN-")));
+        } else if (receiptRepository.findByDocno(receipt.getDocno()).isPresent()) {
+            throw new RuntimeException("Mã phiếu '" + receipt.getDocno() + "' đã tồn tại");
+        }
         receipt.setDocstatus(DocStatus.DRAFT);
         receipt = receiptRepository.save(receipt);
+        notifyManagersIfStaffCreated(receipt);
 
         saveDetails(receipt, request.getDetails());
         return toResponse(receipt);
@@ -181,6 +187,7 @@ public class GoodsReceiptService {
             receipt.setModifiedBy(u.getUsername());
         });
         receiptRepository.save(receipt);
+        notifyCreatorApproved(receipt);
         return toResponse(receipt);
     }
 
@@ -329,7 +336,10 @@ public class GoodsReceiptService {
     }
 
     private void applyHeader(GoodsReceipt receipt, GoodsReceiptRequest request) {
-        receipt.setDocno(request.getDocno());
+        String docno = request.getDocno();
+        if (docno != null && !docno.isBlank()) {
+            receipt.setDocno(docno.trim());
+        }
         receipt.setDocDate(request.getDocDate());
         receipt.setDescription(request.getDescription());
         if (request.getCustomerId() != null) {
@@ -342,6 +352,35 @@ public class GoodsReceiptService {
         if (receipt.getUser() == null) {
             getCurrentUser().ifPresent(receipt::setUser);
         }
+    }
+
+    private void notifyManagersIfStaffCreated(GoodsReceipt receipt) {
+        User creator = receipt.getUser();
+        if (creator == null || creator.getRole() != Role.STAFF) return;
+        String docno = receipt.getDocno();
+        notificationService.notifyManagers(
+                NotificationType.APPROVAL_REQUIRED,
+                NotificationTargetType.GOODS_RECEIPT,
+                receipt.getId(),
+                docno,
+                "Phieu nhap can duyet",
+                "Phieu nhap " + docno + " can duyet"
+        );
+    }
+
+    private void notifyCreatorApproved(GoodsReceipt receipt) {
+        User creator = receipt.getUser();
+        if (creator == null || creator.getRole() != Role.STAFF) return;
+        String docno = receipt.getDocno();
+        notificationService.notifyUser(
+                creator,
+                NotificationType.APPROVED,
+                NotificationTargetType.GOODS_RECEIPT,
+                receipt.getId(),
+                docno,
+                "Phieu nhap da duyet",
+                "Phieu nhap " + docno + " da duyet"
+        );
     }
 
     private java.util.Optional<User> getCurrentUser() {
@@ -386,6 +425,22 @@ public class GoodsReceiptService {
         if (receipt.getDocstatus() != required) {
             throw new RuntimeException(message);
         }
+    }
+
+    private String generateNextDocno(String prefix, List<String> existingDocnos) {
+        int max = existingDocnos.stream()
+                .mapToInt(docno -> extractSequence(docno, prefix))
+                .max()
+                .orElse(0);
+        int next = max + 1;
+        return String.format("%s%02d", prefix, next);
+    }
+
+    private int extractSequence(String docno, String prefix) {
+        if (docno == null || !docno.startsWith(prefix)) return -1;
+        String numeric = docno.substring(prefix.length());
+        if (!numeric.matches("\\d+")) return -1;
+        return Integer.parseInt(numeric);
     }
 
     public GoodsReceiptResponse toResponse(GoodsReceipt receipt) {
