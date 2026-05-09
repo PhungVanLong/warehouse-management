@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore } from "firebase/firestore";
 
 const getConfig = () => ({
     apiKey: "AIzaSyCjk4taY72CSsggbtgz62d_KT1BvMSfzGs",
@@ -20,8 +20,19 @@ export const getFirebaseApp = () => {
     return getApps()[0];
 };
 
+let firestoreDb = null;
+
 export const getFirestoreDb = () => {
     const app = getFirebaseApp();
     if (!app) return null;
-    return getFirestore(app);
+    if (firestoreDb) return firestoreDb;
+    try {
+        firestoreDb = initializeFirestore(app, {
+            experimentalForceLongPolling: true,
+            useFetchStreams: false,
+        });
+    } catch {
+        return null;
+    }
+    return firestoreDb;
 };

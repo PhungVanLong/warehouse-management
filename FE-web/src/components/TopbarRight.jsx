@@ -4,12 +4,33 @@ import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { getNotifications, getUnreadCount, markRead, markReadAll } from "../api/notificationApi";
 import { getFirestoreDb } from "../firebase/firebaseClient";
 
-export default function TopbarRight() {
+class TopbarRightBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError() {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error) {
+        console.error("TopbarRight error:", error);
+    }
+
+    render() {
+        if (this.state.hasError) return null;
+        return this.props.children;
+    }
+}
+
+function TopbarRightContent() {
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [realtimeEnabled, setRealtimeEnabled] = useState(true);
 
     const firestore = useMemo(() => getFirestoreDb(), []);
 
@@ -25,30 +46,43 @@ export default function TopbarRight() {
     const initial = displayName ? displayName.charAt(0).toUpperCase() : "U";
 
     useEffect(() => {
-        if (!firestore || !user?.id) return;
-        const ref = collection(firestore, "users", String(user.id), "notifications");
-        const q = query(ref, orderBy("createdAt", "desc"));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const list = snapshot.docs.map((doc) => {
-                const data = doc.data() || {};
-                const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt || null;
-                return {
-                    id: data.id ?? (Number(doc.id) || doc.id),
-                    ...data,
-                    createdAt,
-                };
-            });
-            setNotifications(list);
-            setUnreadCount(list.filter((n) => !n.isRead).length);
-        }, () => {
-            setNotifications([]);
-            setUnreadCount(0);
-        });
-        return () => unsubscribe();
-    }, [firestore, user?.id]);
+        if (!firestore || !user?.id || !realtimeEnabled) return;
+        let unsubscribe = null;
+        try {
+            const ref = collection(firestore, "users", String(user.id), "notifications");
+            const q = query(ref, orderBy("createdAt", "desc"));
+            unsubscribe = onSnapshot(
+                q,
+                (snapshot) => {
+                    const list = snapshot.docs.map((doc) => {
+                        const data = doc.data() || {};
+                        const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt || null;
+                        return {
+                            id: data.id ?? (Number(doc.id) || doc.id),
+                            ...data,
+                            createdAt,
+                        };
+                    });
+                    setNotifications(list);
+                    setUnreadCount(list.filter((n) => !n.isRead).length);
+                },
+                () => {
+                    setNotifications([]);
+                    setUnreadCount(0);
+                    setRealtimeEnabled(false);
+                    setLoading(false);
+                }
+            );
+        } catch {
+            setRealtimeEnabled(false);
+        }
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [firestore, user?.id, realtimeEnabled]);
 
     useEffect(() => {
-        if (firestore) return;
+        if (firestore && realtimeEnabled) return;
         let cancelled = false;
         const loadUnread = async () => {
             try {
@@ -60,7 +94,7 @@ export default function TopbarRight() {
         };
         loadUnread();
         return () => { cancelled = true; };
-    }, [firestore]);
+    }, [firestore, realtimeEnabled]);
 
     const buildTargetUrl = (note) => {
         if (note.targetUrl) return note.targetUrl;
@@ -74,7 +108,7 @@ export default function TopbarRight() {
         const next = !open;
         setOpen(next);
         if (!next) return;
-        if (!firestore) {
+        if (!firestore || !realtimeEnabled) {
             setLoading(true);
             try {
                 const list = await getNotifications();
@@ -148,5 +182,13 @@ export default function TopbarRight() {
                 <span className="sp-avatar-text">{initial}</span>
             </button>
         </div>
+    );
+}
+
+export default function TopbarRight() {
+    return (
+        <TopbarRightBoundary>
+            <TopbarRightContent />
+        </TopbarRightBoundary>
     );
 }
