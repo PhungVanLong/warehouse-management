@@ -19,7 +19,7 @@ export default function LoginForm() {
             const res = await login({ username, password });
             if (res.success) {
                 localStorage.setItem("user", JSON.stringify(res.data));
-                navigate("/supplies");
+                navigate("/overview");
             } else {
                 setError(res.message || "Đăng nhập thất bại");
             }

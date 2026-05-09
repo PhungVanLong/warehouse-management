@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "./batches.css";
 import { getBatchById } from "../../api/batchApi";
+import TopbarRight from "../../components/TopbarRight";
 
 function formatDate(str) {
     if (!str) return "—";
@@ -58,16 +59,7 @@ export default function BatchDetailPage() {
                         &rsaquo; <span className="sp-breadcrumb-active">Chi tiết lô hàng</span>
                     </div>
                 </div>
-                <div className="sp-topbar-right">
-                    <button className="sp-icon-btn">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                        <span className="sp-notif-dot" />
-                    </button>
-                    <div className="sp-avatar" />
-                </div>
+                <TopbarRight />
             </div>
 
             {/* Content */}
@@ -102,7 +94,7 @@ export default function BatchDetailPage() {
                             <div className="sd-field sd-field-row">
                                 <div className="sd-field-half">
                                     <label className="sd-label">Số lượng ban đầu</label>
-                                    <div className="bt-read-value">{formatNumber(batch.quantity)}</div>
+                                    <div className="bt-read-value" >{formatNumber(batch.quantity)}</div>
                                 </div>
                                 <div className="sd-field-half">
                                     <label className="sd-label">Số lượng còn lại</label>

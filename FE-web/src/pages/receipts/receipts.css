@@ -191,6 +191,22 @@
     row-gap: 10px;
 }
 
+.rc-form-row.rc-form-row-wrap {
+    flex-wrap: wrap;
+}
+
+.rc-form-input.rc-input-auto {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 140px;
+}
+
+.rc-header-row.rc-header-row-wrap .rc-form-input {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 140px;
+}
+
 .rc-lapphieu-btn {
     display: flex;
     align-items: center;

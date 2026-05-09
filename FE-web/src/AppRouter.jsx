@@ -30,6 +30,10 @@ import AuditCreatePage from "./pages/audits/AuditCreatePage";
 import AuditDetailPage from "./pages/audits/AuditDetailPage";
 import AuditTasksPage from "./pages/audits/AuditTasksPage";
 import ReceiptReportPage from "./pages/reports/ReceiptReportPage";
+import IssueReportPage from "./pages/reports/IssueReportPage";
+import InventorySummaryReportPage from "./pages/reports/InventorySummaryReportPage";
+import ItemDetailReportPage from "./pages/reports/ItemDetailReportPage";
+import OverviewPage from "./pages/overview/OverviewPage";
 import SidebarLayout from "./components/SidebarLayout";
 
 export default function AppRouter() {
@@ -44,6 +48,7 @@ export default function AppRouter() {
 
                 {/* Các route còn lại đều bọc SidebarLayout */}
                 <Route element={<SidebarLayout />}>
+                    <Route path="/overview" element={<OverviewPage />} />
                     <Route path="/supplies" element={<SuppliesPage />} />
                     <Route path="/supplies/create" element={<SuppliesCreatePage />} />
                     <Route path="/supplies/:id" element={<SuppliesDetailPage />} />
@@ -70,6 +75,9 @@ export default function AppRouter() {
                     <Route path="/audits/requests" element={<AuditTasksPage />} />
                     <Route path="/audits/:id" element={<AuditDetailPage />} />
                     <Route path="/reports/receipt" element={<ReceiptReportPage />} />
+                    <Route path="/reports/issue" element={<IssueReportPage />} />
+                    <Route path="/reports/inventory-summary" element={<InventorySummaryReportPage />} />
+                    <Route path="/reports/item-detail" element={<ItemDetailReportPage />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>

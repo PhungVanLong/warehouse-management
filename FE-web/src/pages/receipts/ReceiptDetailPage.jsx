@@ -3,6 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import "../../styles/shared.css";
 import "./receipts.css";
 import { getReceiptById, confirmReceipt, cancelReceipt } from "../../api/receiptApi";
+import TopbarRight from "../../components/TopbarRight";
+
+const COMPANY_NAME = "CÔNG TY TNHH HOSHIMOTO VIỆT NAM";
+const COMPANY_ADDRESS_LINE1 = "Căn số 49-TT5, Khu nhà ở Đài phát sóng phát thanh Mễ Trì,";
+const COMPANY_ADDRESS_LINE2 = "Phường Đại Mỗ, TP Hà Nội";
 
 const STATUS_LABELS = { DRAFT: "Chờ duyệt", CONFIRMED: "Đã duyệt", CANCELLED: "Hủy" };
 const STATUS_CLASS = {
@@ -26,6 +31,78 @@ function formatDateInput(str) {
 function formatMoney(n) {
     if (!n && n !== 0) return "";
     return Number(n).toLocaleString("vi-VN");
+}
+
+function escapeHtml(str) {
+    return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function numberToWordsVi(n) {
+    const units = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+    const scales = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ", "triệu tỷ", "tỷ tỷ"];
+
+    const readTens = (num, full) => {
+        const tens = Math.floor(num / 10);
+        const unit = num % 10;
+        let text = "";
+
+        if (tens > 1) {
+            text = `${units[tens]} mươi`;
+            if (unit === 1) text += " mốt";
+            else if (unit === 5) text += " lăm";
+            else if (unit > 0) text += ` ${units[unit]}`;
+        } else if (tens === 1) {
+            text = "mười";
+            if (unit === 1) text += " một";
+            else if (unit === 5) text += " lăm";
+            else if (unit > 0) text += ` ${units[unit]}`;
+        } else if (full && unit > 0) {
+            text = `lẻ ${units[unit]}`;
+        } else if (unit > 0) {
+            text = units[unit];
+        }
+
+        return text;
+    };
+
+    const readHundreds = (num, full) => {
+        const hundred = Math.floor(num / 100);
+        const rest = num % 100;
+        let text = "";
+
+        if (hundred > 0 || full) {
+            text = `${units[hundred]} trăm`;
+            if (rest > 0) text += ` ${readTens(rest, true)}`;
+        } else if (rest > 0) {
+            text = readTens(rest, false);
+        }
+
+        return text;
+    };
+
+    if (n === 0) return "không";
+
+    let number = Math.floor(Math.abs(n));
+    let scaleIndex = 0;
+    let parts = [];
+
+    while (number > 0 && scaleIndex < scales.length) {
+        const chunk = number % 1000;
+        if (chunk > 0) {
+            const full = scaleIndex > 0 && chunk < 100;
+            const chunkText = readHundreds(chunk, full).trim();
+            parts.unshift(`${chunkText} ${scales[scaleIndex]}`.trim());
+        }
+        number = Math.floor(number / 1000);
+        scaleIndex += 1;
+    }
+
+    return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
 export default function ReceiptDetailPage() {
@@ -93,6 +170,184 @@ export default function ReceiptDetailPage() {
         ? receipt.details.reduce((s, d) => s + (d.amount || (d.quantity || 0) * (d.unitprice || 0)), 0)
         : 0;
 
+    const handleExportPdf = () => {
+        if (!receipt) return;
+
+        const totalRound = Math.round(totalAmount || 0);
+        const rawWords = numberToWordsVi(totalRound);
+        const totalWords = `${rawWords.charAt(0).toUpperCase()}${rawWords.slice(1)} đồng chẵn`;
+        const docDate = formatDate(receipt.docDate);
+        const invoiceDate = formatDate(receipt.invoiceDate || receipt.docDate);
+        const supplierName = receipt.supplierName || receipt.customerName || "";
+        const createdBy = receipt.createdByFullname || receipt.createdByName || "";
+        const deliverer = receipt.delivererName || receipt.deliveryName || supplierName;
+        const storekeeper = receipt.storekeeperName || "";
+        const address = receipt.address || "";
+        const docNo = receipt.docno || "";
+        const warehouseName = receipt.warehouseName || receipt.warehouseCode || "Kho hàng hóa";
+
+        const rowsHtml = (receipt.details || []).map((d, idx) => {
+            const qty = Number(d.quantity || 0);
+            const actualQty = d.currentQty ?? d.onhandQty ?? d.onhand ?? d.availableQty ?? d.stockQty ?? d.quantity ?? 0;
+            const unitPrice = Number(d.unitprice || 0);
+            const amount = d.amount || qty * unitPrice;
+            return `
+                <tr>
+                    <td class="center">${idx + 1}</td>
+                    <td>${escapeHtml(d.itemname || "")}</td>
+                    <td class="center">${escapeHtml(d.itemcode || "")}</td>
+                    <td class="center">${escapeHtml(d.unitof || "")}</td>
+                    <td class="right">${formatMoney(qty)}</td>
+                    <td class="right">${formatMoney(actualQty)}</td>
+                    <td class="right">${formatMoney(unitPrice)}</td>
+                    <td class="right">${formatMoney(amount)}</td>
+                </tr>
+            `;
+        }).join("");
+
+        const html = `
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <title>Phieu nhap kho</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: "Times New Roman", serif; color: #111; margin: 24px 28px; }
+        .row { display: flex; justify-content: space-between; align-items: flex-start; }
+        .company { font-size: 14px; line-height: 1.4; }
+        .company .name { font-weight: 700; text-transform: uppercase; }
+        .form-meta { text-align: right; font-size: 12.5px; line-height: 1.25; }
+        .form-meta .title { font-weight: 700; }
+        .form-meta .note { font-style: italic; }
+        .doc-title { text-align: center; margin: 18px 0 8px; }
+        .doc-title h1 { margin: 0; font-size: 22px; letter-spacing: 0.5px; }
+        .doc-title .date { font-style: italic; margin-top: 4px; font-size: 14px; }
+        .doc-sub { text-align: center; font-size: 14px; margin-bottom: 10px; }
+        .doc-sub span { margin: 0 18px; }
+        .info { font-size: 14px; line-height: 1.6; margin: 10px 0; }
+        .info .label { display: inline-block; min-width: 130px; }
+        .info .line { border-bottom: 1px dotted #333; display: inline-block; min-width: 260px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border: 1px solid #000; padding: 6px 6px; vertical-align: middle; }
+        th { text-align: center; font-weight: 700; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .total-row td { font-weight: 700; }
+        .signature { margin-top: 18px; font-size: 14px; }
+        .sign-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center; }
+        .sign-title { font-weight: 700; }
+        .sign-sub { font-style: italic; font-size: 13px; }
+        .sign-space { height: 70px; }
+        @media print {
+            body { margin: 0; }
+            @page { size: A4 portrait; margin: 18mm 16mm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="row">
+        <div class="company">
+            <div class="name">${escapeHtml(COMPANY_NAME)}</div>
+            <div>${escapeHtml(COMPANY_ADDRESS_LINE1)}<br/>${escapeHtml(COMPANY_ADDRESS_LINE2)}</div>
+        </div>
+        <div class="form-meta">
+            <div class="title">Mẫu số: 01 - VT</div>
+            <div class="note">(Ban hành theo Thông tư số 200/2014/TT-BTC</div>
+            <div class="note">Ngày 22/12/2014 của Bộ Tài chính)</div>
+        </div>
+    </div>
+
+    <div class="doc-title">
+        <h1>PHIẾU NHẬP KHO</h1>
+        <div class="date">Ngày ${escapeHtml(docDate)}</div>
+    </div>
+    <div class="doc-sub">
+        <span>Số: ${escapeHtml(docNo)}</span>
+        <span>Nợ: ____________</span>
+        <span>Có: ____________</span>
+    </div>
+
+    <div class="info">- Họ và tên người giao: ${escapeHtml(deliverer || "____________________")}</div>
+    <div class="info">- Theo hóa đơn số ${escapeHtml(receipt.invoiceNo || "________")} ngày ${escapeHtml(invoiceDate || "____/____/____")} của ${escapeHtml(supplierName || "____________________")}</div>
+    <div class="info">- Nhập tại kho: ${escapeHtml(warehouseName)} &nbsp;&nbsp; Địa điểm: ${escapeHtml(address || "____________________")}</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th rowspan="2">STT</th>
+                <th rowspan="2">Tên, nhãn hiệu, quy cách, phẩm chất vật tư, dụng cụ sản phẩm, hàng hóa</th>
+                <th rowspan="2">Mã số</th>
+                <th rowspan="2">Đơn vị tính</th>
+                <th colspan="2">Số lượng</th>
+                <th rowspan="2">Đơn giá</th>
+                <th rowspan="2">Thành tiền</th>
+            </tr>
+            <tr>
+                <th>Theo chứng từ</th>
+                <th>Thực nhập</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${rowsHtml || ""}
+            <tr class="total-row">
+                <td class="center" colspan="7">Cộng</td>
+                <td class="right">${formatMoney(totalAmount)}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="info">- Tổng số tiền (Viết bằng chữ): <strong>${escapeHtml(totalWords)}</strong></div>
+    <div class="info">- Số chứng từ gốc kèm theo: ________________________________</div>
+
+    <div class="signature">
+        <div class="sign-row">
+            <div>
+                <div class="sign-title">Người lập phiếu</div>
+                <div class="sign-sub">(Ký, họ tên)</div>
+                <div class="sign-space"></div>
+                <div>${escapeHtml(createdBy)}</div>
+            </div>
+            <div>
+                <div class="sign-title">Người giao hàng</div>
+                <div class="sign-sub">(Ký, họ tên)</div>
+                <div class="sign-space"></div>
+            </div>
+            <div>
+                <div class="sign-title">Thủ kho</div>
+                <div class="sign-sub">(Ký, họ tên)</div>
+                <div class="sign-space"></div>
+                <div>${escapeHtml(storekeeper)}</div>
+            </div>
+            <div>
+                <div class="sign-title">Kế toán trưởng</div>
+                <div class="sign-sub">(Hoặc bộ phận có nhu cầu nhập)</div>
+                <div class="sign-sub">(Ký, họ tên)</div>
+                <div class="sign-space"></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+        `;
+
+        const win = window.open("", "_blank", "width=900,height=1200");
+        if (!win) return;
+        win.document.write(html);
+        win.document.close();
+
+        let printed = false;
+        const triggerPrint = () => {
+            if (printed || win.closed) return;
+            printed = true;
+            win.focus();
+            win.print();
+        };
+
+        win.onload = triggerPrint;
+        setTimeout(triggerPrint, 600);
+    };
+
     return (
         <>
             {confirmModal && (
@@ -136,16 +391,7 @@ export default function ReceiptDetailPage() {
                             <span className="sp-breadcrumb-active">Chi tiết phiếu nhập kho</span>
                         </div>
                     </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
-                    </div>
+                    <TopbarRight />
                 </div>
 
                 <div className="sp-content">
@@ -157,17 +403,15 @@ export default function ReceiptDetailPage() {
                     {!loading && !error && receipt && (
                         <div className="rc-form-card">
                             {/* ── Header ── */}
-                            <div className="rc-header-row">
+                            <div className="rc-header-row rc-header-row-wrap">
                                 <label className="rc-form-label">Ngày</label>
-                                <input type="date" className="rc-form-input" style={{ minWidth: 150 }} value={formatDateInput(receipt.docDate)} readOnly />
-                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Đối tượng</label>
-                                <input className="rc-form-input" style={{ minWidth: 250 }} value={receipt.customerName || ""} readOnly />
-                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
-                                <input className="rc-form-input" style={{ minWidth: 150 }} value={receipt.docno || ""} readOnly />
-                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Loại</label>
-                                <input className="rc-form-input" style={{ minWidth: 150 }} value={receipt.docType || receipt.doctype || "Thông thường"} readOnly />
+                                <input type="date" className="rc-form-input rc-input-auto" value={formatDateInput(receipt.docDate)} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Người lập</label>
-                                <input className="rc-form-input" style={{ minWidth: 160 }} value={receipt.createdByFullname || receipt.createdByName || ""} readOnly />
+                                <input className="rc-form-input rc-input-auto" value={receipt.createdByFullname || receipt.createdByName || ""} readOnly />
+                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
+                                <input className="rc-form-input rc-input-auto" value={receipt.docno || ""} readOnly />
+                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Loại</label>
+                                <input className="rc-form-input rc-input-auto" value={receipt.docType || receipt.doctype || "Thông thường"} readOnly />
                                 {/* Status pill – static badge, no dropdown */}
                                 <span className={`${STATUS_CLASS[receipt.docstatus] || "rc-status-pill"} rc-status-inline`} style={{ marginLeft: "auto", cursor: "default", pointerEvents: "none" }}>
                                     {STATUS_LABELS[receipt.docstatus] || receipt.docstatus}
@@ -200,9 +444,13 @@ export default function ReceiptDetailPage() {
                             ) : null}
 
                             {/* ── Diễn giải ── */}
-                            <div className="rc-form-row">
+                            <div className="rc-form-row rc-form-row-wrap">
                                 <label className="rc-form-label">Diễn giải</label>
                                 <input className="rc-form-input rc-form-full" value={receipt.description || ""} readOnly />
+                            </div>
+                            <div className="rc-form-row">
+                                <label className="rc-form-label">Đối tượng</label>
+                                <input className="rc-form-input rc-form-full" value={receipt.customerName || ""} readOnly />
                             </div>
 
                             {/* ── Địa chỉ ── */}
@@ -280,6 +528,7 @@ export default function ReceiptDetailPage() {
 
                             {/* ── Actions ── */}
                             <div className="rc-form-actions">
+                                <button className="rc-btn-template" onClick={handleExportPdf}>Xuất PDF</button>
                                 <button className="sp-btn-outline" onClick={() => navigate("/receipts")}>Quay lại</button>
                                 {receipt.docstatus === "DRAFT" && canConfirmCancel && (
                                     <>

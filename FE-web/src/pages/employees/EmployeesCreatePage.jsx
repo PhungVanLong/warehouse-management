@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import DatePicker from "../../components/DatePicker";
 import { createEmployee } from "../../api/employeeApi";
+import TopbarRight from "../../components/TopbarRight";
 
 const EMPTY_FORM = {
     usercode: "", fullname: "", username: "", email: "",
@@ -31,6 +32,7 @@ function IconChevron({ open }) {
 
 export default function EmployeesCreatePage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
     const isAdmin = currentUser?.role === "ADMIN";
 
@@ -45,6 +47,32 @@ export default function EmployeesCreatePage() {
     const [fieldErrors, setFieldErrors] = useState({});
     const [openSection, setOpenSection] = useState(true);
     const [openAccountSection, setOpenAccountSection] = useState(true);
+    const [prefilledFromClone, setPrefilledFromClone] = useState(false);
+
+    useEffect(() => {
+        const clone = location.state?.clone;
+        if (!clone || prefilledFromClone) return;
+        setForm({
+            ...EMPTY_FORM,
+            usercode: clone.usercode || "",
+            fullname: clone.fullname || "",
+            username: clone.username || "",
+            email: clone.email || "",
+            department: clone.department || "",
+            phoneNumber: clone.phoneNumber || "",
+            address: clone.address || "",
+            birthdate: clone.birthdate || "",
+            gender: clone.gender || "",
+            firstworkingdate: clone.firstworkingdate || "",
+            bankaccount: clone.bankaccount || "",
+            bankname: clone.bankname || "",
+            isActive: typeof clone.isActive === "boolean" ? clone.isActive : true,
+            role: clone.role || "STAFF",
+            password: "",
+            confirmPassword: "",
+        });
+        setPrefilledFromClone(true);
+    }, [location.state, prefilledFromClone]);
 
     const set = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -107,16 +135,7 @@ export default function EmployeesCreatePage() {
                         <span className="sp-breadcrumb-active">Thêm mới nhân viên</span>
                     </div>
                 </div>
-                <div className="sp-topbar-right">
-                    <button className="sp-icon-btn">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                        <span className="sp-notif-dot" />
-                    </button>
-                    <div className="sp-avatar" />
-                </div>
+                <TopbarRight />
             </div>
 
             {showToast && (

@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import ExcelJS from "exceljs";
 import "../../styles/shared.css";
 import "../receipts/receipts.css";
 import "./reports.css";
-import { getAllReceipts } from "../../api/receiptApi";
+import { getAllIssues } from "../../api/issueApi";
 import { getAllItems } from "../../api/itemApi";
 import { getAllEmployees } from "../../api/employeeApi";
 import { getAllCustomers } from "../../api/customerApi";
@@ -104,31 +104,27 @@ function FilterDrawer({ open, filters, setFilters, items, employees, customers, 
                         </select>
                     </div>
                     <div className="rpt-filter-field">
-                        <label className="rpt-filter-label">Người lập phiếu</label>
+                        <label className="rpt-filter-label">Người lập</label>
                         <select className="rc-form-select" value={local.createdBy} onChange={(e) => set("createdBy", e.target.value)}>
-                            <option value="">-- Tất cả người lập --</option>
-                            {employees.map((emp) => (
-                                <option key={emp.id} value={String(emp.id)}>
-                                    {emp.fullname || emp.username}
-                                </option>
+                            <option value="">-- Tất cả --</option>
+                            {employees.map((e) => (
+                                <option key={e.id} value={String(e.id)}>{e.fullname}</option>
                             ))}
                         </select>
                     </div>
                     <div className="rpt-filter-field">
                         <label className="rpt-filter-label">Đối tượng</label>
                         <select className="rc-form-select" value={local.customerId} onChange={(e) => set("customerId", e.target.value)}>
-                            <option value="">-- Tất cả đối tượng --</option>
-                            <TopbarRight />
-                            <option value="">-- Tất cả loại --</option>
-                            <option value="NORMAL">Thông thường</option>
-                            <option value="ADJUSTMENT">Điều chỉnh</option>
-                            <option value="RETURN">Hàng trả về</option>
+                            <option value="">-- Tất cả --</option>
+                            {customers.map((c) => (
+                                <option key={c.id} value={String(c.id)}>{c.customername}</option>
+                            ))}
                         </select>
                     </div>
                 </div>
-                <div className="rpt-drawer-footer">
-                    <button className="sp-btn-primary" onClick={handleApply} style={{ minWidth: 80 }}>Nhận</button>
-                    <button className="sp-btn-outline" onClick={handleCancel} style={{ minWidth: 80 }}>Hủy</button>
+                <div className="rpt-drawer-actions">
+                    <button className="sp-btn-outline" onClick={handleCancel}>Hủy</button>
+                    <button className="sp-btn-primary" onClick={handleApply}>Áp dụng</button>
                 </div>
             </div>
         </div>
@@ -137,8 +133,8 @@ function FilterDrawer({ open, filters, setFilters, items, employees, customers, 
 
 const EMPTY_FILTERS = { fromDate: "", toDate: "", itemId: "", createdBy: "", customerId: "", docType: "" };
 
-export default function ReceiptReportPage() {
-    const [receipts, setReceipts] = useState([]);
+export default function IssueReportPage() {
+    const [issues, setIssues] = useState([]);
     const [items, setItems] = useState([]);
     const [employees, setEmployees] = useState([]);
     const [customers, setCustomers] = useState([]);
@@ -158,28 +154,28 @@ export default function ReceiptReportPage() {
     useEffect(() => {
         setLoading(true);
         setError(null);
-        getAllReceipts()
-            .then((data) => setReceipts((data || []).filter((r) => r.docstatus === "CONFIRMED")))
-            .catch(() => setError("Không thể tải dữ liệu phiếu nhập."))
+        getAllIssues()
+            .then((data) => setIssues((data || []).filter((r) => r.docstatus === "CONFIRMED")))
+            .catch(() => setError("Không thể tải dữ liệu phiếu xuất."))
             .finally(() => setLoading(false));
     }, []);
 
     const rows = useMemo(() => {
         const result = [];
-        (receipts || []).forEach((r) => {
+        (issues || []).forEach((r) => {
             const details = r.details || [];
             if (details.length === 0) {
-                result.push({ receipt: r, detail: null });
+                result.push({ issue: r, detail: null });
             } else {
-                details.forEach((d) => result.push({ receipt: r, detail: d }));
+                details.forEach((d) => result.push({ issue: r, detail: d }));
             }
         });
         return result;
-    }, [receipts]);
+    }, [issues]);
 
     const filteredRows = useMemo(() => {
         const f = applied;
-        return rows.filter(({ receipt: r, detail: d }) => {
+        return rows.filter(({ issue: r, detail: d }) => {
             if (f.fromDate) {
                 const docD = toDateObj(r.docDate);
                 if (!docD || stripTime(docD) < stripTime(new Date(f.fromDate))) return false;
@@ -229,7 +225,7 @@ export default function ReceiptReportPage() {
         const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
 
         const wb = new ExcelJS.Workbook();
-        const ws = wb.addWorksheet("Bảng kê phiếu nhập");
+        const ws = wb.addWorksheet("Bảng kê phiếu xuất");
 
         ws.columns = [
             { width: 6 },
@@ -284,7 +280,7 @@ export default function ReceiptReportPage() {
         ws.addRow([]);
 
         // ── Row 4: Title ───────────────────────────────────────
-        const r4 = ws.addRow(["BẢNG KÊ CHỨNG TỪ PHIẾU NHẬP"]);
+        const r4 = ws.addRow(["BẢNG KÊ CHỨNG TỪ PHIẾU XUẤT"]);
         ws.mergeCells("A4:K4");
         r4.getCell(1).font = { bold: true, size: 14 };
         r4.getCell(1).alignment = { horizontal: "center", vertical: "middle" };
@@ -306,7 +302,7 @@ export default function ReceiptReportPage() {
         const hdrAlign = { horizontal: "center", vertical: "middle", wrapText: true };
         const hdrBorder = { top: GRAY_BORDER, bottom: GRAY_BORDER, left: GRAY_BORDER, right: GRAY_BORDER };
 
-        const r7 = ws.addRow(["STT", "Chứng từ", "", "Mã vật tư", "Tên vật tư", "Đvt", "Người lập", "Đối tượng", "Loại phiếu nhập", "Số lượng", "Thành tiền"]);
+        const r7 = ws.addRow(["STT", "Chứng từ", "", "Mã vật tư", "Tên vật tư", "Đvt", "Người lập", "Đối tượng", "Loại phiếu xuất", "Số lượng", "Thành tiền"]);
         const r8 = ws.addRow(["", "Ngày", "Số", "", "", "", "", "", "", "", ""]);
         r7.height = 22;
         r8.height = 18;
@@ -328,13 +324,13 @@ export default function ReceiptReportPage() {
         // ── Group rows by date ─────────────────────────────────
         const dateMap = new Map();
         const grouped = [];
-        filteredRows.forEach(({ receipt: r, detail: d }) => {
+        filteredRows.forEach(({ issue: r, detail: d }) => {
             const key = dateKey(r.docDate);
             if (!dateMap.has(key)) {
                 dateMap.set(key, { label: formatDate(r.docDate), rows: [] });
                 grouped.push(dateMap.get(key));
             }
-            dateMap.get(key).rows.push({ receipt: r, detail: d });
+            dateMap.get(key).rows.push({ issue: r, detail: d });
         });
 
         let currentRowNum = 9;
@@ -359,7 +355,7 @@ export default function ReceiptReportPage() {
             currentRowNum++;
 
             // Data rows
-            gRows.forEach(({ receipt: r, detail: d }) => {
+            gRows.forEach(({ issue: r, detail: d }) => {
                 const amt = d?.amount ?? (Number(d?.quantity || 0) * Number(d?.unitprice || 0));
                 const docType = (r.docType || r.doctype || "NORMAL").toUpperCase();
 
@@ -447,7 +443,7 @@ export default function ReceiptReportPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `BangKe_PhieuNhap_${stamp}.xlsx`;
+        a.download = `BangKe_PhieuXuat_${stamp}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -470,13 +466,13 @@ export default function ReceiptReportPage() {
                 <div className="sp-topbar">
                     <div>
                         <div className="sp-breadcrumb">
-                            Báo cáo &rsaquo; <span className="sp-breadcrumb-active">Bảng kê chứng từ phiếu nhập</span>
+                            Báo cáo &rsaquo; <span className="sp-breadcrumb-active">Bảng kê chứng từ phiếu xuất</span>
                         </div>
                     </div>
                     <TopbarRight />
                 </div>
                 <div className="sp-content">
-                    <h1 className="sp-title">Bảng kê chứng từ phiếu nhập</h1>
+                    <h1 className="sp-title">Bảng kê chứng từ phiếu xuất</h1>
                     <div className="sp-toolbar">
                         <div className="sp-search-wrap">
                             <span className="sp-search-icon">
@@ -501,7 +497,7 @@ export default function ReceiptReportPage() {
                     </div>
 
                     <div className="rpt-content rpt-printable">
-                        <div className="rpt-report-title">BẢNG KÊ CHỨNG TỪ PHIẾU NHẬP</div>
+                        <div className="rpt-report-title">BẢNG KÊ CHỨNG TỪ PHIẾU XUẤT</div>
                         {dateLabel && <div className="rpt-report-subtitle">{dateLabel}</div>}
 
                         {activeFilterCount > 0 && (
@@ -521,7 +517,7 @@ export default function ReceiptReportPage() {
 
                         {!loading && !error && (
                             <div className="rc-detail-table-wrap rpt-table-wrap">
-                                <table className="rc-detail-table rpt-table rpt-receipt-table" style={{ tableLayout: "fixed" }}>
+                                <table className="rc-detail-table rpt-table rpt-issue-table" style={{ tableLayout: "fixed" }}>
                                     <colgroup>
                                         <col style={{ width: "50px" }} />
                                         <col style={{ width: "90px" }} />
@@ -545,7 +541,7 @@ export default function ReceiptReportPage() {
                                             <th style={{ textAlign: "center" }}>ĐVT</th>
                                             <th>Người lập</th>
                                             <th>Đối tượng</th>
-                                            <th>Loại phiếu nhập</th>
+                                            <th>Loại phiếu xuất</th>
                                             <th className="rpt-num">Số lượng</th>
                                             <th className="rpt-num">Thành tiền</th>
                                         </tr>
@@ -562,13 +558,13 @@ export default function ReceiptReportPage() {
                                             // Group by date for display
                                             const dateMap = new Map();
                                             const grouped = [];
-                                            filteredRows.forEach(({ receipt: r, detail: d }) => {
+                                            filteredRows.forEach(({ issue: r, detail: d }) => {
                                                 const key = dateKey(r.docDate);
                                                 if (!dateMap.has(key)) {
                                                     dateMap.set(key, { label: formatDate(r.docDate), rows: [] });
                                                     grouped.push(dateMap.get(key));
                                                 }
-                                                dateMap.get(key).rows.push({ receipt: r, detail: d });
+                                                dateMap.get(key).rows.push({ issue: r, detail: d });
                                             });
                                             const rendered = [];
                                             let stt = 1;
@@ -581,7 +577,7 @@ export default function ReceiptReportPage() {
                                                         <td />
                                                     </tr>
                                                 );
-                                                gRows.forEach(({ receipt: r, detail: d }, ri) => {
+                                                gRows.forEach(({ issue: r, detail: d }, ri) => {
                                                     const amt = d?.amount ?? (Number(d?.quantity || 0) * Number(d?.unitprice || 0));
                                                     const docType = (r.docType || r.doctype || "NORMAL").toUpperCase();
                                                     rendered.push(

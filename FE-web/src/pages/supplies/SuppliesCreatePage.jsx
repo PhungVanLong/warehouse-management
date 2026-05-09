@@ -1,8 +1,9 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "./supplies.css";
 import { createItem } from "../../api/itemApi";
+import TopbarRight from "../../components/TopbarRight";
 
 const EMPTY_FORM = {
     itemcode: "",
@@ -16,11 +17,29 @@ const EMPTY_FORM = {
 
 export default function SuppliesCreatePage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [form, setForm] = useState({ ...EMPTY_FORM });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
+    const [prefilledFromClone, setPrefilledFromClone] = useState(false);
+
+    useEffect(() => {
+        const clone = location.state?.clone;
+        if (!clone || prefilledFromClone) return;
+        setForm({
+            ...EMPTY_FORM,
+            itemcode: clone.itemcode || "",
+            itemname: clone.itemname || "",
+            invoicename: clone.invoicename || "",
+            itemcatg: clone.itemcatg || "Hàng hóa",
+            description: clone.description || "",
+            unitof: clone.unitof || "Cái",
+            itemtype: clone.itemtype || "Vật tư hàng hóa",
+        });
+        setPrefilledFromClone(true);
+    }, [location.state, prefilledFromClone]);
 
     const handleChange = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -87,16 +106,7 @@ export default function SuppliesCreatePage() {
                             <span className="sp-breadcrumb-active">Thêm mới vật tư hàng hóa</span>
                         </div>
                     </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4c6152" strokeWidth="2" strokeLinecap="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
-                    </div>
+                    <TopbarRight />
                 </div>
 
                 {/* Content */}

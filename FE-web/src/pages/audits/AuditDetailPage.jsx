@@ -5,6 +5,7 @@ import "../receipts/receipts.css";
 import "./audits.css";
 import { getAuditById, confirmAudit, cancelAudit } from "../../api/auditApi";
 import { getAvailableLocations } from "../../api/issueApi";
+import TopbarRight from "../../components/TopbarRight";
 
 const STATUS_LABELS = {
     DRAFT: "Nháp",
@@ -114,8 +115,9 @@ export default function AuditDetailPage() {
                 setLocationsByItem({});
             }
         };
+
         loadLocations();
-    }, [audit?.details]);
+    }, [audit]);
 
     const handleConfirm = async () => {
         setConfirmModal(false);
@@ -130,7 +132,10 @@ export default function AuditDetailPage() {
             }
         } catch (err) {
             showToast("error", err?.response?.data?.message || "Có lỗi xảy ra.");
-        } finally { setActionLoading(false); setStatusMenuOpen(false); }
+        } finally {
+            setActionLoading(false);
+            setStatusMenuOpen(false);
+        }
     };
 
     const handleCancel = async () => {
@@ -145,10 +150,12 @@ export default function AuditDetailPage() {
             }
         } catch (err) {
             showToast("error", err?.response?.data?.message || "Có lỗi xảy ra.");
-        } finally { setActionLoading(false); setStatusMenuOpen(false); }
+        } finally {
+            setActionLoading(false);
+            setStatusMenuOpen(false);
+        }
     };
 
-    // Tổng hợp chênh lệch
     const summary = audit?.details ? audit.details.reduce(
         (acc, d) => {
             const diff = d.diffquantity ?? 0;
@@ -209,16 +216,7 @@ export default function AuditDetailPage() {
                             <span className="sp-breadcrumb-active">Chi tiết phiếu kiểm kê</span>
                         </div>
                     </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
-                    </div>
+                    <TopbarRight />
                 </div>
 
                 <div className="sp-content">

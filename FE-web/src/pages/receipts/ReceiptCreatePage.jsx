@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import "../../styles/shared.css";
 import "./receipts.css";
 import { createReceipt, getAvailableLocations, getAllReceipts } from "../../api/receiptApi";
@@ -7,6 +7,7 @@ import { getAuditById } from "../../api/auditApi";
 import { getAllCustomers } from "../../api/customerApi";
 import { getAllItems } from "../../api/itemApi";
 import { createBatch } from "../../api/batchApi";
+import TopbarRight from "../../components/TopbarRight";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 let _rowKey = 0;
@@ -322,6 +323,7 @@ function LocationModal({ open, onClose, onConfirm, loading, suggestions, quantit
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 export default function ReceiptCreatePage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams] = useSearchParams();
 
     const [form, setForm] = useState({ date: todayStr(), docno: "", customerId: "", address: "", description: "", docType: "NORMAL" });
@@ -332,9 +334,10 @@ export default function ReceiptCreatePage() {
     const [loadingData, setLoadingData] = useState(true);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
-    const [lapPhieuOpen, setLapPhieuOpen] = useState(false);
     const [locModal, setLocModal] = useState({ open: false, rowIdx: null, suggestions: [], loading: false });
     const [prefilledFromAudit, setPrefilledFromAudit] = useState(false);
+    const [prefilledFromClone, setPrefilledFromClone] = useState(false);
+    const [prefilledFromOverview, setPrefilledFromOverview] = useState(false);
     const loadData = useCallback(async () => {
         setLoadingData(true);
         try {
@@ -355,6 +358,64 @@ export default function ReceiptCreatePage() {
             setForm((prev) => ({ ...prev, docType: paramType }));
         }
     }, [searchParams]);
+
+    useEffect(() => {
+        const prefillItems = location.state?.prefillItems;
+        if (!prefillItems || prefilledFromOverview || prefilledFromClone || prefilledFromAudit) return;
+        const rowsFromOverview = (prefillItems || []).map((item) => ({
+            ...newRow(),
+            itemId: item.itemId || "",
+            itemcode: item.itemcode || "",
+            itemname: item.itemname || "",
+            unitof: item.unitof || "",
+            quantity: item.quantity != null ? String(item.quantity) : "",
+            price: "",
+            nameBatch: "L",
+            selectedLocations: [],
+        }));
+        if (rowsFromOverview.length > 0) setRows(rowsFromOverview);
+        setForm((prev) => ({
+            ...prev,
+            description: prev.description || "Nhập hàng bổ sung từ tổng quan",
+            docType: prev.docType || "NORMAL",
+        }));
+        setPrefilledFromOverview(true);
+    }, [location.state, prefilledFromOverview, prefilledFromClone, prefilledFromAudit]);
+
+    useEffect(() => {
+        const clone = location.state?.clone;
+        if (!clone || prefilledFromClone) return;
+        const toDateOnly = (val) => (val ? String(val).slice(0, 10) : "");
+        const rowsFromClone = (clone.details || []).map((d) => ({
+            ...newRow(),
+            itemId: d.itemId ?? d.itemid ?? "",
+            itemcode: d.itemcode || "",
+            itemname: d.itemname || "",
+            unitof: d.unitof || "",
+            quantity: d.quantity != null ? String(d.quantity) : d.qty != null ? String(d.qty) : "",
+            price: d.unitprice != null ? String(d.unitprice) : d.price != null ? String(d.price) : "",
+            nameBatch: d.nameBatch || d.batchCode || "L",
+            selectedLocations: [],
+        }));
+        if (rowsFromClone.length > 0) setRows(rowsFromClone);
+        setForm((prev) => ({
+            ...prev,
+            date: toDateOnly(clone.docDate) || prev.date,
+            customerId: clone.customerId || "",
+            address: clone.address || "",
+            description: clone.description || "",
+            docType: clone.docType || prev.docType || "NORMAL",
+        }));
+        setInvoice((prev) => ({
+            ...prev,
+            date: toDateOnly(clone.invoiceDate),
+            taxcode: clone.taxcode || clone.customerTaxcode || prev.taxcode,
+            number: clone.invoiceNo || clone.invoiceNumber || "",
+            supplierId: clone.customerId || prev.supplierId,
+        }));
+        setPrefilledFromClone(true);
+        setPrefilledFromAudit(true);
+    }, [location.state, prefilledFromClone]);
 
     useEffect(() => {
         const auditId = searchParams.get("auditId");
@@ -520,16 +581,7 @@ export default function ReceiptCreatePage() {
                             <span className="sp-breadcrumb-active">Thêm mới phiếu nhập kho</span>
                         </div>
                     </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
-                    </div>
+                    <TopbarRight />
                 </div>
 
                 <div className="sp-content">
@@ -542,22 +594,11 @@ export default function ReceiptCreatePage() {
                             <input type="date" className="rc-form-input" style={{ minWidth: 150 }} value={form.date} onChange={(e) => handleFormChange("date", e.target.value)} />
                             <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
                             <input className="rc-form-input" style={{ minWidth: 200 }} placeholder="Nhập số chứng từ" value={form.docno} onChange={(e) => handleFormChange("docno", e.target.value)} />
-                            <div style={{ position: "relative", marginLeft: "auto" }}>
-                                <button className="rc-lapphieu-btn" onClick={() => setLapPhieuOpen((v) => !v)}>
-                                    Lập phiếu <IconChevron />
-                                </button>
-                                {lapPhieuOpen && (
-                                    <div style={{ position: "absolute", right: 0, top: "110%", background: "#fff", border: "1.5px solid #c6dfd0", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 100, minWidth: 160, padding: "4px 0" }}
-                                        onBlur={() => setLapPhieuOpen(false)}>
-                                        {["Tạo mới", "Từ đơn hàng"].map((opt) => (
-                                            <div key={opt} style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#243427" }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = "#f3faf6"}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = ""}
-                                                onClick={() => setLapPhieuOpen(false)}>{opt}</div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            <label className="rc-form-label" style={{ marginLeft: 16 }}>Loại</label>
+                            <select className="rc-form-select" value={form.docType} onChange={(e) => handleFormChange("docType", e.target.value)}>
+                                <option value="NORMAL">Thông thường</option>
+                                <option value="ADJUSTMENT">Điều chỉnh</option>
+                            </select>
                         </div>
 
                         {/* ── Đối tượng ── */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import "../../styles/shared.css";
 import "../receipts/receipts.css";
 import "./issues.css";
@@ -8,6 +8,7 @@ import { getAuditById } from "../../api/auditApi";
 import { getAllCustomers } from "../../api/customerApi";
 import { getAllItems } from "../../api/itemApi";
 import { getAllBatches } from "../../api/batchApi";
+import TopbarRight from "../../components/TopbarRight";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 let _rowKey = 0;
@@ -272,6 +273,7 @@ function LocationModal({ open, onClose, onConfirm, loading, locations, quantity,
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function IssueCreatePage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams] = useSearchParams();
 
     const [form, setForm] = useState({ date: todayStr(), docno: "", customerId: "", address: "", description: "", docType: "NORMAL" });
@@ -285,6 +287,7 @@ export default function IssueCreatePage() {
     const [locModal, setLocModal] = useState({ open: false, rowIdx: null, locations: [], loading: false });
     const [stockByItem, setStockByItem] = useState({});
     const [prefilledFromAudit, setPrefilledFromAudit] = useState(false);
+    const [prefilledFromClone, setPrefilledFromClone] = useState(false);
 
     const loadData = useCallback(async () => {
         setLoadingData(true);
@@ -312,6 +315,36 @@ export default function IssueCreatePage() {
             setForm((prev) => ({ ...prev, docType: paramType }));
         }
     }, [searchParams]);
+
+    useEffect(() => {
+        const clone = location.state?.clone;
+        if (!clone || prefilledFromClone) return;
+        const toDateOnly = (val) => (val ? String(val).slice(0, 10) : "");
+        const rowsFromClone = (clone.details || []).map((d) => ({
+            ...newRow(),
+            itemId: d.itemId ?? d.itemid ?? "",
+            itemcode: d.itemcode || "",
+            itemname: d.itemname || "",
+            unitof: d.unitof || "",
+            batchId: d.batchId ?? "",
+            batchCode: d.batchCode || d.nameBatch || "",
+            unitCost: d.unitCost != null ? String(d.unitCost) : d.unitprice != null ? String(d.unitprice) : "",
+            quantity: d.quantity != null ? String(d.quantity) : d.qty != null ? String(d.qty) : "",
+            price: d.price != null ? String(d.price) : "",
+            selectedLocations: [],
+        }));
+        if (rowsFromClone.length > 0) setRows(rowsFromClone);
+        setForm((prev) => ({
+            ...prev,
+            date: toDateOnly(clone.docDate) || prev.date,
+            customerId: clone.customerId || "",
+            address: clone.address || "",
+            description: clone.description || "",
+            docType: clone.docType || prev.docType || "NORMAL",
+        }));
+        setPrefilledFromClone(true);
+        setPrefilledFromAudit(true);
+    }, [location.state, prefilledFromClone]);
 
     useEffect(() => {
         const auditId = searchParams.get("auditId");
@@ -493,16 +526,7 @@ export default function IssueCreatePage() {
                             <span className="sp-breadcrumb-active">Thêm mới phiếu xuất kho</span>
                         </div>
                     </div>
-                    <div className="sp-topbar-right">
-                        <button className="sp-icon-btn">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                            </svg>
-                            <span className="sp-notif-dot" />
-                        </button>
-                        <div className="sp-avatar" />
-                    </div>
+                    <TopbarRight />
                 </div>
 
                 <div className="sp-content">

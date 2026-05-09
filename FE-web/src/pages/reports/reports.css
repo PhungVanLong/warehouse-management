@@ -204,10 +204,29 @@
 .rpt-table-wrap {
     margin-top: 8px;
     margin-bottom: 0;
+    overflow-x: auto;
 }
 
 .rpt-table {
     width: 100%;
+    table-layout: auto;
+    min-width: 980px;
+}
+
+.rpt-table th,
+.rpt-table td {
+    white-space: normal;
+    word-break: break-word;
+    overflow: visible;
+}
+
+.rpt-num {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.rpt-nowrap {
+    white-space: nowrap;
 }
 
 /* ── Date group row ─────────────────────────────────── */
@@ -240,6 +259,31 @@
     color: #1a3a25;
     border-top: 2px solid #b8d8c5;
     padding: 7px 7px;
+}
+
+/* ── Item detail report rows ────────────────────────── */
+.rpt-item-group-row td {
+    background: #fef6e4;
+    color: #5a3e00;
+    font-weight: 700;
+    padding: 6px 8px;
+    border-top: 1px solid #d4c49a;
+    border-bottom: 1px solid #d4c49a;
+}
+
+.rpt-opening-row td {
+    background: #fffaf2;
+    font-weight: 600;
+}
+
+.rpt-summary-row td {
+    background: #f7fbf8;
+    font-weight: 700;
+}
+
+.rpt-summary-row.rpt-summary-strong td {
+    background: #f9f4e8;
+    font-weight: 800;
 }
 
 /* ── Print styles ────────────────────────────────────── */

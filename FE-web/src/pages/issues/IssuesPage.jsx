@@ -4,6 +4,7 @@ import "../../styles/shared.css";
 import "../receipts/receipts.css";
 import "./issues.css";
 import { getAllIssues } from "../../api/issueApi";
+import TopbarRight from "../../components/TopbarRight";
 
 const STATUS_LABELS = {
     DRAFT: "Chờ duyệt",
@@ -133,15 +134,25 @@ export default function IssuesPage() {
 
     const allChecked = pageData.length > 0 && pageData.every((r) => selected.has(r.id));
     const toggleAll = () => {
-        const next = new Set(selected);
-        if (allChecked) pageData.forEach((r) => next.delete(r.id));
-        else pageData.forEach((r) => next.add(r.id));
+        const next = new Set();
+        if (!allChecked && pageData[0]) next.add(pageData[0].id);
         setSelected(next);
     };
     const toggleOne = (id) => {
-        const next = new Set(selected);
-        if (next.has(id)) next.delete(id); else next.add(id);
+        const next = new Set();
+        if (!selected.has(id)) next.add(id);
         setSelected(next);
+    };
+
+    const handleClone = () => {
+        if (selected.size !== 1) {
+            window.alert("Vui lòng chọn 1 dòng để tạo bản sao.");
+            return;
+        }
+        const id = Array.from(selected)[0];
+        const item = issues.find((r) => r.id === id);
+        if (!item) return;
+        navigate("/issues/create", { state: { clone: item } });
     };
 
     const pages = useMemo(() => {
@@ -159,16 +170,7 @@ export default function IssuesPage() {
                         Chứng từ &rsaquo; <span className="sp-breadcrumb-active">Phiếu xuất kho</span>
                     </div>
                 </div>
-                <div className="sp-topbar-right">
-                    <button className="sp-icon-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                        <span className="sp-notif-dot" />
-                    </button>
-                    <div className="sp-avatar" />
-                </div>
+                <TopbarRight />
             </div>
 
             <div className="sp-content">
@@ -193,9 +195,7 @@ export default function IssuesPage() {
                     <button className="sp-btn-primary" onClick={() => navigate("/issues/create")}>
                         <IconPlus /> Thêm mới
                     </button>
-                    <button className="rc-btn-template"><IconDoc /> Thêm bản sao mới</button>
-                    <button className="rc-btn-template"><IconPrint /> Mẫu in</button>
-                    <button className="rc-btn-template"><IconExport /> Export</button>
+                    <button className="rc-btn-template" onClick={handleClone}><IconDoc /> Thêm bản sao mới</button>
                 </div>
 
                 {/* Tabs */}
@@ -245,7 +245,7 @@ export default function IssuesPage() {
                                     onClick={() => navigate(`/issues/${r.id}`)}
                                 >
                                     <td className="sp-td-cb" onClick={(e) => { e.stopPropagation(); toggleOne(r.id); }}>
-                                        <input type="checkbox" checked={selected.has(r.id)} onChange={() => { }} />
+                                        <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleOne(r.id)} />
                                     </td>
                                     <td className="sp-td-id">{r.docno}</td>
                                     <td>{formatDate(r.docDate)}</td>
