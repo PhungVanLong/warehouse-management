@@ -235,7 +235,7 @@ export default function PartnersPage() {
                                         onChange={(e) => toggleAll(e.target.checked)}
                                     />
                                 </th>
-                                <th>Mã <SortIcon /></th>
+                                <th className="sp-th-sticky">Mã <SortIcon /></th>
                                 <th>Tên doanh nghiệp <SortIcon /></th>
                                 <th>SDT đối tác <SortIcon /></th>
                                 <th>Đại diện pháp luật <SortIcon /></th>
@@ -266,7 +266,7 @@ export default function PartnersPage() {
                                             onChange={() => toggleRow(r.id)}
                                         />
                                     </td>
-                                    <td className="sp-td-id">{r.customercode}</td>
+                                    <td className="sp-td-id sp-td-sticky">{r.customercode}</td>
                                     <td>{r.customername}</td>
                                     <td>{r.partnermobile}</td>
                                     <td>{r.partnername}</td>

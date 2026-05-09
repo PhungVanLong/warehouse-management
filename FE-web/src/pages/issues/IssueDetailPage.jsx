@@ -295,8 +295,6 @@ export default function IssueDetailPage() {
                             <div className="rc-header-row rc-header-row-wrap">
                                 <label className="rc-form-label">Ngày</label>
                                 <input type="date" className="rc-form-input rc-input-auto" value={formatDateInput(issue.docDate)} readOnly />
-                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Người lập</label>
-                                <input className="rc-form-input rc-input-auto" value={issue.createdByFullname || issue.createdByName || ""} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
                                 <input className="rc-form-input rc-input-auto" value={issue.docno || ""} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Loại</label>
@@ -332,14 +330,17 @@ export default function IssueDetailPage() {
                                 </div>
                             ) : null}
 
+                            <div className="rc-form-row">
+                                <label className="rc-form-label">Người lập</label>
+                                <input className="rc-form-input rc-input-auto" value={issue.createdByFullname || issue.createdByName || ""} readOnly />
+                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Đối tượng</label>
+                                <input className="rc-form-input" style={{ flex: 1, minWidth: 260 }} value={issue.customerName || ""} readOnly />
+                            </div>
+
                             {/* ── Diễn giải ── */}
                             <div className="rc-form-row rc-form-row-wrap">
                                 <label className="rc-form-label">Diễn giải</label>
                                 <input className="rc-form-input rc-form-full" value={issue.description || ""} readOnly />
-                            </div>
-                            <div className="rc-form-row">
-                                <label className="rc-form-label">Đối tượng</label>
-                                <input className="rc-form-input rc-form-full" value={issue.customerName || ""} readOnly />
                             </div>
 
                             {/* ── Địa chỉ ── */}

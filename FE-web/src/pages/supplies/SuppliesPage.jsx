@@ -247,7 +247,7 @@ export default function SuppliesPage() {
                                         onChange={(e) => toggleAll(e.target.checked)}
                                     />
                                 </th>
-                                <th>Mã VT <SortIcon /></th>
+                                <th className="sp-th-sticky">Mã VT <SortIcon /></th>
                                 <th>Tên vật tư / hàng hóa <SortIcon /></th>
                                 <th>Tồn hiện tại <SortIcon /></th>
                                 <th>Tồn tối thiểu <SortIcon /></th>
@@ -276,7 +276,7 @@ export default function SuppliesPage() {
                                             onChange={() => toggleRow(r.id)}
                                         />
                                     </td>
-                                    <td className="sp-td-id">{r.itemcode}</td>
+                                    <td className="sp-td-id sp-td-sticky">{r.itemcode}</td>
                                     <td>{r.itemname}</td>
                                     <td className="sp-td-num">{stockByItem[String(r.id)] || 0}</td>
                                     <td className="sp-td-num">50</td>
