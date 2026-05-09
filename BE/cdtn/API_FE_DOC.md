@@ -1026,7 +1026,19 @@ Thông báo dùng để:
 4. Restart service de config co hieu luc.
 
 **Frontend (React/Vite):**
-- Firebase web config khong phai secret. Neu muon dung nhieu may, co the dat thong tin vao source (firebaseClient.js) hoac giu trong env tuy theo quy trinh cua team.
+- Firebase web config khong phai secret. De FE ket noi duoc tren nhieu may, co 2 cach:
+  - Cach A (khuyen nghi neu khong muon .env): dat config truc tiep trong `firebaseClient.js`.
+    ```js
+    const getConfig = () => ({
+      apiKey: "<apiKey>",
+      authDomain: "<projectId>.firebaseapp.com",
+      projectId: "<projectId>",
+      storageBucket: "<projectId>.appspot.com",
+      messagingSenderId: "<messagingSenderId>",
+      appId: "<appId>",
+    });
+    ```
+  - Cach B: dung `VITE_FIREBASE_*` (neu team muon quan ly bang env).
 
 **Firestore Rules (gợi ý tối thiểu):**
 ```txt
@@ -1121,8 +1133,3 @@ service cloud.firestore {
 - `GOODS_RECEIPT` → route `/receipts/{id}`
 - `GOODS_ISSUE` → route `/issues/{id}`
 - `INVENTORY_AUDIT` → route `/audits/{id}`
-# Persist for future shells
-setx FIREBASE_CREDENTIALS "C:\Users\ASUS\Downloads\firebase-service-account.json"
-
-# Also set for the current session (so you can run immediately)
-$env:FIREBASE_CREDENTIALS = "C:\Users\ASUS\Downloads\firebase-service-account.json"
