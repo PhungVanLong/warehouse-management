@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "../receipts/receipts.css";
 import "./audits.css";
-import { getAllAudits, getAssignedAudits } from "../../api/auditApi";
+import { getAllAudits, getAssignedAuditsPending, getAssignedAuditsDone } from "../../api/auditApi";
 import TopbarRight from "../../components/TopbarRight";
 
 const STATUS_LABELS = {
     DRAFT: "Nháp",
-    REQUESTED: "Chờ xử lý",
+    REQUESTED: "Đã giao",
     SUBMITTED: "Chờ duyệt",
     CONFIRMED: "Đã xác nhận",
     CANCELLED: "Đã hủy",
@@ -21,6 +21,7 @@ const STATUS_BADGE = {
     CANCELLED: "rc-badge au-badge-cancelled",
 };
 const TABS = ["Tất cả", "Nháp", "Đã giao", "Chờ duyệt", "Đã xác nhận", "Đã hủy"];
+const STAFF_TABS = ["Tất cả", "Đã giao", "Chờ duyệt", "Đã xác nhận", "Đã hủy"];
 const TAB_STATUS = { "Nháp": "DRAFT", "Đã giao": "REQUESTED", "Chờ duyệt": "SUBMITTED", "Đã xác nhận": "CONFIRMED", "Đã hủy": "CANCELLED" };
 const ROWS_OPTIONS = [10, 15, 20, 50];
 
@@ -80,8 +81,20 @@ export default function AuditsPage() {
         setLoading(true);
         setError(null);
         try {
-            const data = isStaff ? await getAssignedAudits() : await getAllAudits();
-            setAudits(data);
+            if (isStaff) {
+                const [pending, done] = await Promise.all([
+                    getAssignedAuditsPending(),
+                    getAssignedAuditsDone(),
+                ]);
+                const map = new Map();
+                [...(pending || []), ...(done || [])].forEach((item) => {
+                    if (item?.id != null) map.set(item.id, item);
+                });
+                setAudits(Array.from(map.values()));
+            } else {
+                const data = await getAllAudits();
+                setAudits(data);
+            }
         } catch {
             setError(isStaff ? "Không thể tải danh sách yêu cầu kiểm kê." : "Không thể tải danh sách phiếu kiểm kê.");
         } finally {
@@ -171,19 +184,17 @@ export default function AuditsPage() {
                 </div>
 
                 {/* Tabs */}
-                {!isStaff && (
-                    <div className="rc-tabs">
-                        {TABS.map((tab) => (
-                            <div
-                                key={tab}
-                                className={`rc-tab${activeTab === tab ? " rc-tab-active" : ""}`}
-                                onClick={() => { setActiveTab(tab); setPage(1); }}
-                            >
-                                {tab}
-                            </div>
-                        ))}
-                    </div>
-                )}
+                <div className="rc-tabs">
+                    {(isStaff ? STAFF_TABS : TABS).map((tab) => (
+                        <div
+                            key={tab}
+                            className={`rc-tab${activeTab === tab ? " rc-tab-active" : ""}`}
+                            onClick={() => { setActiveTab(tab); setPage(1); }}
+                        >
+                            {tab}
+                        </div>
+                    ))}
+                </div>
 
                 {/* Table */}
                 <div className="sp-table-wrap sp-scrollable">

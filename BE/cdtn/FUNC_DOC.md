@@ -220,15 +220,17 @@
 | GET | `/api/batches/{id}` | Chi ti?t l� h�ng | ADMIN, STAFF |
 | POST | `/api/batches` | T?o l� m?i, BE t? sinh `batchCode` | ADMIN, STAFF |
 
-**Quy t?c sinh `batchCode`:**
-- M?u: `NAMEBATCH-YYYYMMDD-ITEMCODE`.
-- `NAMEBATCH` t? `nameBatch`, chu?n h�a ch? hoa v� thay k� t? d?c bi?t b?ng `-`.
-- `YYYYMMDD` l?y t? `manufactureDate`; n?u kh�ng c� th� d�ng ng�y t?o l�.
-- `ITEMCODE` l?y t? `itemId`.
-- N?u tr�ng m� c�ng ng�y, BE th�m h?u t? th? t?:
-  - `LO-A-20260505-SP001`
-  - `LO-A-20260505-SP001-01`
-  - `LO-A-20260505-SP001-02`
+**Quy tac sinh `batchCode`:**
+- Mau: `ITEMCODE-YYYYMMDD`.
+- `ITEMCODE` lay tu `itemId`.
+- `YYYYMMDD` lay tu `manufactureDate`; neu khong co thi dung ngay tao lo.
+- Neu trung ma cung ngay, BE them hau to thu tu:
+  - `SP001-20260505`
+  - `SP001-20260505-01`
+  - `SP001-20260505-02`
+
+**Quy tac sinh `nameBatch`:**
+- Dinh dang: `Lo {tenVatTu} dot {YYYYMMDD}`
 
 **Y�u c?u khi t?o l�:**
 - `itemId` t?n t?i.
@@ -240,7 +242,6 @@
 ```json
 {
   "itemId": 5,
-  "nameBatch": "L� A",
   "receiptDetailId": 7,
   "manufactureDate": "2026-05-01",
   "expiryDate": "2027-05-01",
@@ -256,11 +257,11 @@
   "message": "T?o l� h�ng th�nh c�ng",
   "data": {
     "id": 12,
-    "batchCode": "LO-A-20260501-SP001",
+    "batchCode": "SP001-20260501",
     "itemId": 5,
     "itemcode": "SP001",
     "itemname": "S?n ph?m A",
-    "nameBatch": "L� A",
+    "nameBatch": "Lo San pham A dot 20260501",
     "receiptDetailId": 7,
     "manufactureDate": "2026-05-01",
     "expiryDate": "2027-05-01",
@@ -273,7 +274,7 @@
 ```
 
 **Ghi ch� cho FE:**
-- FE ch? g?i th�ng tin l�, BE sinh `batchCode` t? d?ng.
+- FE ch? g?i th�ng tin l�, BE sinh `batchCode` va `nameBatch` t? d?ng.
 - FE c� th? hi?n th? `batchCode` trong m�n h�nh chi ti?t l�.
 - Batch d�ng d? qu?n l� xu?t kho theo FIFO, d?c bi?t khi nhi?u l� c�ng item.
 

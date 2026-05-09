@@ -16,7 +16,7 @@ export const getBatchById = async (id) => {
 };
 
 // Tạo mới lô hàng
-// body: { itemId*, nameBatch*, receiptDetailId*, manufactureDate, expiryDate, unitCost*, quantity* }
+// body: { itemId*, receiptDetailId*, manufactureDate, expiryDate, unitCost*, quantity* }
 // batchCode do BE tự sinh, FE không gửi
 export const createBatch = async (body) => {
     const res = await axiosInstance.post(API_URL, body);

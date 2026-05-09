@@ -38,16 +38,30 @@ export default function AccountPage() {
         if (!stored) { navigate("/login"); return; }
         let parsed;
         try { parsed = JSON.parse(stored); } catch { navigate("/login"); return; }
-        const id = parsed.id;
+        const id = parsed.id ?? parsed.userId ?? parsed.employeeId ?? parsed.user?.id ?? parsed.user?.userId;
         if (!id) { navigate("/login"); return; }
         setUserId(id);
         if (parsed.fullname) setUserInitial(parsed.fullname.charAt(0).toUpperCase());
+
+        const role = parsed.role ?? parsed.user?.role;
+        if (role === "STAFF") {
+            setForm({ ...EMPTY_FORM, ...parsed, role: role || "STAFF" });
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         getEmployeeById(id)
             .then((data) => {
                 setForm({ ...EMPTY_FORM, ...data });
             })
-            .catch(() => setError("Không thể tải thông tin tài khoản."))
+            .catch((err) => {
+                if (err?.response?.status === 403) {
+                    setForm({ ...EMPTY_FORM, ...parsed, role: role || "STAFF" });
+                    return;
+                }
+                setError("Không thể tải thông tin tài khoản.");
+            })
             .finally(() => setLoading(false));
     }, []);
 

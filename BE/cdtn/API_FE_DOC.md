@@ -49,7 +49,7 @@
 | GoodsReceipt | `doctype`, mỗi detail cần `itemId`, `quantity` ( `docno` do BE tự sinh nếu không gửi ) |
 | GoodsIssue | mỗi detail cần `itemId`, `quantity`, `locationId` ( `docno` do BE tự sinh nếu không gửi ) |
 | InventoryAudit | mỗi detail cần `itemId` (số thực tế chỉ bắt buộc khi STAFF cập nhật) ( `docno` do BE tự sinh nếu không gửi ) |
-| Batch | `itemId`, `nameBatch`, `receiptDetailId`, `unitCost`, `quantity` |
+| Batch | `itemId`, `receiptDetailId`, `unitCost`, `quantity` |
 
 ### Unique
 
@@ -70,7 +70,7 @@
 
 ### Ngày giờ
 
-- FE không cần gửi `createdAt`, `batchCode`, `quantityRemaining`; BE tự sinh.
+- FE không cần gửi `createdAt`, `batchCode`, `nameBatch`, `quantityRemaining`; BE tự sinh.
 - Định dạng ngày: `yyyy-MM-dd` (ví dụ: `"2026-05-05"`).
 - Định dạng datetime: ISO 8601 (ví dụ: `"2026-05-05T08:30:00"`).
 
@@ -407,7 +407,7 @@
         "itemname": "Sản phẩm A",
         "unitof": "Cái",
         "quantity": 40,
-        "batchCodes": ["LO-HANG-A-20260415-SP001"]
+        "batchCodes": ["SP001-20260415"]
       }
     ]
   }
@@ -557,7 +557,7 @@ Trả về danh sách sắp xếp: `EXISTING` → `EMPTY` → `PARTIAL`.
         "itemname": "Sản phẩm A",
         "unitof": "Cái",
         "quantity": 40,
-        "batchCodes": ["LO-HANG-A-20260415-SP001"]
+        "batchCodes": ["SP001-20260415"]
       }
     ]
   }
@@ -702,6 +702,8 @@ BE thực hiện:
 | POST | `/api/inventory-audits/{id}/confirm` | Xác nhận → điều chỉnh tồn | ADMIN, MANAGER |
 | POST | `/api/inventory-audits/{id}/cancel` | Hủy phiếu DRAFT | ADMIN, MANAGER |
 | GET | `/api/inventory-audits/assigned` | Danh sách phiếu được gán cho `STAFF` đang đăng nhập | STAFF |
+| GET | `/api/inventory-audits/assigned/pending` | Danh sách phiếu kiểm kê chưa làm | STAFF |
+| GET | `/api/inventory-audits/assigned/done` | Danh sách phiếu kiểm kê đã làm | STAFF |
 | PUT | `/api/inventory-audits/{id}/assigned` | `STAFF` cập nhật chi tiết phiếu được gán (trạng thái REQUESTED) | STAFF |
 | POST | `/api/inventory-audits/{id}/submit` | `STAFF` gửi kết quả kiểm kê về Manager (chuyển sang SUBMITTED) | STAFF |
 
@@ -745,7 +747,8 @@ BE thực hiện:
 
 **Ghi chú cho FE (gán và nhận yêu cầu):**
 - Khi Manager muốn giao nhiệm vụ kiểm kê cho nhân viên: gửi `assignedUserId` (id của `STAFF`) và `sendToStaff=true` trong body của `POST /api/inventory-audits`. BE sẽ lưu phiếu và chuyển `docstatus` thành `REQUESTED`.
-- `STAFF` gọi `GET /api/inventory-audits/assigned` để lấy danh sách yêu cầu được giao. `STAFF` cập nhật số liệu qua `PUT /api/inventory-audits/{id}/assigned` (gửi `details` với `actualquantity`), rồi gọi `POST /api/inventory-audits/{id}/submit` để gửi kết quả về Manager (BE chuyển `docstatus` thành `SUBMITTED`).
+- `STAFF` gọi `GET /api/inventory-audits/assigned` hoặc `GET /api/inventory-audits/assigned/pending` để lấy danh sách yêu cầu chưa làm. `STAFF` cập nhật số liệu qua `PUT /api/inventory-audits/{id}/assigned` (gửi `details` với `actualquantity`), rồi gọi `POST /api/inventory-audits/{id}/submit` để gửi kết quả về Manager (BE chuyển `docstatus` thành `SUBMITTED`).
+- `STAFF` gọi `GET /api/inventory-audits/assigned/done` để lấy danh sách đã làm (SUBMITTED, CONFIRMED, CANCELLED).
 - Manager có thể xem phiếu ở trạng thái `SUBMITTED` và gọi `POST /api/inventory-audits/{id}/confirm` để áp chênh lệch và chuyển `CONFIRMED`.
 
 **Lưu ý FE sau khi `CONFIRMED`:**
@@ -780,6 +783,7 @@ BE thực hiện:
 
 **Response:**
 > Nếu gửi `sendToStaff=true` và có `assignedUserId`, BE sẽ trả `docstatus = REQUESTED` và đi kèm các trường `assignedToUserId`, `assignedToUsername`, `assignedToFullname`. Nếu không gửi yêu cầu cho nhân viên, `docstatus = DRAFT` và các trường gán sẽ là `null`. Khi vừa tạo yêu cầu, `actualquantity` và `diffquantity` sẽ là `null` cho đến khi STAFF cập nhật.
+> `auditor*` là người kiểm kê (nhân viên thực hiện); nếu không gán nhân viên thì `auditor*` là người tạo phiếu. `approver*` là người duyệt khi phiếu được confirm.
 ```json
 {
   "success": true,
@@ -796,6 +800,12 @@ BE thực hiện:
     "assignedToUserId": 12,
     "assignedToUsername": "staff01",
     "assignedToFullname": "Nhân viên kho",
+    "auditorUserId": 12,
+    "auditorUsername": "staff01",
+    "auditorFullname": "Nhân viên kho",
+    "approverUserId": null,
+    "approverUsername": null,
+    "approverFullname": null,
     "modifiedAt": null,
     "modifiedBy": null,
     "details": [
@@ -838,13 +848,16 @@ BE thực hiện:
 
 **Base path:** `/api/batches`
 
-**Mục đích:** Quản lý lô hàng, phục vụ xuất kho theo FIFO. `batchCode` do BE tự sinh — FE không gửi trường này.
+**Mục đích:** Quản lý lô hàng, phục vụ xuất kho theo FIFO. `batchCode` và `nameBatch` do BE tự sinh — FE không gửi các trường này.
 
 **Quy tắc sinh `batchCode`:**
-- Định dạng: `NAMEBATCH-YYYYMMDD-ITEMCODE`
-- Nếu trùng (cùng tên lô, ngày, mã hàng): thêm hậu tố `...-01`, `...-02`, ...
-- Ví dụ: `LO-HANG-A-20260505-SP001`, `LO-HANG-A-20260505-SP001-01`
+- Định dạng: `ITEMCODE-YYYYMMDD`
+- Nếu trùng (cùng mã vật tư, ngày): thêm hậu tố `...-01`, `...-02`, ...
+- Ví dụ: `SP001-20260505`, `SP001-20260505-01`
 - Ký tự đặc biệt và dấu tiếng Việt được chuẩn hóa thành `-`
+
+**Quy tắc sinh `nameBatch`:**
+- Định dạng: `Lo {tenVatTu} dot {YYYYMMDD}`
 
 | Method | Endpoint | Mô tả | Quyền |
 |--------|----------|-------|-------|
@@ -861,7 +874,6 @@ BE thực hiện:
 ```json
 {
   "itemId": 5,
-  "nameBatch": "Lô hàng A",
   "receiptDetailId": 10,
   "manufactureDate": "2026-04-15",
   "expiryDate": "2027-04-15",
@@ -873,7 +885,6 @@ BE thực hiện:
 | Trường | Bắt buộc | Mô tả |
 |--------|----------|-------|
 | `itemId` | ✅ | ID hàng hóa |
-| `nameBatch` | ✅ | Tên lô (dùng để sinh `batchCode`) |
 | `receiptDetailId` | ✅ | ID dòng phiếu nhập tạo ra lô này |
 | `manufactureDate` | ❌ | Ngày sản xuất; nếu null dùng ngày hiện tại để sinh mã |
 | `expiryDate` | ❌ | Hạn sử dụng |
@@ -887,11 +898,11 @@ BE thực hiện:
   "message": "Tạo lô hàng thành công",
   "data": {
     "id": 1,
-    "batchCode": "LO-HANG-A-20260415-SP001",
+    "batchCode": "SP001-20260415",
     "itemId": 5,
     "itemcode": "SP001",
     "itemname": "Sản phẩm A",
-    "nameBatch": "Lô hàng A",
+    "nameBatch": "Lo Sản phẩm A dot 20260415",
     "receiptDetailId": 10,
     "manufactureDate": "2026-04-15",
     "expiryDate": "2027-04-15",
@@ -917,11 +928,11 @@ BE thực hiện:
   "data": [
     {
       "id": 1,
-      "batchCode": "LO-HANG-A-20260415-SP001",
+      "batchCode": "SP001-20260415",
       "itemId": 5,
       "itemcode": "SP001",
       "itemname": "Sản phẩm A",
-      "nameBatch": "Lô hàng A",
+      "nameBatch": "Lo Sản phẩm A dot 20260415",
       "receiptDetailId": 10,
       "manufactureDate": "2026-04-15",
       "expiryDate": "2027-04-15",
@@ -946,7 +957,7 @@ BE thực hiện:
   "data": [
     {
       "batchId": 1,
-      "batchCode": "LO-HANG-A-20260415-SP001",
+      "batchCode": "SP001-20260415",
       "itemId": 5,
       "itemcode": "SP001",
       "itemname": "Sản phẩm A",
@@ -995,7 +1006,7 @@ Thông báo dùng để:
 - **Goods Issue**: STAFF tạo phiếu → Manager nhận `APPROVAL_REQUIRED`; Manager confirm → STAFF nhận `APPROVED`.
 - **Inventory Audit**:
   - Manager gán STAFF → STAFF nhận `ASSIGNED`.
-  - STAFF submit → Manager nhận `APPROVAL_REQUIRED`.
+  - STAFF submit → Quản lý đã tạo phiếu nhận `APPROVAL_REQUIRED`.
   - Manager confirm → STAFF nhận `APPROVED`.
 
 > FE có thể hiển thị badge số lượng chưa đọc và mở chi tiết phiếu khi click vào thông báo.

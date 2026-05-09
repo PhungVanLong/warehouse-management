@@ -236,20 +236,6 @@ export default function AuditDetailPage() {
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Người lập</label>
                                 <input className="rc-form-input" style={{ minWidth: 180 }} value={audit.createdByFullname || audit.createdByUsername || ""} readOnly />
 
-                                {audit.docstatus !== "DRAFT" && (
-                                    <>
-                                        <label className="rc-form-label" style={{ marginLeft: 16 }}>
-                                            {audit.docstatus === "CANCELLED" ? "Người hủy" : "Người kiểm kê"}
-                                        </label>
-                                        <input
-                                            className="rc-form-input"
-                                            style={{ minWidth: 180 }}
-                                            value={audit.modifiedBy || ""}
-                                            readOnly
-                                        />
-                                    </>
-                                )}
-
                                 {/* Status pill with dropdown – Manager only */}
                                 <div style={{ position: "relative", marginLeft: "auto" }}>
                                     <button
@@ -289,10 +275,22 @@ export default function AuditDetailPage() {
                             </div>
 
                             {/* ── Nhân viên được giao ── */}
-                            {(audit.assignedUserFullname || audit.assignedUsername) && (
+                            {(audit.assignedToFullname || audit.assignedToUsername || audit.assignedUserFullname || audit.assignedUsername || audit.approverFullname || audit.approverUsername) && (
                                 <div className="rc-form-row">
                                     <label className="rc-form-label">Nhân viên kiểm kê</label>
-                                    <input className="rc-form-input" style={{ minWidth: 200 }} value={audit.assignedUserFullname || audit.assignedUsername || ""} readOnly />
+                                    <input
+                                        className="rc-form-input"
+                                        style={{ minWidth: 200 }}
+                                        value={audit.assignedToFullname || audit.assignedToUsername || audit.assignedUserFullname || audit.assignedUsername || ""}
+                                        readOnly
+                                    />
+                                    <label className="rc-form-label" style={{ marginLeft: 16 }}>Người duyệt</label>
+                                    <input
+                                        className="rc-form-input"
+                                        style={{ minWidth: 200 }}
+                                        value={audit.approverFullname || audit.approverUsername || ""}
+                                        readOnly
+                                    />
                                     <span style={{ marginLeft: 10, fontSize: "0.82rem", color: "#f57f17", fontWeight: 600 }}>
                                         {audit.docstatus === "REQUESTED" ? "Đang chờ nhân viên xử lý" : audit.docstatus === "SUBMITTED" ? "Nhân viên đã gửi kết quả" : ""}
                                     </span>

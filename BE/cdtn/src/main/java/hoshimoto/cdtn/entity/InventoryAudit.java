@@ -50,6 +50,10 @@ public class InventoryAudit {
     @JoinColumn(name = "assigned_userid")
     private User assignedUser;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "approverid")
+    private User approver;
+
     @CreationTimestamp
     @Column(updatable = false, name = "createdat")
     private LocalDateTime createdAt;

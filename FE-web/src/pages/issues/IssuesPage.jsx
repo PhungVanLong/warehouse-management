@@ -85,6 +85,10 @@ function IconExport() {
 }
 
 export default function IssuesPage() {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const isStaff = user?.role === "STAFF";
+    const userId = user?.id ?? user?.userId;
+    const userCode = user?.usercode || user?.username || user?.userCode;
     const [issues, setIssues] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -112,6 +116,18 @@ export default function IssuesPage() {
 
     const filtered = useMemo(() => {
         let list = issues;
+        if (isStaff) {
+            list = list.filter((r) => {
+                const createdById = r?.createdById ?? r?.createdByUserId ?? r?.userId ?? r?.staffId ?? r?.employeeId ?? r?.createdBy;
+                const createdByObjId = r?.createdBy?.id ?? r?.createdBy?.userId;
+                if (userId && (String(createdById) === String(userId) || String(createdByObjId) === String(userId))) return true;
+                if (userCode) {
+                    const createdByCode = r?.createdByUsername ?? r?.createdByUsercode ?? r?.createdByUserCode;
+                    if (createdByCode && String(createdByCode) === String(userCode)) return true;
+                }
+                return false;
+            });
+        }
         if (activeTab !== "Tất cả") {
             const st = TAB_STATUS[activeTab];
             list = list.filter((r) => r.docstatus === st);

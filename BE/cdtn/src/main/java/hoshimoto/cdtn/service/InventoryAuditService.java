@@ -118,6 +118,19 @@ public class InventoryAuditService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    public List<InventoryAuditResponse> getAssignedPendingForCurrentUser() {
+        return getAssignedForCurrentUser();
+    }
+
+    public List<InventoryAuditResponse> getAssignedDoneForCurrentUser() {
+        var optUser = getCurrentUser();
+        if (optUser.isEmpty()) return java.util.List.of();
+        User u = optUser.get();
+        return auditRepository.findByAssignedUserIdAndDocstatusInOrderByCreatedAtDesc(
+                u.getId(), List.of(DocStatus.SUBMITTED, DocStatus.CONFIRMED, DocStatus.CANCELLED))
+                .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
     /**
      * Nhân viên cập nhật chi tiết cho phiếu được giao (chỉ khi trạng thái REQUESTED và là người được giao).
      */
@@ -210,6 +223,7 @@ public class InventoryAuditService {
         audit.setDocstatus(DocStatus.CONFIRMED);
         audit.setModifiedAt(LocalDateTime.now());
         getCurrentUser().ifPresent(u -> {
+            audit.setApprover(u);
             audit.setModifiedBy(u.getUsername());
         });
         auditRepository.save(audit);
@@ -264,8 +278,11 @@ public class InventoryAuditService {
     }
 
     private void notifyManagersAuditSubmitted(InventoryAudit audit) {
+        User requester = audit.getUser();
+        if (requester == null) return;
         String docno = audit.getDocno();
-        notificationService.notifyManagers(
+        notificationService.notifyUser(
+            requester,
                 NotificationType.APPROVAL_REQUIRED,
                 NotificationTargetType.INVENTORY_AUDIT,
                 audit.getId(),
@@ -382,6 +399,19 @@ public class InventoryAuditService {
             res.setAssignedToUserId(audit.getAssignedUser().getId());
             res.setAssignedToUsername(audit.getAssignedUser().getUsername());
             res.setAssignedToFullname(audit.getAssignedUser().getFullname());
+            res.setAuditorUserId(audit.getAssignedUser().getId());
+            res.setAuditorUsername(audit.getAssignedUser().getUsername());
+            res.setAuditorFullname(audit.getAssignedUser().getFullname());
+        } else if (audit.getUser() != null) {
+            res.setAuditorUserId(audit.getUser().getId());
+            res.setAuditorUsername(audit.getUser().getUsername());
+            res.setAuditorFullname(audit.getUser().getFullname());
+        }
+
+        if (audit.getApprover() != null) {
+            res.setApproverUserId(audit.getApprover().getId());
+            res.setApproverUsername(audit.getApprover().getUsername());
+            res.setApproverFullname(audit.getApprover().getFullname());
         }
 
         List<InventoryAuditDetail> details = detailRepository.findByInventoryAuditId(audit.getId());

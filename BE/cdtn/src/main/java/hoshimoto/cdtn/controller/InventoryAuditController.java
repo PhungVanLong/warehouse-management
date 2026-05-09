@@ -58,6 +58,20 @@ public class InventoryAuditController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Danh sách yêu cầu kiểm kê được giao", inventoryAuditService.getAssignedForCurrentUser()));
     }
 
+    /** Lấy danh sách phiếu chưa làm của nhân viên đăng nhập */
+    @GetMapping("/assigned/pending")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<List<InventoryAuditResponse>>> getAssignedPending() {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Danh sách phiếu kiểm kê chưa làm", inventoryAuditService.getAssignedPendingForCurrentUser()));
+    }
+
+    /** Lấy danh sách phiếu đã làm của nhân viên đăng nhập */
+    @GetMapping("/assigned/done")
+    @PreAuthorize("hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<List<InventoryAuditResponse>>> getAssignedDone() {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Danh sách phiếu kiểm kê đã làm", inventoryAuditService.getAssignedDoneForCurrentUser()));
+    }
+
     /** Nhân viên cập nhật chi tiết phiếu được giao */
     @PutMapping("/{id}/assigned")
     @PreAuthorize("hasRole('STAFF')")

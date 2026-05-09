@@ -20,6 +20,12 @@ public class InventoryAuditResponse {
     private Long assignedToUserId;
     private String assignedToUsername;
     private String assignedToFullname;
+    private Long auditorUserId;
+    private String auditorUsername;
+    private String auditorFullname;
+    private Long approverUserId;
+    private String approverUsername;
+    private String approverFullname;
     private LocalDateTime modifiedAt;
     private String modifiedBy;
     private List<InventoryAuditDetailResponse> details;

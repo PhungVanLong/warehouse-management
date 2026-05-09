@@ -8,7 +8,6 @@ import TopbarRight from "../../components/TopbarRight";
 
 const EMPTY_FORM = {
     itemId: "",
-    nameBatch: "",
     receiptDetailId: "",
     manufactureDate: "",
     expiryDate: "",
@@ -37,7 +36,6 @@ export default function BatchCreatePage() {
     const validate = () => {
         const errs = {};
         if (!form.itemId) errs.itemId = "Bắt buộc";
-        if (!form.nameBatch.trim()) errs.nameBatch = "Bắt buộc";
         if (!form.receiptDetailId) errs.receiptDetailId = "Bắt buộc";
         if (!form.unitCost || Number(form.unitCost) <= 0) errs.unitCost = "Phải lớn hơn 0";
         if (!form.quantity || Number(form.quantity) <= 0) errs.quantity = "Phải lớn hơn 0";
@@ -52,7 +50,6 @@ export default function BatchCreatePage() {
         try {
             await createBatch({
                 itemId: Number(form.itemId),
-                nameBatch: form.nameBatch,
                 receiptDetailId: Number(form.receiptDetailId),
                 manufactureDate: form.manufactureDate || undefined,
                 expiryDate: form.expiryDate || undefined,
@@ -130,19 +127,6 @@ export default function BatchCreatePage() {
                                         ))}
                                     </select>
                                     {fieldErrors.itemId && <span className="sd-error-msg">{fieldErrors.itemId}</span>}
-                                </div>
-                            </div>
-
-                            <div className="sd-field">
-                                <label className="sd-label">Tên lô <span className="sd-required">*</span></label>
-                                <div className="sd-input-wrap">
-                                    <input
-                                        className={`sd-input${fieldErrors.nameBatch ? " sd-input-error" : ""}`}
-                                        placeholder="Nhập tên lô hàng"
-                                        value={form.nameBatch}
-                                        onChange={(e) => handleChange("nameBatch", e.target.value)}
-                                    />
-                                    {fieldErrors.nameBatch && <span className="sd-error-msg">{fieldErrors.nameBatch}</span>}
                                 </div>
                             </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "../receipts/receipts.css";
@@ -70,6 +70,10 @@ export default function AuditCreatePage() {
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
     const showActual = !form.assigneeId;
+    const selectedAssignee = useMemo(
+        () => employees.find((e) => String(e.id) === String(form.assigneeId)),
+        [employees, form.assigneeId]
+    );
 
     const loadData = useCallback(async () => {
         setLoadingData(true);
@@ -226,19 +230,32 @@ export default function AuditCreatePage() {
                         </div>
 
                         {/* ── Nhân viên kiểm kê ── */}
-                        <div className="rc-form-row">
-                            <label className="rc-form-label">Nhân viên kiểm kê</label>
-                            <select
-                                className="rc-form-select rc-form-full"
-                                value={form.assigneeId}
-                                onChange={(e) => handleFormChange("assigneeId", e.target.value)}
-                                disabled={loadingData}
-                            >
-                                <option value="">(Không giao, tự kiểm kê)</option>
-                                {employees.filter((e) => e.role === "STAFF").map((emp) => (
-                                    <option key={emp.id} value={emp.id}>{emp.usercode ? `${emp.usercode}: ` : ""}{emp.fullname}</option>
-                                ))}
-                            </select>
+                        <div className="rc-form-2col">
+                            <div className="rc-form-field">
+                                <label className="rc-form-label">Mã nhân viên</label>
+                                <select
+                                    className="rc-form-select"
+                                    value={form.assigneeId}
+                                    onChange={(e) => handleFormChange("assigneeId", e.target.value)}
+                                    disabled={loadingData}
+                                >
+                                    <option value="">(Không giao, tự kiểm kê)</option>
+                                    {employees.filter((e) => e.role === "STAFF").map((emp) => (
+                                        <option key={emp.id} value={emp.id}>
+                                            {emp.usercode || emp.username || emp.id}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="rc-form-field">
+                                <label className="rc-form-label">Tên nhân viên</label>
+                                <input
+                                    className="rc-form-input"
+                                    value={selectedAssignee?.fullname || selectedAssignee?.username || ""}
+                                    placeholder="Tự điền khi chọn mã nhân viên"
+                                    readOnly
+                                />
+                            </div>
                         </div>
 
                         {/* ── Diễn giải ── */}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../../styles/shared.css";
 import "../receipts/receipts.css";
@@ -8,7 +8,7 @@ import { getAllLocations, getItemsAtLocation } from "../../api/locationApi";
 import TopbarRight from "../../components/TopbarRight";
 
 const STATUS_LABELS = {
-    REQUESTED: "Chờ xử lý",
+    REQUESTED: "Đã giao",
     SUBMITTED: "Chờ duyệt",
     CONFIRMED: "Đã xác nhận",
     CANCELLED: "Đã hủy",
@@ -19,6 +19,7 @@ const STATUS_BADGE = {
     CONFIRMED: "rc-badge au-badge-confirmed",
     CANCELLED: "rc-badge au-badge-cancelled",
 };
+const STATUS_FILTERS = ["ALL", "REQUESTED", "SUBMITTED", "CONFIRMED", "CANCELLED"];
 
 function formatDate(str) {
     if (!str) return "";
@@ -167,6 +168,7 @@ export default function AuditTasksPage() {
     const queryId = new URLSearchParams(location.search).get("id");
 
     const [audits, setAudits] = useState([]);
+    const [statusFilter, setStatusFilter] = useState("ALL");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [active, setActive] = useState(null);
@@ -197,8 +199,26 @@ export default function AuditTasksPage() {
 
     useEffect(() => { fetchList(); }, [fetchList]);
 
+    const statusCounts = useMemo(() => {
+        const counts = { ALL: audits.length };
+        STATUS_FILTERS.forEach((s) => { if (s !== "ALL") counts[s] = 0; });
+        (audits || []).forEach((a) => {
+            const st = a?.docstatus;
+            if (st) counts[st] = (counts[st] || 0) + 1;
+        });
+        return counts;
+    }, [audits]);
+
+    const filteredAudits = useMemo(() => {
+        if (statusFilter === "ALL") return audits;
+        return (audits || []).filter((a) => a?.docstatus === statusFilter);
+    }, [audits, statusFilter]);
+
     useEffect(() => {
-        if (!queryId) return;
+        if (!queryId) {
+            setActive(null);
+            return;
+        }
         handleOpen(Number(queryId));
     }, [queryId]);
 
@@ -350,6 +370,7 @@ export default function AuditTasksPage() {
                 showToast("success", "Đã gửi kết quả kiểm kê cho quản lý!");
                 await fetchList();
                 setActive(null);
+                navigate("/audits");
             } else {
                 showToast("error", res?.message || "Gửi thất bại.");
             }
@@ -394,53 +415,8 @@ export default function AuditTasksPage() {
                     <h1 className="sp-title">Yêu cầu kiểm kê</h1>
 
                     {!queryId && (
-                        <div className="sp-table-wrap sp-scrollable">
-                            <table className="sp-table">
-                                <thead>
-                                    <tr>
-                                        <th>Số phiếu</th>
-                                        <th>Ngày kiểm kê</th>
-                                        <th>Số mặt hàng</th>
-                                        <th>Diễn giải</th>
-                                        <th>Trạng thái</th>
-                                        <th className="sp-th-action">Thao tác</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loading && (
-                                        <tr><td colSpan={6} className="sp-status-row">Đang tải dữ liệu...</td></tr>
-                                    )}
-                                    {!loading && error && (
-                                        <tr><td colSpan={6} className="sp-status-row sp-status-error">{error}</td></tr>
-                                    )}
-                                    {!loading && !error && audits.length === 0 && (
-                                        <tr><td colSpan={6} className="sp-status-row">Không có yêu cầu kiểm kê nào.</td></tr>
-                                    )}
-                                    {!loading && !error && audits.map((r) => (
-                                        <tr key={r.id} className={`sp-row-clickable${active?.id === r.id ? " sp-row-selected" : ""}`} onClick={() => handleOpen(r.id)}>
-                                            <td className="sp-td-id">{r.docno}</td>
-                                            <td>{formatDate(r.docDate)}</td>
-                                            <td style={{ textAlign: "center", fontWeight: 600, color: "#1E3A2F" }}>
-                                                {r.details ? r.details.length : "—"}
-                                            </td>
-                                            <td style={{ color: "#4c6152", fontSize: "0.88rem" }}>{r.description || "—"}</td>
-                                            <td>
-                                                <span className={STATUS_BADGE[r.docstatus] || "rc-badge"}>
-                                                    {STATUS_LABELS[r.docstatus] || r.docstatus}
-                                                </span>
-                                            </td>
-                                            <td className="sp-td-action" onClick={(e) => { e.stopPropagation(); handleOpen(r.id); }}>
-                                                <button className="sp-edit-btn" title="Xử lý">
-                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                                    </svg>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="sp-status-row" style={{ padding: "36px 0" }}>
+                            Vui lòng chọn phiếu từ danh sách yêu cầu kiểm kê.
                         </div>
                     )}
 
@@ -538,7 +514,7 @@ export default function AuditTasksPage() {
                                                         step="1"
                                                         value={d.actualquantity ?? ""}
                                                         onChange={(e) => handleItemChange(idx, "actualquantity", e.target.value)}
-                                                        disabled
+                                                        disabled={!canEdit}
                                                         style={{ width: "90%" }}
                                                     />
                                                 </td>
@@ -575,7 +551,7 @@ export default function AuditTasksPage() {
                             </div>
 
                             <div className="rc-form-actions">
-                                <button className="sp-btn-outline" onClick={() => setActive(null)}>Đóng</button>
+                                <button className="sp-btn-outline" onClick={() => navigate("/audits")}>Đóng</button>
                                 {canEdit && (
                                     <>
                                         <button className="sp-btn-outline" onClick={handleSave} disabled={saving || submitting}>
