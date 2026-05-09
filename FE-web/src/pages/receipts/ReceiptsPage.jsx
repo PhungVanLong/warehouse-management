@@ -170,8 +170,8 @@ export default function ReceiptsPage() {
                     <div className="sp-breadcrumb">
                         Chứng từ &rsaquo; <span className="sp-breadcrumb-active">Phiếu nhập kho</span>
                     </div>
-                    <TopbarRight />
                 </div>
+                <TopbarRight />
             </div>
 
             <div className="sp-content">

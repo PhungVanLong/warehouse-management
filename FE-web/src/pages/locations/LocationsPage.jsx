@@ -270,7 +270,7 @@ export default function LocationsPage() {
                                         onChange={(e) => toggleAll(e.target.checked)}
                                     />
                                 </th>
-                                <th>Mã vị trí <SortIcon /></th>
+                                <th className="sp-th-sticky">Mã vị trí <SortIcon /></th>
                                 <th>Tên <SortIcon /></th>
                                 <th>Diễn giải <SortIcon /></th>
                                 <th>Mã vật tư</th>
@@ -298,7 +298,7 @@ export default function LocationsPage() {
                                             onChange={() => toggleRow(r.id)}
                                         />
                                     </td>
-                                    <td className="sp-td-id">{r.locationcode}</td>
+                                    <td className="sp-td-id sp-td-sticky">{r.locationcode}</td>
                                     <td>{r.locationname}</td>
                                     <td>{r.description}</td>
                                     <td style={{ fontSize: "0.9rem", color: "#234", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>{locationItemsMap[r.id] ?? "..."}</td>

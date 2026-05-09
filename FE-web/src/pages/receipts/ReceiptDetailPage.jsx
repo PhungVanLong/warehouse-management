@@ -406,8 +406,6 @@ export default function ReceiptDetailPage() {
                             <div className="rc-header-row rc-header-row-wrap">
                                 <label className="rc-form-label">Ngày</label>
                                 <input type="date" className="rc-form-input rc-input-auto" value={formatDateInput(receipt.docDate)} readOnly />
-                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Người lập</label>
-                                <input className="rc-form-input rc-input-auto" value={receipt.createdByFullname || receipt.createdByName || ""} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
                                 <input className="rc-form-input rc-input-auto" value={receipt.docno || ""} readOnly />
                                 <label className="rc-form-label" style={{ marginLeft: 16 }}>Loại</label>
@@ -443,14 +441,17 @@ export default function ReceiptDetailPage() {
                                 </div>
                             ) : null}
 
+                            <div className="rc-form-row">
+                                <label className="rc-form-label">Người lập</label>
+                                <input className="rc-form-input rc-input-auto" value={receipt.createdByFullname || receipt.createdByName || ""} readOnly />
+                                <label className="rc-form-label" style={{ marginLeft: 16 }}>Đối tượng</label>
+                                <input className="rc-form-input" style={{ flex: 1, minWidth: 260 }} value={receipt.customerName || ""} readOnly />
+                            </div>
+
                             {/* ── Diễn giải ── */}
                             <div className="rc-form-row rc-form-row-wrap">
                                 <label className="rc-form-label">Diễn giải</label>
                                 <input className="rc-form-input rc-form-full" value={receipt.description || ""} readOnly />
-                            </div>
-                            <div className="rc-form-row">
-                                <label className="rc-form-label">Đối tượng</label>
-                                <input className="rc-form-input rc-form-full" value={receipt.customerName || ""} readOnly />
                             </div>
 
                             {/* ── Địa chỉ ── */}

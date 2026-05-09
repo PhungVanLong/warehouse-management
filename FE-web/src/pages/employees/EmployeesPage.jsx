@@ -239,7 +239,7 @@ export default function EmployeesPage() {
                                         onChange={(e) => toggleAll(e.target.checked)}
                                     />
                                 </th>
-                                <th>Mã nhân viên <SortIcon /></th>
+                                <th className="sp-th-sticky">Mã nhân viên <SortIcon /></th>
                                 <th>Họ và tên <SortIcon /></th>
                                 <th>Tên đăng nhập <SortIcon /></th>
                                 <th>Giới tính <SortIcon /></th>
@@ -272,7 +272,7 @@ export default function EmployeesPage() {
                                             onChange={() => toggleRow(r.id)}
                                         />
                                     </td>
-                                    <td className="sp-td-id">{r.usercode}</td>
+                                    <td className="sp-td-id sp-td-sticky">{r.usercode}</td>
                                     <td>{r.fullname}</td>
                                     <td>{r.username}</td>
                                     <td>{r.gender}</td>
