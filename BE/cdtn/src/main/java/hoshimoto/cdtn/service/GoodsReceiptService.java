@@ -20,6 +20,9 @@ import hoshimoto.cdtn.dto.request.GoodsReceiptDetailRequest;
 import hoshimoto.cdtn.dto.request.GoodsReceiptRequest;
 import hoshimoto.cdtn.entity.Customer;
 import hoshimoto.cdtn.entity.Enum.DocStatus;
+import hoshimoto.cdtn.entity.Enum.NotificationTargetType;
+import hoshimoto.cdtn.entity.Enum.NotificationType;
+import hoshimoto.cdtn.entity.Enum.Role;
 import hoshimoto.cdtn.entity.GoodsReceipt;
 import hoshimoto.cdtn.entity.GoodsReceiptDetail;
 import hoshimoto.cdtn.entity.InventoryBalance;
@@ -49,6 +52,7 @@ public class GoodsReceiptService {
     @Autowired private CustomerRepository customerRepository;
     @Autowired private BatchRepository batchRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private NotificationService notificationService;
 
     // ───────────────────────── CRUD ─────────────────────────
 
@@ -77,6 +81,7 @@ public class GoodsReceiptService {
         }
         receipt.setDocstatus(DocStatus.DRAFT);
         receipt = receiptRepository.save(receipt);
+        notifyManagersIfStaffCreated(receipt);
 
         saveDetails(receipt, request.getDetails());
         return toResponse(receipt);
@@ -182,6 +187,7 @@ public class GoodsReceiptService {
             receipt.setModifiedBy(u.getUsername());
         });
         receiptRepository.save(receipt);
+        notifyCreatorApproved(receipt);
         return toResponse(receipt);
     }
 
@@ -346,6 +352,35 @@ public class GoodsReceiptService {
         if (receipt.getUser() == null) {
             getCurrentUser().ifPresent(receipt::setUser);
         }
+    }
+
+    private void notifyManagersIfStaffCreated(GoodsReceipt receipt) {
+        User creator = receipt.getUser();
+        if (creator == null || creator.getRole() != Role.STAFF) return;
+        String docno = receipt.getDocno();
+        notificationService.notifyManagers(
+                NotificationType.APPROVAL_REQUIRED,
+                NotificationTargetType.GOODS_RECEIPT,
+                receipt.getId(),
+                docno,
+                "Phieu nhap can duyet",
+                "Phieu nhap " + docno + " can duyet"
+        );
+    }
+
+    private void notifyCreatorApproved(GoodsReceipt receipt) {
+        User creator = receipt.getUser();
+        if (creator == null || creator.getRole() != Role.STAFF) return;
+        String docno = receipt.getDocno();
+        notificationService.notifyUser(
+                creator,
+                NotificationType.APPROVED,
+                NotificationTargetType.GOODS_RECEIPT,
+                receipt.getId(),
+                docno,
+                "Phieu nhap da duyet",
+                "Phieu nhap " + docno + " da duyet"
+        );
     }
 
     private java.util.Optional<User> getCurrentUser() {

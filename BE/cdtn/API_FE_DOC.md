@@ -32,6 +32,7 @@
 9. [Inventory Audit – Kiểm kê](#9-inventory-audit--kiểm-kê)
 10. [Batch – Lô hàng](#10-batch--lô-hàng)
 11. [Lưu ý chung cho FE](#11-lưu-ý-chung-cho-fe)
+12. [Notifications – Thông báo](#12-notifications--thông-báo)
 
 ---
 
@@ -974,3 +975,154 @@ BE thực hiện:
    - `SUBMITTED` → "Chờ duyệt" (badge cam) — chỉ phiếu kiểm kê
    - `CONFIRMED` → "Đã xác nhận" (badge xanh)
    - `CANCELLED` → "Đã hủy" (badge đỏ)
+
+---
+
+## 12. Notifications – Thông báo
+
+**Base path:** `/api/notifications`
+
+### 12.1 Mục đích
+
+Thông báo dùng để:
+- **Manager** nhận cảnh báo khi có phiếu cần duyệt.
+- **Staff** nhận thông báo khi:
+  - Được giao phiếu kiểm kê.
+  - Phiếu do mình tạo đã được duyệt.
+
+**Nguồn phát sinh thông báo (hiện tại):**
+- **Goods Receipt**: STAFF tạo phiếu → Manager nhận `APPROVAL_REQUIRED`; Manager confirm → STAFF nhận `APPROVED`.
+- **Goods Issue**: STAFF tạo phiếu → Manager nhận `APPROVAL_REQUIRED`; Manager confirm → STAFF nhận `APPROVED`.
+- **Inventory Audit**:
+  - Manager gán STAFF → STAFF nhận `ASSIGNED`.
+  - STAFF submit → Manager nhận `APPROVAL_REQUIRED`.
+  - Manager confirm → STAFF nhận `APPROVED`.
+
+> FE có thể hiển thị badge số lượng chưa đọc và mở chi tiết phiếu khi click vào thông báo.
+
+**Realtime (Firestore):**
+- Collection path: `users/{userId}/notifications/{notificationId}`
+- FE subscribe `onSnapshot` để cập nhật realtime danh sách và unread count.
+- DB (PostgreSQL) là source of truth; Firestore chỉ là kênh push realtime.
+
+### 12.1.1 Cấu hình Firebase (Realtime Notifications)
+
+**Backend (Spring Boot):**
+1. Tạo Firebase project và bật Firestore (Native mode).
+2. Tạo service account JSON và lưu file trên server (khong commit).
+3. Cung cap duong dan file theo 1 trong 2 cach sau:
+   - Cach A (khuyen nghi): truyen property luc chay
+     - Maven: `mvn spring-boot:run -Dspring-boot.run.arguments="--firebase.credentials=C:\\secrets\\firebase-service-account.json"`
+     - Jar: `java -jar app.jar --firebase.credentials=C:\\secrets\\firebase-service-account.json`
+   - Cach B: env var `FIREBASE_CREDENTIALS`
+     - Windows (PowerShell):
+       ```powershell
+       setx FIREBASE_CREDENTIALS "C:\\secrets\\firebase-service-account.json"
+       ```
+     - Linux/macOS:
+       ```bash
+       export FIREBASE_CREDENTIALS=/opt/secrets/firebase-service-account.json
+       ```
+4. Restart service de config co hieu luc.
+
+**Frontend (React/Vite):**
+- Firebase web config khong phai secret. Neu muon dung nhieu may, co the dat thong tin vao source (firebaseClient.js) hoac giu trong env tuy theo quy trinh cua team.
+
+**Firestore Rules (gợi ý tối thiểu):**
+```txt
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/notifications/{notificationId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+  }
+}
+```
+
+### 12.2 Danh sách thông báo (theo user đăng nhập)
+
+**Endpoint:** `GET /api/notifications`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Danh sách thông báo",
+  "data": [
+    {
+      "id": 10,
+      "type": "APPROVAL_REQUIRED",
+      "targetType": "GOODS_RECEIPT",
+      "targetId": 123,
+      "docno": "PN-2026-001",
+      "title": "Phieu nhap can duyet",
+      "message": "Phieu nhap PN-2026-001 can duyet",
+      "isRead": false,
+      "createdAt": "2026-05-09T10:00:00",
+      "targetUrl": "/receipts/123"
+    }
+  ]
+}
+```
+
+**Comment FE:**
+- `targetUrl` là route FE đã map sẵn (ví dụ: `/receipts/{id}`, `/issues/{id}`, `/audits/{id}`), FE có thể `navigate(targetUrl)`.
+- Nếu FE không muốn dùng `targetUrl`, có thể tự build từ `targetType` + `targetId`.
+
+### 12.3 Đếm thông báo chưa đọc
+
+**Endpoint:** `GET /api/notifications/unread-count`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Số lượng thông báo chưa đọc",
+  "data": 5
+}
+```
+
+### 12.4 Đánh dấu đã đọc 1 thông báo
+
+**Endpoint:** `POST /api/notifications/{id}/read`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Đã đánh dấu đã đọc",
+  "data": null
+}
+```
+
+### 12.5 Đánh dấu đã đọc tất cả
+
+**Endpoint:** `POST /api/notifications/read-all`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Đã đánh dấu tất cả đã đọc",
+  "data": null
+}
+```
+
+### 12.6 Mapping type/target
+
+**`type`:**
+- `APPROVAL_REQUIRED` → "Cần duyệt"
+- `APPROVED` → "Đã duyệt"
+- `ASSIGNED` → "Được giao"
+
+**`targetType`:**
+- `GOODS_RECEIPT` → route `/receipts/{id}`
+- `GOODS_ISSUE` → route `/issues/{id}`
+- `INVENTORY_AUDIT` → route `/audits/{id}`
+# Persist for future shells
+setx FIREBASE_CREDENTIALS "C:\Users\ASUS\Downloads\firebase-service-account.json"
+
+# Also set for the current session (so you can run immediately)
+$env:FIREBASE_CREDENTIALS = "C:\Users\ASUS\Downloads\firebase-service-account.json"

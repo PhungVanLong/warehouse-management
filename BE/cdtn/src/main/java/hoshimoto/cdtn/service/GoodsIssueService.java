@@ -21,6 +21,9 @@ import hoshimoto.cdtn.dto.request.GoodsIssueRequest;
 import hoshimoto.cdtn.entity.Batch;
 import hoshimoto.cdtn.entity.Customer;
 import hoshimoto.cdtn.entity.Enum.DocStatus;
+import hoshimoto.cdtn.entity.Enum.NotificationTargetType;
+import hoshimoto.cdtn.entity.Enum.NotificationType;
+import hoshimoto.cdtn.entity.Enum.Role;
 import hoshimoto.cdtn.entity.GoodsIssue;
 import hoshimoto.cdtn.entity.GoodsIssueDetail;
 import hoshimoto.cdtn.entity.InventoryBalance;
@@ -50,6 +53,7 @@ public class GoodsIssueService {
     @Autowired private CustomerRepository customerRepository;
     @Autowired private BatchRepository batchRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private NotificationService notificationService;
 
     // ───────────────────────── CRUD ─────────────────────────
 
@@ -77,6 +81,7 @@ public class GoodsIssueService {
         }
         issue.setDocstatus(DocStatus.DRAFT);
         issue = issueRepository.save(issue);
+        notifyManagersIfStaffCreated(issue);
 
         saveDetails(issue, request.getDetails());
         return toResponse(issue);
@@ -181,6 +186,7 @@ public class GoodsIssueService {
             issue.setModifiedBy(u.getUsername());
         });
         issueRepository.save(issue);
+        notifyCreatorApproved(issue);
         return toResponse(issue);
     }
 
@@ -319,6 +325,35 @@ public class GoodsIssueService {
         if (issue.getUser() == null) {
             getCurrentUser().ifPresent(issue::setUser);
         }
+    }
+
+    private void notifyManagersIfStaffCreated(GoodsIssue issue) {
+        User creator = issue.getUser();
+        if (creator == null || creator.getRole() != Role.STAFF) return;
+        String docno = issue.getDocno();
+        notificationService.notifyManagers(
+                NotificationType.APPROVAL_REQUIRED,
+                NotificationTargetType.GOODS_ISSUE,
+                issue.getId(),
+                docno,
+                "Phieu xuat can duyet",
+                "Phieu xuat " + docno + " can duyet"
+        );
+    }
+
+    private void notifyCreatorApproved(GoodsIssue issue) {
+        User creator = issue.getUser();
+        if (creator == null || creator.getRole() != Role.STAFF) return;
+        String docno = issue.getDocno();
+        notificationService.notifyUser(
+                creator,
+                NotificationType.APPROVED,
+                NotificationTargetType.GOODS_ISSUE,
+                issue.getId(),
+                docno,
+                "Phieu xuat da duyet",
+                "Phieu xuat " + docno + " da duyet"
+        );
     }
 
     private java.util.Optional<User> getCurrentUser() {

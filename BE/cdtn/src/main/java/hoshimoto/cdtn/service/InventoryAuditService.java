@@ -16,6 +16,8 @@ import hoshimoto.cdtn.dto.InventoryAuditResponse;
 import hoshimoto.cdtn.dto.request.InventoryAuditDetailRequest;
 import hoshimoto.cdtn.dto.request.InventoryAuditRequest;
 import hoshimoto.cdtn.entity.Enum.DocStatus;
+import hoshimoto.cdtn.entity.Enum.NotificationTargetType;
+import hoshimoto.cdtn.entity.Enum.NotificationType;
 import hoshimoto.cdtn.entity.InventoryAudit;
 import hoshimoto.cdtn.entity.InventoryAuditDetail;
 import hoshimoto.cdtn.entity.InventoryBalance;
@@ -35,6 +37,7 @@ public class InventoryAuditService {
     @Autowired private ItemRepository itemRepository;
     @Autowired private InventoryBalanceRepository inventoryBalanceRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private NotificationService notificationService;
 
     // ───────────────────────── CRUD ─────────────────────────
 
@@ -79,6 +82,7 @@ public class InventoryAuditService {
         }
 
         audit = auditRepository.save(audit);
+        notifyAssignedStaff(audit);
 
         saveDetails(audit, request.getDetails());
         return toResponse(audit);
@@ -152,6 +156,7 @@ public class InventoryAuditService {
         audit.setModifiedAt(LocalDateTime.now());
         getCurrentUser().ifPresent(u -> audit.setModifiedBy(u.getUsername()));
         auditRepository.save(audit);
+        notifyManagersAuditSubmitted(audit);
         return toResponse(audit);
     }
 
@@ -208,6 +213,7 @@ public class InventoryAuditService {
             audit.setModifiedBy(u.getUsername());
         });
         auditRepository.save(audit);
+        notifyStaffAuditApproved(audit);
         return toResponse(audit);
     }
 
@@ -240,6 +246,49 @@ public class InventoryAuditService {
                 audit.setCreatedBy(u.getUsername());
             });
         }
+    }
+
+    private void notifyAssignedStaff(InventoryAudit audit) {
+        User assigned = audit.getAssignedUser();
+        if (assigned == null) return;
+        String docno = audit.getDocno();
+        notificationService.notifyUser(
+                assigned,
+                NotificationType.ASSIGNED,
+                NotificationTargetType.INVENTORY_AUDIT,
+                audit.getId(),
+                docno,
+                "Yeu cau kiem ke",
+                "Ban duoc giao kiem ke phieu " + docno
+        );
+    }
+
+    private void notifyManagersAuditSubmitted(InventoryAudit audit) {
+        String docno = audit.getDocno();
+        notificationService.notifyManagers(
+                NotificationType.APPROVAL_REQUIRED,
+                NotificationTargetType.INVENTORY_AUDIT,
+                audit.getId(),
+                docno,
+                "Phieu kiem ke can duyet",
+                "Phieu kiem ke " + docno + " can duyet"
+        );
+    }
+
+    private void notifyStaffAuditApproved(InventoryAudit audit) {
+        User assigned = audit.getAssignedUser();
+        User recipient = assigned != null ? assigned : audit.getUser();
+        if (recipient == null) return;
+        String docno = audit.getDocno();
+        notificationService.notifyUser(
+                recipient,
+                NotificationType.APPROVED,
+                NotificationTargetType.INVENTORY_AUDIT,
+                audit.getId(),
+                docno,
+                "Phieu kiem ke da duyet",
+                "Phieu kiem ke " + docno + " da duyet"
+        );
     }
 
     private void saveDetails(InventoryAudit audit, List<InventoryAuditDetailRequest> detailRequests) {
