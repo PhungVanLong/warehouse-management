@@ -42,6 +42,13 @@ function dateKey(str) {
     if (isNaN(d)) return str;
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+function parseLocalDate(str) {
+    if (!str) return null;
+    const parts = str.split("-");
+    if (parts.length === 3) return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    const d = new Date(str);
+    return isNaN(d) ? null : d;
+}
 
 function IconFilter() {
     return (
@@ -108,7 +115,7 @@ function FilterDrawer({ open, filters, setFilters, items, employees, customers, 
                         <select className="rc-form-select" value={local.createdBy} onChange={(e) => set("createdBy", e.target.value)}>
                             <option value="">-- Tất cả --</option>
                             {employees.map((e) => (
-                                <option key={e.id} value={String(e.id)}>{e.fullname}</option>
+                                <option key={e.id} value={e.fullname || e.username}>{e.fullname || e.username}</option>
                             ))}
                         </select>
                     </div>
@@ -122,9 +129,9 @@ function FilterDrawer({ open, filters, setFilters, items, employees, customers, 
                         </select>
                     </div>
                 </div>
-                <div className="rpt-drawer-actions">
-                    <button className="sp-btn-outline" onClick={handleCancel}>Hủy</button>
-                    <button className="sp-btn-primary" onClick={handleApply}>Áp dụng</button>
+                <div className="rpt-drawer-footer">
+                    <button className="sp-btn-primary" onClick={handleApply} style={{ minWidth: 80 }}>Nhận</button>
+                    <button className="sp-btn-outline" onClick={handleCancel} style={{ minWidth: 80 }}>Hủy</button>
                 </div>
             </div>
         </div>
@@ -178,14 +185,17 @@ export default function IssueReportPage() {
         return rows.filter(({ issue: r, detail: d }) => {
             if (f.fromDate) {
                 const docD = toDateObj(r.docDate);
-                if (!docD || stripTime(docD) < stripTime(new Date(f.fromDate))) return false;
+                if (!docD || stripTime(docD) < parseLocalDate(f.fromDate)) return false;
             }
             if (f.toDate) {
                 const docD = toDateObj(r.docDate);
-                if (!docD || stripTime(docD) > stripTime(new Date(f.toDate))) return false;
+                if (!docD || stripTime(docD) > parseLocalDate(f.toDate)) return false;
             }
             if (f.itemId && d) { if (String(d.itemId) !== f.itemId) return false; }
-            if (f.createdBy) { if (String(r.createdById || r.createdByUserId || "") !== f.createdBy) return false; }
+            if (f.createdBy) {
+                const rName = r.createdByFullname || r.createdByName || "";
+                if (rName !== f.createdBy) return false;
+            }
             if (f.customerId) { if (String(r.customerId || "") !== f.customerId) return false; }
             if (f.docType) {
                 const rt = (r.docType || r.doctype || "NORMAL").toUpperCase();

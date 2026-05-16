@@ -42,6 +42,14 @@ function dateKey(str) {
     if (isNaN(d)) return str;
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+// Parse yyyy-mm-dd from <input type="date"> as local date (no timezone shift)
+function parseLocalDate(str) {
+    if (!str) return null;
+    const parts = str.split("-");
+    if (parts.length === 3) return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    const d = new Date(str);
+    return isNaN(d) ? null : d;
+}
 
 function IconFilter() {
     return (
@@ -108,7 +116,7 @@ function FilterDrawer({ open, filters, setFilters, items, employees, customers, 
                         <select className="rc-form-select" value={local.createdBy} onChange={(e) => set("createdBy", e.target.value)}>
                             <option value="">-- Tất cả người lập --</option>
                             {employees.map((emp) => (
-                                <option key={emp.id} value={String(emp.id)}>
+                                <option key={emp.id} value={emp.fullname || emp.username}>
                                     {emp.fullname || emp.username}
                                 </option>
                             ))}
@@ -118,7 +126,16 @@ function FilterDrawer({ open, filters, setFilters, items, employees, customers, 
                         <label className="rpt-filter-label">Đối tượng</label>
                         <select className="rc-form-select" value={local.customerId} onChange={(e) => set("customerId", e.target.value)}>
                             <option value="">-- Tất cả đối tượng --</option>
-                            <TopbarRight />
+                            {customers.map((c) => (
+                                <option key={c.id} value={String(c.id)}>
+                                    {c.customername || c.name || c.username || String(c.id)}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="rpt-filter-field">
+                        <label className="rpt-filter-label">Loại phiếu nhập</label>
+                        <select className="rc-form-select" value={local.docType} onChange={(e) => set("docType", e.target.value)}>
                             <option value="">-- Tất cả loại --</option>
                             <option value="NORMAL">Thông thường</option>
                             <option value="ADJUSTMENT">Điều chỉnh</option>
@@ -182,14 +199,17 @@ export default function ReceiptReportPage() {
         return rows.filter(({ receipt: r, detail: d }) => {
             if (f.fromDate) {
                 const docD = toDateObj(r.docDate);
-                if (!docD || stripTime(docD) < stripTime(new Date(f.fromDate))) return false;
+                if (!docD || stripTime(docD) < parseLocalDate(f.fromDate)) return false;
             }
             if (f.toDate) {
                 const docD = toDateObj(r.docDate);
-                if (!docD || stripTime(docD) > stripTime(new Date(f.toDate))) return false;
+                if (!docD || stripTime(docD) > parseLocalDate(f.toDate)) return false;
             }
             if (f.itemId && d) { if (String(d.itemId) !== f.itemId) return false; }
-            if (f.createdBy) { if (String(r.createdById || r.createdByUserId || "") !== f.createdBy) return false; }
+            if (f.createdBy) {
+                const rName = r.createdByFullname || r.createdByName || "";
+                if (rName !== f.createdBy) return false;
+            }
             if (f.customerId) { if (String(r.customerId || "") !== f.customerId) return false; }
             if (f.docType) {
                 const rt = (r.docType || r.doctype || "NORMAL").toUpperCase();
@@ -500,8 +520,10 @@ export default function ReceiptReportPage() {
                         </button>
                     </div>
 
-                    <div className="rpt-content rpt-printable">
-                        <div className="rpt-report-title">BẢNG KÊ CHỨNG TỪ PHIẾU NHẬP</div>
+                    <div className="rpt-content rpt-printable">                        <div className="rpt-print-company">
+                        <div className="rpt-print-company-name">{COMPANY_NAME}</div>
+                        <div className="rpt-print-company-address">{COMPANY_ADDRESS}</div>
+                    </div>                        <div className="rpt-report-title">BẢNG KÊ CHỨNG TỪ PHIẾU NHẬP</div>
                         {dateLabel && <div className="rpt-report-subtitle">{dateLabel}</div>}
 
                         {activeFilterCount > 0 && (
@@ -614,6 +636,28 @@ export default function ReceiptReportPage() {
                                 </table>
                             </div>
                         )}
+                        {!loading && !error && filteredRows.length > 0 && (() => {
+                            const now = new Date();
+                            return (
+                                <div className="rpt-print-signature">
+                                    <div className="rpt-print-sig-date">
+                                        {`Ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}`}
+                                    </div>
+                                    <div className="rpt-print-sig-row">
+                                        <div className="rpt-print-sig-col">
+                                            <div className="rpt-print-sig-title">Người lập</div>
+                                            <div className="rpt-print-sig-sub">(Đã ký)</div>
+                                            <div className="rpt-print-sig-name">&nbsp;</div>
+                                        </div>
+                                        <div className="rpt-print-sig-col">
+                                            <div className="rpt-print-sig-title">Kế toán trưởng</div>
+                                            <div className="rpt-print-sig-sub">(Đã ký)</div>
+                                            <div className="rpt-print-sig-name">&nbsp;</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
             </div>
