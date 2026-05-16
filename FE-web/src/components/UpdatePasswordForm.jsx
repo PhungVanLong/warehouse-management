@@ -12,9 +12,24 @@ export default function UpdatePasswordForm() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    const validatePassword = (value) => {
+        if (value.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự.";
+        if (/\s/.test(value)) return "Mật khẩu không được chứa khoảng trắng.";
+        if (!/[A-Z]/.test(value)) return "Mật khẩu phải có ít nhất 1 chữ cái viết hoa.";
+        if (!/[a-z]/.test(value)) return "Mật khẩu phải có ít nhất 1 chữ cái viết thường.";
+        if (!/[0-9]/.test(value)) return "Mật khẩu phải có ít nhất 1 chữ số (0-9).";
+        if (!/[^A-Za-z0-9]/.test(value)) return "Mật khẩu phải có ít nhất 1 ký tự đặc biệt.";
+        return "";
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
+        const passwordError = validatePassword(newPassword);
+        if (passwordError) {
+            setError(passwordError);
+            return;
+        }
         if (newPassword !== confirmPassword) {
             setError("Mật khẩu xác nhận không khớp");
             return;

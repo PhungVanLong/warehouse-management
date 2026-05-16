@@ -178,14 +178,17 @@ export default function BatchCreatePage() {
                                 </div>
                             </div>
 
-                            <div className="sd-field">
-                                <label className="sd-label">Ngày sản xuất</label>
-                                <input
-                                    className="sd-input"
-                                    type="date"
-                                    value={form.manufactureDate}
-                                    onChange={(e) => handleChange("manufactureDate", e.target.value)}
-                                />
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Ngày sản xuất</label>
+                                    <input
+                                        className="sd-input"
+                                        type="date"
+                                        value={form.manufactureDate}
+                                        onChange={(e) => handleChange("manufactureDate", e.target.value)}
+                                    />
+                                </div>
+                                <div className="sd-field-half" />
                             </div>
                         </div>
 

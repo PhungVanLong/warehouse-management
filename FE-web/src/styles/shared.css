@@ -788,6 +788,47 @@
     gap: 3px;
 }
 
+.sd-pw-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.sd-pw-wrap .sd-input {
+    padding-right: 36px;
+    width: 100%;
+}
+
+.sd-pw-toggle {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6b8f7e;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.sd-pw-toggle:hover {
+    color: #277d4b;
+}
+
+/* Ẩn icon mặc định của trình duyệt trên trường password */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-strong-password-auto-fill-button {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .sd-input-wrap .sd-input {
     width: 100%;
     flex: none;

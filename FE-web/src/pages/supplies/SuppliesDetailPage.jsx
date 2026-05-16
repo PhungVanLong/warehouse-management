@@ -120,60 +120,65 @@ export default function SuppliesDetailPage() {
 
                         {/* Form */}
                         <div className="sd-form">
-                            <div className="sd-field">
-                                <label className="sd-label">Mã vật tư <span className="sd-required">*</span></label>
-                                <div className="sd-input-wrap">
-                                    <input
-                                        className={`sd-input${fieldErrors.itemcode ? " sd-input-error" : ""}`}
-                                        value={form.itemcode}
-                                        disabled={!isEditing}
-                                        onChange={(e) => handleChange("itemcode", e.target.value)}
-                                    />
-                                    {fieldErrors.itemcode && <span className="sd-error-msg">{fieldErrors.itemcode}</span>}
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Mã vật tư <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.itemcode ? " sd-input-error" : ""}`}
+                                            value={form.itemcode}
+                                            disabled={!isEditing}
+                                            onChange={(e) => handleChange("itemcode", e.target.value)}
+                                        />
+                                        {fieldErrors.itemcode && <span className="sd-error-msg">{fieldErrors.itemcode}</span>}
+                                    </div>
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Tên vật tư hàng hóa <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.itemname ? " sd-input-error" : ""}`}
+                                            value={form.itemname}
+                                            disabled={!isEditing}
+                                            onChange={(e) => handleChange("itemname", e.target.value)}
+                                        />
+                                        {fieldErrors.itemname && <span className="sd-error-msg">{fieldErrors.itemname}</span>}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="sd-field">
-                                <label className="sd-label">Tên vật tư hàng hóa <span className="sd-required">*</span></label>
-                                <div className="sd-input-wrap">
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Tên trên hóa đơn</label>
                                     <input
-                                        className={`sd-input${fieldErrors.itemname ? " sd-input-error" : ""}`}
-                                        value={form.itemname}
+                                        className="sd-input"
+                                        value={form.invoicename}
                                         disabled={!isEditing}
-                                        onChange={(e) => handleChange("itemname", e.target.value)}
+                                        onChange={(e) => handleChange("invoicename", e.target.value)}
                                     />
-                                    {fieldErrors.itemname && <span className="sd-error-msg">{fieldErrors.itemname}</span>}
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Ngành hàng</label>
+                                    <input
+                                        className="sd-input"
+                                        value={form.itemcatg}
+                                        disabled={!isEditing}
+                                        onChange={(e) => handleChange("itemcatg", e.target.value)}
+                                    />
                                 </div>
                             </div>
 
-                            <div className="sd-field">
-                                <label className="sd-label">Tên trên hóa đơn</label>
-                                <input
-                                    className="sd-input"
-                                    value={form.invoicename}
-                                    disabled={!isEditing}
-                                    onChange={(e) => handleChange("invoicename", e.target.value)}
-                                />
-                            </div>
-
-                            <div className="sd-field">
-                                <label className="sd-label">Ngành hàng</label>
-                                <input
-                                    className="sd-input"
-                                    value={form.itemcatg}
-                                    disabled={!isEditing}
-                                    onChange={(e) => handleChange("itemcatg", e.target.value)}
-                                />
-                            </div>
-
-                            <div className="sd-field">
-                                <label className="sd-label">Mô tả / Thông số kỹ thuật</label>
-                                <input
-                                    className="sd-input"
-                                    value={form.description}
-                                    disabled={!isEditing}
-                                    onChange={(e) => handleChange("description", e.target.value)}
-                                />
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Mô tả / Thông số kỹ thuật</label>
+                                    <input
+                                        className="sd-input"
+                                        value={form.description}
+                                        disabled={!isEditing}
+                                        onChange={(e) => handleChange("description", e.target.value)}
+                                    />
+                                </div>
+                                <div className="sd-field-half" />
                             </div>
 
                             <div className="sd-field sd-field-row">
@@ -213,9 +218,12 @@ export default function SuppliesDetailPage() {
                                     <input className="sd-input" value={50} readOnly />
                                 </div>
                             </div>
-                            <div className="sd-field">
-                                <label className="sd-label">Tồn tối đa</label>
-                                <input className="sd-input" value={500} readOnly />
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Tồn tối đa</label>
+                                    <input className="sd-input" value={500} readOnly />
+                                </div>
+                                <div className="sd-field-half" />
                             </div>
                         </div>
 
