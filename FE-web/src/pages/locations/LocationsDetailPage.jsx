@@ -171,7 +171,7 @@ export default function LocationsDetailPage() {
                                                 <input
                                                     className={`sd-input${fieldErrors.locationcode ? " sd-input-error" : ""}`}
                                                     value={form.locationcode}
-                                                    disabled={!isEditing}
+                                                    disabled
                                                     onChange={(e) => set("locationcode", e.target.value)}
                                                 />
                                                 {fieldErrors.locationcode && <span className="sd-error-msg">{fieldErrors.locationcode}</span>}
@@ -183,7 +183,7 @@ export default function LocationsDetailPage() {
                                                 <input
                                                     className={`sd-input${fieldErrors.locationname ? " sd-input-error" : ""}`}
                                                     value={form.locationname}
-                                                    disabled={!isEditing}
+                                                    disabled
                                                     onChange={(e) => set("locationname", e.target.value)}
                                                 />
                                                 {fieldErrors.locationname && <span className="sd-error-msg">{fieldErrors.locationname}</span>}

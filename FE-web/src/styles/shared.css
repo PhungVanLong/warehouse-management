@@ -344,8 +344,8 @@
 
 .sp-search-wrap {
     position: relative;
-    width: 320px;
-    flex-shrink: 0;
+    flex: 1;
+    min-width: 180px;
 }
 
 .sp-search-icon {
@@ -375,7 +375,7 @@
 }
 
 .sp-toolbar-spacer {
-    flex: 1;
+    display: none;
 }
 
 .sp-btn-primary {
@@ -535,16 +535,25 @@
 }
 
 /* Sticky column hover/selected states */
-.sp-table tbody tr.sp-row-clickable:hover td.sp-td-sticky {
-    background: #eef8f2;
+.sp-table tbody tr.sp-row-clickable:hover td.sp-td-sticky,
+.sp-table tbody tr.sp-row-clickable:hover td.sp-td-cb {
+    background: #eef8f2 !important;
 }
 
 .sp-row-selected td {
-    background: #f0fbf5;
+    background: #d6f5e3;
+}
+
+.sp-row-selected td:first-child {
+    border-left: 3px solid #2DBE60;
 }
 
 .sp-row-selected td.sp-td-sticky {
-    background: #f0fbf5;
+    background: #d6f5e3 !important;
+}
+
+.sp-row-selected td.sp-td-cb {
+    background: #d6f5e3 !important;
 }
 
 .sp-status-row {

@@ -127,7 +127,7 @@ export default function SuppliesDetailPage() {
                                         <input
                                             className={`sd-input${fieldErrors.itemcode ? " sd-input-error" : ""}`}
                                             value={form.itemcode}
-                                            disabled={!isEditing}
+                                            disabled
                                             onChange={(e) => handleChange("itemcode", e.target.value)}
                                         />
                                         {fieldErrors.itemcode && <span className="sd-error-msg">{fieldErrors.itemcode}</span>}
@@ -211,7 +211,7 @@ export default function SuppliesDetailPage() {
                             <div className="sd-field sd-field-row">
                                 <div className="sd-field-half">
                                     <label className="sd-label">Tồn hiện tại</label>
-                                    <input className="sd-input" value={currentStock} readOnly />
+                                    <input className="sd-input" value={currentStock} disabled readOnly />
                                 </div>
                                 <div className="sd-field-half">
                                     <label className="sd-label">Tồn tối thiểu</label>
