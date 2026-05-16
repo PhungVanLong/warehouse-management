@@ -9,15 +9,21 @@ import TopbarRight from "../../components/TopbarRight";
 
 const STATUS_LABELS = {
     DRAFT: "Nháp",
-    REQUESTED: "Chờ xử lý",
+    REQUESTED: "Chờ kiểm kê",
+    IN_PROGRESS: "Đang kiểm kê",
     SUBMITTED: "Chờ duyệt",
+    PENDING_PROCESS: "Chờ xử lý",
+    PROCESSED: "Đã xử lý",
     CONFIRMED: "Đã xác nhận",
     CANCELLED: "Đã hủy",
 };
 const STATUS_CLASS = {
     DRAFT: "rc-status-pill au-status-pill-draft",
     REQUESTED: "rc-status-pill au-status-pill-requested",
+    IN_PROGRESS: "rc-status-pill au-status-pill-in-progress",
     SUBMITTED: "rc-status-pill au-status-pill-submitted",
+    PENDING_PROCESS: "rc-status-pill au-status-pill-pending-process",
+    PROCESSED: "rc-status-pill au-status-pill-processed",
     CONFIRMED: "rc-status-pill au-status-pill-confirmed",
     CANCELLED: "rc-status-pill au-status-pill-cancelled",
 };
@@ -72,8 +78,8 @@ export default function AuditDetailPage() {
     const [locationsByItem, setLocationsByItem] = useState({});
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     const isStaff = user?.role === "STAFF";
-    // Manager can confirm from DRAFT or SUBMITTED
-    const canConfirm = !isStaff && (audit?.docstatus === "DRAFT" || audit?.docstatus === "SUBMITTED");
+    // Manager can confirm from DRAFT, SUBMITTED, or PENDING_PROCESS
+    const canConfirm = !isStaff && ["DRAFT", "SUBMITTED", "PENDING_PROCESS"].includes(audit?.docstatus);
     const canCancel = !isStaff && audit?.docstatus === "DRAFT";
     const canOpenMenu = canConfirm || canCancel;
     const canCreateAdjustment = !isStaff && audit?.docstatus === "CONFIRMED";
@@ -256,7 +262,7 @@ export default function AuditDetailPage() {
                                                     onMouseLeave={(e) => e.currentTarget.style.background = ""}
                                                     onClick={() => { setStatusMenuOpen(false); setConfirmModal(true); }}
                                                 >
-                                                    ✓ Xác nhận kiểm kê
+                                                    ✓ {audit?.docstatus === "PENDING_PROCESS" ? "Xử lý chênh lệch" : "Xác nhận kiểm kê"}
                                                 </div>
                                             )}
                                             {canCancel && (
@@ -292,7 +298,11 @@ export default function AuditDetailPage() {
                                         readOnly
                                     />
                                     <span style={{ marginLeft: 10, fontSize: "0.82rem", color: "#f57f17", fontWeight: 600 }}>
-                                        {audit.docstatus === "REQUESTED" ? "Đang chờ nhân viên xử lý" : audit.docstatus === "SUBMITTED" ? "Nhân viên đã gửi kết quả" : ""}
+                                        {audit.docstatus === "REQUESTED" ? "Đang chờ nhân viên bắt đầu kiểm kê"
+                                            : audit.docstatus === "IN_PROGRESS" ? "Nhân viên đang thực hiện kiểm kê"
+                                                : audit.docstatus === "SUBMITTED" ? "Nhân viên đã gửi kết quả"
+                                                    : audit.docstatus === "PENDING_PROCESS" ? "Có chênh lệch, cần xử lý"
+                                                        : ""}
                                     </span>
                                 </div>
                             )}
@@ -352,12 +362,22 @@ export default function AuditDetailPage() {
                             )}
                             {audit.docstatus === "REQUESTED" && (
                                 <div style={{ background: "#fff9c4", border: "1px solid #ffd54f", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#5d4037" }}>
-                                    Phiếu đã <strong>giao cho nhân viên</strong>. Đang chờ nhân viên kiểm kê và gửi kết quả.
+                                    Phiếu đã <strong>giao cho nhân viên</strong>. Đang chờ nhân viên bắt đầu kiểm kê.
+                                </div>
+                            )}
+                            {audit.docstatus === "IN_PROGRESS" && (
+                                <div style={{ background: "#e3f2fd", border: "1px solid #90caf9", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#1565c0" }}>
+                                    Nhân viên đang <strong>thực hiện kiểm kê</strong>. Vui lòng chờ kết quả.
                                 </div>
                             )}
                             {audit.docstatus === "SUBMITTED" && !isStaff && (
                                 <div style={{ background: "#fff3e0", border: "1px solid #ffb74d", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#5d4037" }}>
-                                    Nhân viên đã <strong>gửi kết quả kiểm kê</strong>. Vui lòng xem xét và xác nhận hoặc hủy.
+                                    Nhân viên đã <strong>gửi kết quả kiểm kê</strong>. Không có chênh lệch. Vui lòng xác nhận.
+                                </div>
+                            )}
+                            {audit.docstatus === "PENDING_PROCESS" && !isStaff && (
+                                <div style={{ background: "#ffe0b2", border: "1px solid #ff8a65", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#bf360c" }}>
+                                    Nhân viên đã gửi kết quả. <strong>Có chênh lệch tồn kho</strong>, vui lòng xem xét và xử lý.
                                 </div>
                             )}
 
@@ -457,7 +477,7 @@ export default function AuditDetailPage() {
                                 )}
                                 {canConfirm && (
                                     <button className="sp-btn-primary" onClick={() => setConfirmModal(true)} disabled={actionLoading}>
-                                        {actionLoading ? "Đang xử lý..." : "Xác nhận kiểm kê"}
+                                        {actionLoading ? "Đang xử lý..." : audit?.docstatus === "PENDING_PROCESS" ? "Xử lý chênh lệch" : "Xác nhận kiểm kê"}
                                     </button>
                                 )}
                                 {canCancel && (

@@ -8,21 +8,27 @@ import TopbarRight from "../../components/TopbarRight";
 
 const STATUS_LABELS = {
     DRAFT: "Nháp",
-    REQUESTED: "Đã giao",
+    REQUESTED: "Chờ kiểm kê",
+    IN_PROGRESS: "Đang kiểm kê",
     SUBMITTED: "Chờ duyệt",
+    PENDING_PROCESS: "Chờ xử lý",
+    PROCESSED: "Đã xử lý",
     CONFIRMED: "Đã xác nhận",
     CANCELLED: "Đã hủy",
 };
 const STATUS_BADGE = {
     DRAFT: "rc-badge au-badge-draft",
     REQUESTED: "rc-badge au-badge-requested",
+    IN_PROGRESS: "rc-badge au-badge-in-progress",
     SUBMITTED: "rc-badge au-badge-submitted",
+    PENDING_PROCESS: "rc-badge au-badge-pending-process",
+    PROCESSED: "rc-badge au-badge-processed",
     CONFIRMED: "rc-badge au-badge-confirmed",
     CANCELLED: "rc-badge au-badge-cancelled",
 };
-const TABS = ["Tất cả", "Nháp", "Đã giao", "Chờ duyệt", "Đã xác nhận", "Đã hủy"];
-const STAFF_TABS = ["Tất cả", "Đã giao", "Chờ duyệt", "Đã xác nhận", "Đã hủy"];
-const TAB_STATUS = { "Nháp": "DRAFT", "Đã giao": "REQUESTED", "Chờ duyệt": "SUBMITTED", "Đã xác nhận": "CONFIRMED", "Đã hủy": "CANCELLED" };
+const TABS = ["Tất cả", "Nháp", "Chờ kiểm kê", "Đang kiểm kê", "Chờ duyệt", "Chờ xử lý", "Đã xử lý", "Đã xác nhận", "Đã hủy"];
+const STAFF_TABS = ["Tất cả", "Chờ kiểm kê", "Đang kiểm kê", "Chờ duyệt", "Đã xác nhận", "Đã hủy"];
+const TAB_STATUS = { "Nháp": "DRAFT", "Chờ kiểm kê": "REQUESTED", "Đang kiểm kê": "IN_PROGRESS", "Chờ duyệt": "SUBMITTED", "Chờ xử lý": "PENDING_PROCESS", "Đã xử lý": "PROCESSED", "Đã xác nhận": "CONFIRMED", "Đã hủy": "CANCELLED" };
 const ROWS_OPTIONS = [10, 15, 20, 50];
 
 function formatDate(str) {

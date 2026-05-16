@@ -202,7 +202,7 @@ function LocationModal({ open, onClose, onConfirm, loading, suggestions, quantit
                 onClick={isDisabled ? undefined : () => handleToggle(loc)}
                 style={{ cursor: isDisabled ? "not-allowed" : "pointer", opacity: isDisabled ? 0.32 : 1, transition: "opacity 0.15s" }}
             >
-                <td><input type="checkbox" checked={isSel} disabled={isDisabled} onChange={() => { }} onClick={(e) => e.stopPropagation()} /></td>
+                <td><input type="checkbox" checked={isSel} disabled={isDisabled} onChange={() => { }} onClick={(e) => { e.stopPropagation(); if (!isDisabled) handleToggle(loc); }} /></td>
                 {extraCol}
                 <td>{loc.locationcode}</td>
                 <td>{loc.capacity ?? "∞"}</td>
@@ -456,6 +456,9 @@ export default function ReceiptCreatePage() {
         fillFromAudit();
     }, [searchParams, prefilledFromAudit]);
 
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const isManager = user?.role && user.role !== "STAFF";
+
     const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
 
     const handleFormChange = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
@@ -537,6 +540,7 @@ export default function ReceiptCreatePage() {
                 description: form.description.trim(),
                 customerId: Number(form.customerId),
                 docType: form.docType,
+                docstatus: isManager ? "CONFIRMED" : "DRAFT",
                 invoiceDate: invoice.date || undefined,
                 taxcode: invoice.taxcode || undefined,
                 invoiceNo: invoice.number || undefined,

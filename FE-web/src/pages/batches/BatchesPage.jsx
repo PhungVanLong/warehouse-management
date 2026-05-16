@@ -124,7 +124,7 @@ export default function BatchesPage() {
                         <td class="right">${formatNumber(r.quantity)}</td>
                         <td class="right">${formatNumber(r.quantityRemaining)}</td>
                         <td class="right">${formatNumber(r.unitCost)}</td>
-                        <td>${escapeHtml(formatDate(r.manufactureDate) || "")}</td>
+                        <td>${escapeHtml(formatDate(r.createdAt) || "")}</td>
                         </tr>
                 `).join("");
 
@@ -159,7 +159,7 @@ export default function BatchesPage() {
                 <th>Số lượng</th>
                 <th>Số lượng còn</th>
                 <th>Giá</th>
-                <th>Ngày sản xuất</th>
+                <th>Ngày tạo</th>
             </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
@@ -274,7 +274,7 @@ export default function BatchesPage() {
                                 <th>SL ban đầu <SortIcon /></th>
                                 <th>SL còn lại <SortIcon /></th>
                                 <th>Đơn giá nhập <SortIcon /></th>
-                                <th>Ngày sản xuất <SortIcon /></th>
+                                <th>Ngày tạo <SortIcon /></th>
                                 <th className="sp-th-action">Thao tác</th>
                             </tr>
                         </thead>
@@ -309,7 +309,7 @@ export default function BatchesPage() {
                                         </span>
                                     </td>
                                     <td className="bt-td-number" style={{ textAlign: "left" }}>{formatNumber(r.unitCost)}</td>
-                                    <td className="bt-td-date" style={{ textAlign: "left" }} >{formatDate(r.manufactureDate)}</td>
+                                    <td className="bt-td-date" style={{ textAlign: "left" }} >{formatDate(r.createdAt)}</td>
                                     <td className="sp-td-action" onClick={(e) => e.stopPropagation()}>
                                         <button className="sp-edit-btn" title="Xem chi tiết" onClick={() => navigate(`/batches/${r.id}`)}>
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

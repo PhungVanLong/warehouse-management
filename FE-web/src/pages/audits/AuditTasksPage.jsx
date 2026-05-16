@@ -8,18 +8,20 @@ import { getAllLocations, getItemsAtLocation } from "../../api/locationApi";
 import TopbarRight from "../../components/TopbarRight";
 
 const STATUS_LABELS = {
-    REQUESTED: "Đã giao",
+    REQUESTED: "Chờ kiểm kê",
+    IN_PROGRESS: "Đang kiểm kê",
     SUBMITTED: "Chờ duyệt",
     CONFIRMED: "Đã xác nhận",
     CANCELLED: "Đã hủy",
 };
 const STATUS_BADGE = {
     REQUESTED: "rc-badge au-badge-requested",
+    IN_PROGRESS: "rc-badge au-badge-in-progress",
     SUBMITTED: "rc-badge au-badge-submitted",
     CONFIRMED: "rc-badge au-badge-confirmed",
     CANCELLED: "rc-badge au-badge-cancelled",
 };
-const STATUS_FILTERS = ["ALL", "REQUESTED", "SUBMITTED", "CONFIRMED", "CANCELLED"];
+const STATUS_FILTERS = ["ALL", "REQUESTED", "IN_PROGRESS", "SUBMITTED", "CONFIRMED", "CANCELLED"];
 
 function formatDate(str) {
     if (!str) return "";

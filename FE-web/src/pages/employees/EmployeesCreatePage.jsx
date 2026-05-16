@@ -148,7 +148,22 @@ export default function EmployeesCreatePage() {
             setShowToast(true);
             setTimeout(() => navigate("/employees"), 2000);
         } catch (err) {
-            setError(err?.response?.data?.message || "Thêm mới thất bại. Vui lòng thử lại.");
+            const msg = err?.response?.data?.message || "";
+            const status = err?.response?.status;
+            if (status === 409 || status === 400) {
+                const lmsg = msg.toLowerCase();
+                if (/usercode|m[aã] nh[aâ]n vi[eê]n/i.test(lmsg)) {
+                    setFieldErrors((prev) => ({ ...prev, usercode: msg || "Mã nhân viên đã tồn tại." }));
+                } else if (/username|t[eê]n đ[aă]ng nh[aậ]p/i.test(lmsg)) {
+                    setFieldErrors((prev) => ({ ...prev, username: msg || "Tên đăng nhập đã tồn tại." }));
+                } else if (/email/i.test(lmsg)) {
+                    setFieldErrors((prev) => ({ ...prev, email: msg || "Email đã tồn tại." }));
+                } else {
+                    setError(msg || "Thêm mới thất bại. Vui lòng thử lại.");
+                }
+            } else {
+                setError(msg || "Thêm mới thất bại. Vui lòng thử lại.");
+            }
         } finally {
             setSaving(false);
         }
@@ -223,12 +238,15 @@ export default function EmployeesCreatePage() {
                                 <div className="sd-field sd-field-row">
                                     <div className="sd-field-half">
                                         <label className="sd-label">Email</label>
-                                        <input
-                                            className="sd-input"
-                                            placeholder="Nhập email"
-                                            value={form.email}
-                                            onChange={(e) => set("email", e.target.value)}
-                                        />
+                                        <div className="sd-input-wrap">
+                                            <input
+                                                className={`sd-input${fieldErrors.email ? " sd-input-error" : ""}`}
+                                                placeholder="Nhập email"
+                                                value={form.email}
+                                                onChange={(e) => set("email", e.target.value)}
+                                            />
+                                            {fieldErrors.email && <span className="sd-error-msg">{fieldErrors.email}</span>}
+                                        </div>
                                     </div>
                                     <div className="sd-field-half">
                                         <label className="sd-label">Số điện thoại</label>

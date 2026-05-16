@@ -126,17 +126,9 @@ export default function BatchDetailPage() {
                                     <div className="bt-read-value">{formatNumber(batch.unitCost)}</div>
                                 </div>
                                 <div className="sd-field-half">
-                                    <label className="sd-label">Ngày sản xuất</label>
-                                    <div className="bt-read-value">{formatDate(batch.manufactureDate)}</div>
-                                </div>
-                            </div>
-
-                            <div className="sd-field sd-field-row">
-                                <div className="sd-field-half">
                                     <label className="sd-label">Ngày tạo</label>
                                     <div className="bt-read-value">{formatDateTime(batch.createdAt)}</div>
                                 </div>
-                                <div className="sd-field-half" />
                             </div>
                         </div>
 

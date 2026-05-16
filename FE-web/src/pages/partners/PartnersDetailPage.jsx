@@ -162,8 +162,7 @@ export default function PartnersDetailPage() {
                                                     <input
                                                         className={`sd-input${fieldErrors.customercode ? " sd-input-error" : ""}`}
                                                         value={form.customercode}
-                                                        disabled={!isEditing}
-                                                        onChange={(e) => set("customercode", e.target.value)}
+                                                        disabled={true}
                                                     />
                                                     {fieldErrors.customercode && <span className="sd-error-msg">{fieldErrors.customercode}</span>}
                                                 </div>
