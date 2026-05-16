@@ -76,3 +76,9 @@ export const submitAudit = async (id) => {
     const res = await axiosInstance.post(`${BASE}/${id}/submit`);
     return res.data;
 };
+
+/** POST /api/inventory-audits/{id}/reject — Manager từ chối duyệt (kèm lý do) */
+export const rejectAudit = async (id, reason) => {
+    const res = await axiosInstance.post(`${BASE}/${id}/reject`, { reason });
+    return res.data;
+};

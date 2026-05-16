@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import { getLocationById, updateLocation, getItemsAtLocation } from "../../api/locationApi";
+import { getAllBatches } from "../../api/batchApi";
+import { getAllReceipts } from "../../api/receiptApi";
 import TopbarRight from "../../components/TopbarRight";
 
 const EMPTY_FORM = {
@@ -30,6 +32,7 @@ export default function LocationsDetailPage() {
     const [fieldErrors, setFieldErrors] = useState({});
     const [success, setSuccess] = useState(false);
     const [storedItems, setStoredItems] = useState([]);
+    const [confirmedBatchByCode, setConfirmedBatchByCode] = useState({});
     const [itemsLoading, setItemsLoading] = useState(false);
     const [itemsError, setItemsError] = useState(null);
 
@@ -46,16 +49,38 @@ export default function LocationsDetailPage() {
             .finally(() => setLoading(false));
         setItemsLoading(true);
         setItemsError(null);
-        getItemsAtLocation(id)
-            .then((data) => {
-                const items = Array.isArray(data) ? data : (data?.items || []);
-                setStoredItems(items);
-            })
-            .catch(() => {
-                setItemsError("Không thể tải danh sách vật tư.");
-                setStoredItems([]);
-            })
-            .finally(() => setItemsLoading(false));
+        // Fetch items at location and also load batch/receipt data to filter only confirmed batches
+        Promise.all([
+            getItemsAtLocation(id),
+            getAllBatches(),
+            getAllReceipts(),
+        ]).then(([data, allBatches, allReceipts]) => {
+            const items = Array.isArray(data) ? data : (data?.items || []);
+            setStoredItems(items);
+
+            try {
+                const statusByDetailId = {};
+                (allReceipts || []).forEach((receipt) => {
+                    (receipt.details || []).forEach((detail) => {
+                        if (detail?.id) statusByDetailId[detail.id] = receipt.docstatus;
+                    });
+                });
+                const confirmed = {};
+                (allBatches || []).forEach((b) => {
+                    if (!b) return;
+                    const code = b.batchCode || b.batchcode || "";
+                    const detailId = b.receiptDetailId;
+                    if (code && detailId && statusByDetailId[detailId] === "CONFIRMED") confirmed[code] = true;
+                });
+                setConfirmedBatchByCode(confirmed);
+            } catch (err) {
+                setConfirmedBatchByCode({});
+            }
+        }).catch(() => {
+            setItemsError("Không thể tải danh sách vật tư.");
+            setStoredItems([]);
+            setConfirmedBatchByCode({});
+        }).finally(() => setItemsLoading(false));
     }, [id]);
 
     const set = (field, value) => {

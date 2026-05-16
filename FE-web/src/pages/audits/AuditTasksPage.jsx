@@ -383,7 +383,8 @@ export default function AuditTasksPage() {
         }
     };
 
-    const canEdit = active && active.docstatus === "REQUESTED";
+    // Theo API docs: staff có thể cập nhật khi REQUESTED (chuyển sang IN_PROGRESS) hoặc đang IN_PROGRESS
+    const canEdit = active && ["REQUESTED", "IN_PROGRESS"].includes(active.docstatus);
 
     return (
         <>
@@ -454,6 +455,14 @@ export default function AuditTasksPage() {
                             {!canEdit && active.docstatus === "SUBMITTED" && (
                                 <div style={{ background: "#fff3e0", border: "1px solid #ffb74d", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#5d4037" }}>
                                     Đã gửi kết quả cho quản lý. Đang chờ xác nhận.
+                                </div>
+                            )}
+                            {active.docstatus === "REJECTED" && (
+                                <div style={{ background: "#fbe9e7", border: "1px solid #ff8a65", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#bf360c" }}>
+                                    Phiếu kiểm kê đã bị <strong>từ chối</strong> bởi quản lý.
+                                    {active.rejectReason && (
+                                        <span> Lý do: <strong>{active.rejectReason}</strong></span>
+                                    )}
                                 </div>
                             )}
 

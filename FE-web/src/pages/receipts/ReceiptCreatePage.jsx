@@ -6,7 +6,7 @@ import { createReceipt, getAvailableLocations, getAllReceipts } from "../../api/
 import { getAuditById } from "../../api/auditApi";
 import { getAllCustomers } from "../../api/customerApi";
 import { getAllItems } from "../../api/itemApi";
-import { createBatch } from "../../api/batchApi";
+import { createBatch, getAllBatches } from "../../api/batchApi";
 import TopbarRight from "../../components/TopbarRight";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -422,7 +422,13 @@ export default function ReceiptCreatePage() {
         if (!auditId || prefilledFromAudit) return;
         const fillFromAudit = async () => {
             try {
-                const data = await getAuditById(auditId);
+                const [data, batchList] = await Promise.all([getAuditById(auditId), getAllBatches()]);
+                // Build map: itemId -> unitCost from existing batches
+                const unitCostByItem = {};
+                (batchList || []).forEach((b) => {
+                    const key = String(b.itemId);
+                    if (!unitCostByItem[key] && b.unitCost) unitCostByItem[key] = String(b.unitCost);
+                });
                 const rowsFromAudit = (data.details || [])
                     .filter((d) => Number(d.diffquantity) > 0)
                     .map((d) => {
@@ -436,6 +442,7 @@ export default function ReceiptCreatePage() {
                             itemname: d.itemname,
                             unitof: d.unitof,
                             quantity: String(diff),
+                            price: unitCostByItem[String(d.itemId)] || "",
                             nameBatch: "L",
                             selectedLocations,
                         };
@@ -533,6 +540,7 @@ export default function ReceiptCreatePage() {
             }))
         );
         setSaving(true);
+        const adjAuditId = searchParams.get("auditId");
         try {
             const result = await createReceipt({
                 docno: form.docno.trim(),
@@ -543,8 +551,9 @@ export default function ReceiptCreatePage() {
                 docstatus: isManager ? "CONFIRMED" : "DRAFT",
                 invoiceDate: invoice.date || undefined,
                 taxcode: invoice.taxcode || undefined,
-                invoiceNo: invoice.number || undefined,
+                invoiceNumber: invoice.number || undefined,
                 supplierId: invoice.supplierId ? Number(invoice.supplierId) : undefined,
+                ...(adjAuditId ? { inventoryAuditId: Number(adjAuditId) } : {}),
                 details,
             });
             if (result?.success) {
@@ -571,6 +580,10 @@ export default function ReceiptCreatePage() {
                 }
                 if (batchPromises.length > 0) await Promise.all(batchPromises);
                 showToast("success", "Tạo phiếu nhập kho thành công!");
+                // Lưu ID phiếu để AuditDetailPage kiểm tra status sau này
+                if (adjAuditId && form.docType === "ADJUSTMENT" && result?.data?.id) {
+                    localStorage.setItem(`audit_adj_receipt_id_${adjAuditId}`, String(result.data.id));
+                }
                 setTimeout(() => navigate("/receipts"), 1200);
             } else {
                 showToast("error", result?.message || "Tạo phiếu thất bại.");

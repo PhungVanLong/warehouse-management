@@ -49,6 +49,12 @@
     border: 1px solid #80cbc4;
 }
 
+.au-badge-rejected {
+    background: #fbe9e7;
+    color: #bf360c;
+    border: 1px solid #ff8a65;
+}
+
 /* ── Audit status pills (detail page) ────────────────── */
 .au-status-pill-draft {
     background: #eceff1;
@@ -96,6 +102,12 @@
     background: #e0f2f1;
     color: #00695c;
     border: 1.5px solid #80cbc4;
+}
+
+.au-status-pill-rejected {
+    background: #fbe9e7;
+    color: #bf360c;
+    border: 1.5px solid #ff8a65;
 }
 
 /* ── Diff quantity badges ─────────────────────────────── */

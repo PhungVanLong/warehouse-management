@@ -15,6 +15,7 @@ const STATUS_LABELS = {
     PROCESSED: "Đã xử lý",
     CONFIRMED: "Đã xác nhận",
     CANCELLED: "Đã hủy",
+    REJECTED: "Đã từ chối",
 };
 const STATUS_BADGE = {
     DRAFT: "rc-badge au-badge-draft",
@@ -25,10 +26,11 @@ const STATUS_BADGE = {
     PROCESSED: "rc-badge au-badge-processed",
     CONFIRMED: "rc-badge au-badge-confirmed",
     CANCELLED: "rc-badge au-badge-cancelled",
+    REJECTED: "rc-badge au-badge-rejected",
 };
-const TABS = ["Tất cả", "Nháp", "Chờ kiểm kê", "Đang kiểm kê", "Chờ duyệt", "Chờ xử lý", "Đã xử lý", "Đã xác nhận", "Đã hủy"];
-const STAFF_TABS = ["Tất cả", "Chờ kiểm kê", "Đang kiểm kê", "Chờ duyệt", "Đã xác nhận", "Đã hủy"];
-const TAB_STATUS = { "Nháp": "DRAFT", "Chờ kiểm kê": "REQUESTED", "Đang kiểm kê": "IN_PROGRESS", "Chờ duyệt": "SUBMITTED", "Chờ xử lý": "PENDING_PROCESS", "Đã xử lý": "PROCESSED", "Đã xác nhận": "CONFIRMED", "Đã hủy": "CANCELLED" };
+const TABS = ["Tất cả", "Nháp", "Chờ kiểm kê", "Đang kiểm kê", "Chờ duyệt", "Chờ xử lý", "Đã xử lý", "Đã xác nhận", "Đã hủy", "Đã từ chối"];
+const STAFF_TABS = ["Tất cả", "Chờ kiểm kê", "Đang kiểm kê", "Chờ duyệt", "Chờ xử lý", "Đã xử lý", "Đã xác nhận", "Đã hủy", "Đã từ chối"];
+const TAB_STATUS = { "Nháp": "DRAFT", "Chờ kiểm kê": "REQUESTED", "Đang kiểm kê": "IN_PROGRESS", "Chờ duyệt": "SUBMITTED", "Chờ xử lý": "PENDING_PROCESS", "Đã xử lý": "PROCESSED", "Đã xác nhận": "CONFIRMED", "Đã hủy": "CANCELLED", "Đã từ chối": "REJECTED" };
 const ROWS_OPTIONS = [10, 15, 20, 50];
 
 function formatDate(str) {
@@ -215,19 +217,20 @@ export default function AuditsPage() {
                                 {/* <th style={{ textAlign: "center" }}>Số mặt hàng</th>
                                 <th>Diễn giải</th> */}
                                 <th style={{ width: "15%" }}>Người lập <IconSort /></th>
+                                <th style={{ width: "15%" }}>Người duyệt <IconSort /></th>
                                 <th style={{ width: "15%" }}>Trạng thái <IconSort /></th>
                                 <th className="sp-th-action">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading && (
-                                <tr><td colSpan={8} className="sp-status-row">Đang tải dữ liệu...</td></tr>
+                                <tr><td colSpan={7} className="sp-status-row">Đang tải dữ liệu...</td></tr>
                             )}
                             {!loading && error && (
-                                <tr><td colSpan={8} className="sp-status-row sp-status-error">{error}</td></tr>
+                                <tr><td colSpan={7} className="sp-status-row sp-status-error">{error}</td></tr>
                             )}
                             {!loading && !error && pageData.length === 0 && (
-                                <tr><td colSpan={8} className="sp-status-row">{isStaff ? "Không có yêu cầu kiểm kê nào." : "Không có phiếu kiểm kê nào."}</td></tr>
+                                <tr><td colSpan={7} className="sp-status-row">{isStaff ? "Không có yêu cầu kiểm kê nào." : "Không có phiếu kiểm kê nào."}</td></tr>
                             )}
                             {!loading && !error && pageData.map((r) => (
                                 <tr
@@ -245,6 +248,7 @@ export default function AuditsPage() {
                                     </td> */}
                                     {/* <td style={{ color: "#4c6152", fontSize: "0.88rem" }}>{r.description || "—"}</td> */}
                                     <td style={{ width: 160 }}>{r.createdByFullname || r.createdByName || "—"}</td>
+                                    <td style={{ width: 160 }}>{r.approverFullname || r.approverUsername || "—"}</td>
                                     <td>
                                         <span className={STATUS_BADGE[r.docstatus] || "rc-badge"}>
                                             {STATUS_LABELS[r.docstatus] || r.docstatus}

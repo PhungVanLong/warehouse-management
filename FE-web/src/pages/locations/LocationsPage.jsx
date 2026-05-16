@@ -181,7 +181,7 @@ export default function LocationsPage() {
         <th>Tên</th>
         <th>Diễn giải</th>
         <th>Mã vật tư</th>
-        <th>Số lượng</th>
+         <th>Số lượng</th>
       </tr>
     </thead>
     <tbody>${rowsHtml}</tbody>
@@ -283,7 +283,7 @@ export default function LocationsPage() {
                                 <th>Tên <SortIcon /></th>
                                 <th>Diễn giải <SortIcon /></th>
                                 <th>Mã vật tư</th>
-                                <th style={{ textAlign: "right" }}>Số lượng</th>
+                                {/* <th style={{ textAlign: "right" }}>Số lượng</th> */}
                                 <th className="sp-th-action">Thao tác</th>
                             </tr>
                         </thead>
@@ -311,7 +311,7 @@ export default function LocationsPage() {
                                     <td>{r.locationname}</td>
                                     <td>{r.description}</td>
                                     <td style={{ fontSize: "0.9rem", color: "#234", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>{locationItemsMap[r.id] ?? "..."}</td>
-                                    <td style={{ textAlign: "right", fontWeight: 600 }}>{
+                                    {/* <td style={{ textAlign: "right", fontWeight: 600 }}>{
                                         // compute total quantity for this location if available
                                         (() => {
                                             const summary = locationItemsMap[r.id];
@@ -324,7 +324,7 @@ export default function LocationsPage() {
                                                 }, 0);
                                             } catch { return "—"; }
                                         })()
-                                    }</td>
+                                    }</td> */}
                                     <td className="sp-td-action" onClick={(e) => e.stopPropagation()}>
                                         <button className="sp-edit-btn" title="Chỉnh sửa" onClick={() => navigate(`/locations/${r.id}`)}>
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
