@@ -37,6 +37,9 @@ public class GoodsReceipt {
 
     @Column(columnDefinition = "TEXT")
     private String description;
+    
+    @Column(length = 100, name = "invoicenumber")
+    private String invoiceNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
@@ -70,5 +73,8 @@ public class GoodsReceipt {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "approverid")
     private User approver;
+
+    @Column(name = "inventory_audit_id")
+    private Long inventoryAuditId;
 
 }

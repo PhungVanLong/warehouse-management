@@ -18,6 +18,7 @@ public class GoodsIssueResponse {
     private String customerName;
     private String customerTaxcode;
     private LocalDateTime createdAt;
+    private Long inventoryAuditId;
     private String createdByUsername;
     private String createdByFullname;
     private String actionByUsername;

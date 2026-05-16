@@ -144,7 +144,7 @@
 | GET | `/api/goods-receipts/suggest-locations?itemId=&quantity=` | G?i � v? tr� ph� h?p | ADMIN, STAFF |
 | GET | `/api/goods-receipts/suggest-split?itemId=&quantity=` | G?i � ph�n b? nhi?u v? tr� | ADMIN, STAFF |
 
-**Tr?ng th�i phi?u (DocStatus):** `DRAFT` ? `CONFIRMED` | `CANCELLED`
+**Trang thai phieu (DocStatus):** `DRAFT` -> `CONFIRMED` | `CANCELLED`
 
 **Entity:** `GoodsReceipt`, `GoodsReceiptDetail`
 
@@ -295,7 +295,7 @@
 | GET | `/api/goods-issues/available-locations?itemId=` | Li?t k� v? tr� c� h�ng | ADMIN, STAFF |
 | GET | `/api/goods-issues/suggest-split?itemId=&quantity=` | G?i � ph�n b? nhi?u v? tr� | ADMIN, STAFF |
 
-**Tr?ng th�i phi?u (DocStatus):** `DRAFT` ? `CONFIRMED` | `CANCELLED`
+**Trang thai phieu (DocStatus):** `DRAFT` -> `REQUESTED` -> `IN_PROGRESS` -> `SUBMITTED` -> `PENDING_PROCESS` -> `PROCESSED` -> `CONFIRMED` | `CANCELLED`
 
 **Entity:** `GoodsIssue`, `GoodsIssueDetail`
 
@@ -342,7 +342,7 @@
 | POST | `/api/inventory-audits/{id}/confirm` | X�c nh?n ? di?u ch?nh t?n kho | ADMIN, STAFF |
 | POST | `/api/inventory-audits/{id}/cancel` | H?y phi?u (ch? DRAFT) | ADMIN, STAFF |
 
-**Tr?ng th�i phi?u (DocStatus):** `DRAFT` ? `CONFIRMED` | `CANCELLED`
+**Trang thai phieu (DocStatus):** `DRAFT` -> `REQUESTED` -> `IN_PROGRESS` -> `SUBMITTED` -> `PENDING_PROCESS` -> `PROCESSED` -> `CONFIRMED` | `CANCELLED`
 
 **Entity:** `InventoryAudit`, `InventoryAuditDetail`
 

@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import hoshimoto.cdtn.entity.Enum.DocStatus;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -69,4 +70,14 @@ public class InventoryAudit {
 
     @Column(name = "isactive")
     private Boolean isActive = true;
+
+    @Column(name = "rejectreason", columnDefinition = "TEXT")
+    private String rejectReason;
+
+    @Column(name = "adjustment_created")
+    private Boolean adjustmentCreated = false;
+
+    @Column(name = "adjustment_flags", columnDefinition = "TEXT")
+    @Convert(converter = hoshimoto.cdtn.converter.BooleanListConverter.class)
+    private java.util.List<Boolean> adjustmentFlags;
 }

@@ -39,6 +39,7 @@ import hoshimoto.cdtn.repository.InventoryBalanceRepository;
 import hoshimoto.cdtn.repository.ItemLocationRepository;
 import hoshimoto.cdtn.repository.ItemRepository;
 import hoshimoto.cdtn.repository.LocationRepository;
+import hoshimoto.cdtn.repository.InventoryAuditRepository;
 import hoshimoto.cdtn.repository.UserRepository;
 
 @Service
@@ -53,6 +54,7 @@ public class GoodsIssueService {
     @Autowired private CustomerRepository customerRepository;
     @Autowired private BatchRepository batchRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private InventoryAuditRepository inventoryAuditRepository;
     @Autowired private NotificationService notificationService;
 
     // ───────────────────────── CRUD ─────────────────────────
@@ -233,7 +235,10 @@ public class GoodsIssueService {
                     sil.getItem().getUnitof(),
                     sil.getQuantity(),
                     batchRepository.findAllByReceiptDetailLocationIdAndItemId(loc.getId(), sil.getItem().getId())
-                        .stream().map(b -> b.getBatchCode()).collect(Collectors.toList())
+                        .stream()
+                        .filter(b -> b.getReceiptDetail() != null && b.getReceiptDetail().getGoodsReceipt() != null
+                                && b.getReceiptDetail().getGoodsReceipt().getDocstatus() == hoshimoto.cdtn.entity.Enum.DocStatus.CONFIRMED)
+                        .map(b -> b.getBatchCode()).collect(Collectors.toList())
             )).collect(Collectors.toList());
 
             result.add(new LocationDetailResponse(
@@ -320,6 +325,18 @@ public class GoodsIssueService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng id: " + request.getCustomerId()));
             issue.setCustomer(customer);
             issue.setTaxcode(customer.getTaxcode());
+        }
+        if (request.getInventoryAuditId() != null) {
+            issue.setInventoryAuditId(request.getInventoryAuditId());
+            var optAudit = inventoryAuditRepository.findById(request.getInventoryAuditId());
+            if (optAudit.isPresent()) {
+                var audit = optAudit.get();
+                audit.setAdjustmentCreated(true);
+                if (request.getAdjustmentFlags() != null) {
+                    audit.setAdjustmentFlags(request.getAdjustmentFlags());
+                }
+                inventoryAuditRepository.save(audit);
+            }
         }
         // Gán người tạo từ JWT token (chỉ set khi tạo mới, không ghi đè khi update)
         if (issue.getUser() == null) {
@@ -471,6 +488,7 @@ public class GoodsIssueService {
             }
             return dr;
         }).collect(Collectors.toList()));
+        res.setInventoryAuditId(issue.getInventoryAuditId());
         return res;
     }
 }

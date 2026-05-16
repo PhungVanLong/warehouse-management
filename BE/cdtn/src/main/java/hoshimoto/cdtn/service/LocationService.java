@@ -56,7 +56,10 @@ public class LocationService {
                         il.getItem().getUnitof(),
                 il.getQuantity(),
                 batchRepository.findAllByReceiptDetailLocationIdAndItemId(loc.getId(), il.getItem().getId())
-                    .stream().map(b -> b.getBatchCode()).collect(Collectors.toList())))
+                    .stream()
+                    .filter(b -> b.getReceiptDetail() != null && b.getReceiptDetail().getGoodsReceipt() != null
+                            && b.getReceiptDetail().getGoodsReceipt().getDocstatus() == hoshimoto.cdtn.entity.Enum.DocStatus.CONFIRMED)
+                    .map(b -> b.getBatchCode()).collect(Collectors.toList())))
                 .collect(Collectors.toList());
 
         String type = itemsAtLoc.isEmpty() ? "EMPTY" : "HAS_STOCK";
