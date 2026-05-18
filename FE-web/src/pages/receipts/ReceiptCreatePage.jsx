@@ -562,19 +562,21 @@ export default function ReceiptCreatePage() {
                 const batchPromises = [];
                 for (const row of rows) {
                     const nLocs = row.selectedLocations.length;
-                    for (let i = 0; i < nLocs; i++) {
-                        const detail = returnedDetails[detailOffset + i];
-                        const allocQty = row.selectedLocations[i]?.allocQty;
-                        if (detail?.id && allocQty) {
-                            batchPromises.push(
-                                createBatch({
-                                    itemId: Number(row.itemId),
-                                    receiptDetailId: detail.id,
-                                    unitCost: Number(row.price) || 0,
-                                    quantity: Number(allocQty),
-                                }).catch(() => { })
-                            );
-                        }
+                    // Mỗi dòng hàng (mã hàng) chỉ tạo 1 lô duy nhất,
+                    // dù số lượng vượt 1 ô và phải phân bổ qua nhiều vị trí.
+                    const firstDetail = returnedDetails[detailOffset];
+                    if (firstDetail?.id && nLocs > 0) {
+                        const totalQty = row.selectedLocations.reduce(
+                            (sum, loc) => sum + Number(loc.allocQty || 0), 0
+                        );
+                        batchPromises.push(
+                            createBatch({
+                                itemId: Number(row.itemId),
+                                receiptDetailId: firstDetail.id,
+                                unitCost: Number(row.price) || 0,
+                                quantity: totalQty,
+                            }).catch(() => { })
+                        );
                     }
                     detailOffset += nLocs;
                 }
