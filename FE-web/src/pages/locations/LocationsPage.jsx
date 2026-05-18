@@ -82,7 +82,7 @@ export default function LocationsPage() {
                         return;
                     }
                     // build short summary: up to 3 items 'CODE(qty)'
-                    const parts = items.slice(0, 3).map((it) => `${it.itemcode || ""}(${it.quantity ?? 0})`);
+                    const parts = items.slice(0, 3).map((it) => it.itemcode || "");
                     if (items.length > 3) parts.push("...");
                     map[id] = parts.join(", ");
                 } catch {
@@ -101,15 +101,17 @@ export default function LocationsPage() {
 
     const toggleRow = (id) =>
         setSelected((prev) => {
-            const next = new Set();
-            if (!prev.has(id)) next.add(id);
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
             return next;
         });
 
     const toggleAll = (checked) =>
-        setSelected(() => {
-            const next = new Set();
-            if (checked && rows[0]) next.add(rows[0].id);
+        setSelected((prev) => {
+            const next = new Set(prev);
+            if (checked) allIds.forEach((id) => next.add(id));
+            else allIds.forEach((id) => next.delete(id));
             return next;
         });
 
@@ -125,8 +127,10 @@ export default function LocationsPage() {
     };
 
     const handleExportPdf = () => {
+        if (selected.size === 0) return;
         const now = new Date();
         const title = "DANH MỤC VỊ TRÍ";
+        const exportRows = filtered.filter((r) => selected.has(r.id));
         const getTotalQty = (locId) => {
             const summary = locationItemsMap[locId];
             if (!summary || summary === "—" || summary === "...") return "—";
@@ -138,7 +142,7 @@ export default function LocationsPage() {
             } catch { return "—"; }
         };
 
-        const rowsHtml = filtered.map((r, idx) => `
+        const rowsHtml = exportRows.map((r, idx) => `
             <tr>
                 <td class="center">${idx + 1}</td>
                 <td>${escapeHtml(r.locationcode || "")}</td>
@@ -177,7 +181,7 @@ export default function LocationsPage() {
         <th>Tên</th>
         <th>Diễn giải</th>
         <th>Mã vật tư</th>
-        <th>Số lượng</th>
+         <th>Số lượng</th>
       </tr>
     </thead>
     <tbody>${rowsHtml}</tbody>
@@ -250,11 +254,16 @@ export default function LocationsPage() {
                         </svg>
                         Thêm bản sao mới
                     </button>
-                    <button className="sp-btn-outline" onClick={handleExportPdf}>
+                    <button
+                        className="sp-btn-outline"
+                        onClick={handleExportPdf}
+                        disabled={selected.size === 0}
+                        title={selected.size === 0 ? "Chọn ít nhất 1 vị trí để export" : `Export ${selected.size} vị trí`}
+                    >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                         </svg>
-                        Export
+                        Export {selected.size > 0 ? `(${selected.size})` : ""}
                     </button>
                 </div>
 
@@ -274,7 +283,7 @@ export default function LocationsPage() {
                                 <th>Tên <SortIcon /></th>
                                 <th>Diễn giải <SortIcon /></th>
                                 <th>Mã vật tư</th>
-                                <th style={{ textAlign: "right" }}>Số lượng</th>
+                                {/* <th style={{ textAlign: "right" }}>Số lượng</th> */}
                                 <th className="sp-th-action">Thao tác</th>
                             </tr>
                         </thead>
@@ -302,7 +311,7 @@ export default function LocationsPage() {
                                     <td>{r.locationname}</td>
                                     <td>{r.description}</td>
                                     <td style={{ fontSize: "0.9rem", color: "#234", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>{locationItemsMap[r.id] ?? "..."}</td>
-                                    <td style={{ textAlign: "right", fontWeight: 600 }}>{
+                                    {/* <td style={{ textAlign: "right", fontWeight: 600 }}>{
                                         // compute total quantity for this location if available
                                         (() => {
                                             const summary = locationItemsMap[r.id];
@@ -315,7 +324,7 @@ export default function LocationsPage() {
                                                 }, 0);
                                             } catch { return "—"; }
                                         })()
-                                    }</td>
+                                    }</td> */}
                                     <td className="sp-td-action" onClick={(e) => e.stopPropagation()}>
                                         <button className="sp-edit-btn" title="Chỉnh sửa" onClick={() => navigate(`/locations/${r.id}`)}>
                                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

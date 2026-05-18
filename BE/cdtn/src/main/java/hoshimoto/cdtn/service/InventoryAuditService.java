@@ -15,9 +15,11 @@ import hoshimoto.cdtn.dto.InventoryAuditDetailResponse;
 import hoshimoto.cdtn.dto.InventoryAuditResponse;
 import hoshimoto.cdtn.dto.request.InventoryAuditDetailRequest;
 import hoshimoto.cdtn.dto.request.InventoryAuditRequest;
+import hoshimoto.cdtn.dto.request.RejectRequest;
 import hoshimoto.cdtn.entity.Enum.DocStatus;
 import hoshimoto.cdtn.entity.Enum.NotificationTargetType;
 import hoshimoto.cdtn.entity.Enum.NotificationType;
+import hoshimoto.cdtn.entity.Enum.Role;
 import hoshimoto.cdtn.entity.InventoryAudit;
 import hoshimoto.cdtn.entity.InventoryAuditDetail;
 import hoshimoto.cdtn.entity.InventoryBalance;
@@ -69,6 +71,20 @@ public class InventoryAuditService {
         Long assignedUserId = request.getAssignedUserId();
         boolean sendToStaff = assignedUserId != null && Boolean.TRUE.equals(request.getSendToStaff());
 
+        // Prevent Manager from doing "self-check" by creating a draft with actual quantities.
+        // Managers should assign to staff (sendToStaff = true) and review/confirm after staff submits.
+        var optUser = getCurrentUser();
+        if (optUser.isPresent()) {
+            var current = optUser.get();
+            if (current.getRole() == Role.MANAGER && !sendToStaff && request.getDetails() != null) {
+                // If manager attempts to create draft with actual quantities, block it
+                boolean hasActual = request.getDetails().stream().anyMatch(d -> d.getActualquantity() != null);
+                if (hasActual) {
+                    throw new RuntimeException("Managers must assign audit tasks to staff. To perform checks, assign to staff and review results after they submit.");
+                }
+            }
+        }
+
         if (sendToStaff) {
             Long nonNullAssignedUserId = Objects.requireNonNull(assignedUserId, "assignedUserId không được để trống");
             // set assigned user
@@ -114,7 +130,8 @@ public class InventoryAuditService {
         var optUser = getCurrentUser();
         if (optUser.isEmpty()) return java.util.List.of();
         User u = optUser.get();
-        return auditRepository.findByAssignedUserIdAndDocstatusOrderByCreatedAtDesc(u.getId(), DocStatus.REQUESTED)
+        return auditRepository.findByAssignedUserIdAndDocstatusInOrderByCreatedAtDesc(
+            u.getId(), List.of(DocStatus.REQUESTED, DocStatus.IN_PROGRESS))
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
@@ -127,17 +144,24 @@ public class InventoryAuditService {
         if (optUser.isEmpty()) return java.util.List.of();
         User u = optUser.get();
         return auditRepository.findByAssignedUserIdAndDocstatusInOrderByCreatedAtDesc(
-                u.getId(), List.of(DocStatus.SUBMITTED, DocStatus.CONFIRMED, DocStatus.CANCELLED))
+            u.getId(), List.of(
+                DocStatus.SUBMITTED,
+                DocStatus.PENDING_PROCESS,
+                DocStatus.PROCESSED,
+                DocStatus.CONFIRMED,
+                DocStatus.CANCELLED))
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     /**
-     * Nhân viên cập nhật chi tiết cho phiếu được giao (chỉ khi trạng thái REQUESTED và là người được giao).
+        * Nhân viên cập nhật chi tiết cho phiếu được giao (REQUESTED/IN_PROGRESS và là người được giao).
      */
     @Transactional
     public InventoryAuditResponse updateByAssignedStaff(Long id, InventoryAuditRequest request) {
         InventoryAudit audit = findOrThrow(id);
-        requireStatus(audit, DocStatus.REQUESTED, "Chỉ có thể cập nhật phiếu khi ở trạng thái REQUESTED");
+        if (audit.getDocstatus() != DocStatus.REQUESTED && audit.getDocstatus() != DocStatus.IN_PROGRESS) {
+            throw new RuntimeException("Chỉ có thể cập nhật phiếu khi ở trạng thái REQUESTED hoặc IN_PROGRESS");
+        }
         var optUser = getCurrentUser();
         if (optUser.isEmpty() || audit.getAssignedUser() == null || !audit.getAssignedUser().getId().equals(optUser.get().getId())) {
             throw new RuntimeException("Bạn không có quyền cập nhật phiếu này");
@@ -146,6 +170,9 @@ public class InventoryAuditService {
         requireActualQuantity(request.getDetails(), "Vui lòng nhập số lượng thực tế trước khi gửi kết quả");
 
         applyHeader(audit, request);
+        if (audit.getDocstatus() == DocStatus.REQUESTED) {
+            audit.setDocstatus(DocStatus.IN_PROGRESS);
+        }
         audit.setModifiedAt(LocalDateTime.now());
         audit = auditRepository.save(audit);
 
@@ -160,12 +187,29 @@ public class InventoryAuditService {
     @Transactional
     public InventoryAuditResponse submitFromStaff(Long id) {
         InventoryAudit audit = findOrThrow(id);
-        requireStatus(audit, DocStatus.REQUESTED, "Chỉ có thể gửi phiếu khi ở trạng thái REQUESTED");
+        if (audit.getDocstatus() != DocStatus.REQUESTED && audit.getDocstatus() != DocStatus.IN_PROGRESS) {
+            throw new RuntimeException("Chỉ có thể gửi phiếu khi ở trạng thái REQUESTED hoặc IN_PROGRESS");
+        }
         var optUser = getCurrentUser();
         if (optUser.isEmpty() || audit.getAssignedUser() == null || !audit.getAssignedUser().getId().equals(optUser.get().getId())) {
             throw new RuntimeException("Bạn không có quyền gửi phiếu này");
         }
-        audit.setDocstatus(DocStatus.SUBMITTED);
+        List<InventoryAuditDetail> details = detailRepository.findByInventoryAuditId(id);
+        if (details == null || details.isEmpty()) {
+            throw new RuntimeException("Phiếu kiểm kê không có dòng chi tiết nào");
+        }
+        boolean hasDiff = false;
+        for (InventoryAuditDetail detail : details) {
+            BigDecimal diff = detail.getDiffquantity();
+            if (diff == null) {
+                throw new RuntimeException("Chưa nhập số lượng thực tế cho hàng hóa '" + detail.getItem().getItemcode() + "'");
+            }
+            if (diff.compareTo(BigDecimal.ZERO) != 0) {
+                hasDiff = true;
+                break;
+            }
+        }
+        audit.setDocstatus(hasDiff ? DocStatus.PENDING_PROCESS : DocStatus.SUBMITTED);
         audit.setModifiedAt(LocalDateTime.now());
         getCurrentUser().ifPresent(u -> audit.setModifiedBy(u.getUsername()));
         auditRepository.save(audit);
@@ -181,9 +225,11 @@ public class InventoryAuditService {
     @Transactional
     public InventoryAuditResponse confirm(Long id) {
         InventoryAudit audit = findOrThrow(id);
-        // Manager có thể xác nhận phiếu ở trạng thái DRAFT hoặc SUBMITTED
-        if (audit.getDocstatus() != DocStatus.DRAFT && audit.getDocstatus() != DocStatus.SUBMITTED) {
-            throw new RuntimeException("Chỉ có thể xác nhận phiếu ở trạng thái DRAFT hoặc SUBMITTED");
+        // Manager có thể xác nhận phiếu ở trạng thái DRAFT, SUBMITTED hoặc PENDING_PROCESS
+        if (audit.getDocstatus() != DocStatus.DRAFT
+                && audit.getDocstatus() != DocStatus.SUBMITTED
+                && audit.getDocstatus() != DocStatus.PENDING_PROCESS) {
+            throw new RuntimeException("Chỉ có thể xác nhận phiếu ở trạng thái DRAFT, SUBMITTED hoặc PENDING_PROCESS");
         }
 
         List<InventoryAuditDetail> details = detailRepository.findByInventoryAuditId(id);
@@ -191,6 +237,7 @@ public class InventoryAuditService {
             throw new RuntimeException("Phiếu kiểm kê không có dòng chi tiết nào");
         }
 
+        boolean hasDiff = false;
         for (InventoryAuditDetail detail : details) {
             BigDecimal diff = detail.getDiffquantity();
             Item item = detail.getItem();
@@ -198,6 +245,7 @@ public class InventoryAuditService {
                 throw new RuntimeException("Chưa nhập số lượng thực tế cho hàng hóa '" + item.getItemcode() + "'");
             }
             if (diff.compareTo(BigDecimal.ZERO) == 0) continue;
+            hasDiff = true;
 
             // ── Cập nhật InventoryBalance ──────────────────────────────
             InventoryBalance balance = inventoryBalanceRepository
@@ -220,7 +268,7 @@ public class InventoryAuditService {
             inventoryBalanceRepository.save(balance);
         }
 
-        audit.setDocstatus(DocStatus.CONFIRMED);
+        audit.setDocstatus(hasDiff ? DocStatus.PROCESSED : DocStatus.CONFIRMED);
         audit.setModifiedAt(LocalDateTime.now());
         getCurrentUser().ifPresent(u -> {
             audit.setApprover(u);
@@ -228,6 +276,28 @@ public class InventoryAuditService {
         });
         auditRepository.save(audit);
         notifyStaffAuditApproved(audit);
+        return toResponse(audit);
+    }
+
+    /**
+     * Từ chối duyệt phiếu kiểm kê (SUBMITTED hoặc PENDING_PROCESS → REJECTED).
+     * Manager cung cấp lý do từ chối; nhân viên được thông báo.
+     */
+    @Transactional
+    public InventoryAuditResponse reject(Long id, RejectRequest request) {
+        InventoryAudit audit = findOrThrow(id);
+        if (audit.getDocstatus() != DocStatus.SUBMITTED && audit.getDocstatus() != DocStatus.PENDING_PROCESS) {
+            throw new RuntimeException("Chỉ có thể từ chối phiếu ở trạng thái SUBMITTED hoặc PENDING_PROCESS");
+        }
+        audit.setDocstatus(DocStatus.REJECTED);
+        audit.setRejectReason(request.getReason());
+        audit.setModifiedAt(LocalDateTime.now());
+        getCurrentUser().ifPresent(u -> {
+            audit.setApprover(u);
+            audit.setModifiedBy(u.getUsername());
+        });
+        auditRepository.save(audit);
+        notifyStaffAuditRejected(audit);
         return toResponse(audit);
     }
 
@@ -289,6 +359,22 @@ public class InventoryAuditService {
                 docno,
                 "Phieu kiem ke can duyet",
                 "Phieu kiem ke " + docno + " can duyet"
+        );
+    }
+
+    private void notifyStaffAuditRejected(InventoryAudit audit) {
+        User assigned = audit.getAssignedUser();
+        User recipient = assigned != null ? assigned : audit.getUser();
+        if (recipient == null) return;
+        String docno = audit.getDocno();
+        notificationService.notifyUser(
+                recipient,
+                NotificationType.REJECTED,
+                NotificationTargetType.INVENTORY_AUDIT,
+                audit.getId(),
+                docno,
+                "Phieu kiem ke bi tu choi",
+                "Phieu kiem ke " + docno + " bi tu choi: " + audit.getRejectReason()
         );
     }
 
@@ -390,6 +476,7 @@ public class InventoryAuditService {
         res.setCreatedAt(audit.getCreatedAt());
         res.setModifiedAt(audit.getModifiedAt());
         res.setModifiedBy(audit.getModifiedBy());
+        res.setRejectReason(audit.getRejectReason());
 
         if (audit.getUser() != null) {
             res.setCreatedByUsername(audit.getUser().getUsername());
@@ -430,6 +517,11 @@ public class InventoryAuditService {
             dr.setDescription(d.getDescription());
             return dr;
         }).collect(Collectors.toList()));
+
+        // expose whether an adjustment voucher has been created for this audit
+        res.setAdjustmentCreated(audit.getAdjustmentCreated());
+        // expose optional adjustment flags (JSON array of booleans)
+        res.setAdjustmentFlags(audit.getAdjustmentFlags());
 
         return res;
     }

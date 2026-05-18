@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import { getLocationById, updateLocation, getItemsAtLocation } from "../../api/locationApi";
+import { getAllBatches } from "../../api/batchApi";
+import { getAllReceipts } from "../../api/receiptApi";
 import TopbarRight from "../../components/TopbarRight";
 
 const EMPTY_FORM = {
@@ -30,6 +32,7 @@ export default function LocationsDetailPage() {
     const [fieldErrors, setFieldErrors] = useState({});
     const [success, setSuccess] = useState(false);
     const [storedItems, setStoredItems] = useState([]);
+    const [confirmedBatchByCode, setConfirmedBatchByCode] = useState({});
     const [itemsLoading, setItemsLoading] = useState(false);
     const [itemsError, setItemsError] = useState(null);
 
@@ -46,16 +49,38 @@ export default function LocationsDetailPage() {
             .finally(() => setLoading(false));
         setItemsLoading(true);
         setItemsError(null);
-        getItemsAtLocation(id)
-            .then((data) => {
-                const items = Array.isArray(data) ? data : (data?.items || []);
-                setStoredItems(items);
-            })
-            .catch(() => {
-                setItemsError("Không thể tải danh sách vật tư.");
-                setStoredItems([]);
-            })
-            .finally(() => setItemsLoading(false));
+        // Fetch items at location and also load batch/receipt data to filter only confirmed batches
+        Promise.all([
+            getItemsAtLocation(id),
+            getAllBatches(),
+            getAllReceipts(),
+        ]).then(([data, allBatches, allReceipts]) => {
+            const items = Array.isArray(data) ? data : (data?.items || []);
+            setStoredItems(items);
+
+            try {
+                const statusByDetailId = {};
+                (allReceipts || []).forEach((receipt) => {
+                    (receipt.details || []).forEach((detail) => {
+                        if (detail?.id) statusByDetailId[detail.id] = receipt.docstatus;
+                    });
+                });
+                const confirmed = {};
+                (allBatches || []).forEach((b) => {
+                    if (!b) return;
+                    const code = b.batchCode || b.batchcode || "";
+                    const detailId = b.receiptDetailId;
+                    if (code && detailId && statusByDetailId[detailId] === "CONFIRMED") confirmed[code] = true;
+                });
+                setConfirmedBatchByCode(confirmed);
+            } catch (err) {
+                setConfirmedBatchByCode({});
+            }
+        }).catch(() => {
+            setItemsError("Không thể tải danh sách vật tư.");
+            setStoredItems([]);
+            setConfirmedBatchByCode({});
+        }).finally(() => setItemsLoading(false));
     }, [id]);
 
     const set = (field, value) => {
@@ -164,81 +189,87 @@ export default function LocationsDetailPage() {
                                 </div>
 
                                 <div className="sd-form">
-                                    <div className="sd-field">
-                                        <label className="sd-label">Mã vị trí <span className="sd-required">*</span></label>
-                                        <div className="sd-input-wrap">
-                                            <input
-                                                className={`sd-input${fieldErrors.locationcode ? " sd-input-error" : ""}`}
-                                                value={form.locationcode}
-                                                disabled={!isEditing}
-                                                onChange={(e) => set("locationcode", e.target.value)}
-                                            />
-                                            {fieldErrors.locationcode && <span className="sd-error-msg">{fieldErrors.locationcode}</span>}
+                                    <div className="sd-field sd-field-row">
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Mã vị trí <span className="sd-required">*</span></label>
+                                            <div className="sd-input-wrap">
+                                                <input
+                                                    className={`sd-input${fieldErrors.locationcode ? " sd-input-error" : ""}`}
+                                                    value={form.locationcode}
+                                                    disabled
+                                                    onChange={(e) => set("locationcode", e.target.value)}
+                                                />
+                                                {fieldErrors.locationcode && <span className="sd-error-msg">{fieldErrors.locationcode}</span>}
+                                            </div>
+                                        </div>
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Tên vị trí <span className="sd-required">*</span></label>
+                                            <div className="sd-input-wrap">
+                                                <input
+                                                    className={`sd-input${fieldErrors.locationname ? " sd-input-error" : ""}`}
+                                                    value={form.locationname}
+                                                    disabled
+                                                    onChange={(e) => set("locationname", e.target.value)}
+                                                />
+                                                {fieldErrors.locationname && <span className="sd-error-msg">{fieldErrors.locationname}</span>}
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="sd-field">
-                                        <label className="sd-label">Tên vị trí <span className="sd-required">*</span></label>
-                                        <div className="sd-input-wrap">
+                                    <div className="sd-field sd-field-row">
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Dãy</label>
                                             <input
-                                                className={`sd-input${fieldErrors.locationname ? " sd-input-error" : ""}`}
-                                                value={form.locationname}
+                                                className="sd-input"
+                                                value={form.rackno}
                                                 disabled={!isEditing}
-                                                onChange={(e) => set("locationname", e.target.value)}
+                                                onChange={(e) => set("rackno", e.target.value)}
                                             />
-                                            {fieldErrors.locationname && <span className="sd-error-msg">{fieldErrors.locationname}</span>}
+                                        </div>
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Kệ</label>
+                                            <input
+                                                className="sd-input"
+                                                value={form.floorno}
+                                                disabled={!isEditing}
+                                                onChange={(e) => set("floorno", e.target.value)}
+                                            />
                                         </div>
                                     </div>
 
-                                    <div className="sd-field">
-                                        <label className="sd-label">Dãy</label>
-                                        <input
-                                            className="sd-input"
-                                            value={form.rackno}
-                                            disabled={!isEditing}
-                                            onChange={(e) => set("rackno", e.target.value)}
-                                        />
+                                    <div className="sd-field sd-field-row">
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Tầng</label>
+                                            <input
+                                                className="sd-input"
+                                                value={form.columnno}
+                                                disabled={!isEditing}
+                                                onChange={(e) => set("columnno", e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Sức chứa</label>
+                                            <input
+                                                className="sd-input"
+                                                type="number"
+                                                value={form.capacity}
+                                                disabled={!isEditing}
+                                                onChange={(e) => set("capacity", e.target.value)}
+                                            />
+                                        </div>
                                     </div>
 
-                                    <div className="sd-field">
-                                        <label className="sd-label">Kệ</label>
-                                        <input
-                                            className="sd-input"
-                                            value={form.floorno}
-                                            disabled={!isEditing}
-                                            onChange={(e) => set("floorno", e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="sd-field">
-                                        <label className="sd-label">Tầng</label>
-                                        <input
-                                            className="sd-input"
-                                            value={form.columnno}
-                                            disabled={!isEditing}
-                                            onChange={(e) => set("columnno", e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="sd-field">
-                                        <label className="sd-label">Sức chứa</label>
-                                        <input
-                                            className="sd-input"
-                                            type="number"
-                                            value={form.capacity}
-                                            disabled={!isEditing}
-                                            onChange={(e) => set("capacity", e.target.value)}
-                                        />
-                                    </div>
-
-                                    <div className="sd-field">
-                                        <label className="sd-label">Diễn giải</label>
-                                        <input
-                                            className="sd-input"
-                                            value={form.description}
-                                            disabled={!isEditing}
-                                            onChange={(e) => set("description", e.target.value)}
-                                        />
+                                    <div className="sd-field sd-field-row">
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Diễn giải</label>
+                                            <input
+                                                className="sd-input"
+                                                value={form.description}
+                                                disabled={!isEditing}
+                                                onChange={(e) => set("description", e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="sd-field-half" />
                                     </div>
                                 </div>
                             </div>

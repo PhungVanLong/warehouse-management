@@ -32,6 +32,13 @@ function toDateObj(str) {
 function stripTime(d) {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
+function parseLocalDate(str) {
+    if (!str) return null;
+    const parts = str.split("-");
+    if (parts.length === 3) return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    const d = new Date(str);
+    return isNaN(d) ? null : d;
+}
 
 function IconFilter() {
     return (
@@ -132,8 +139,8 @@ export default function ItemDetailReportPage() {
     }, []);
 
     const groups = useMemo(() => {
-        const fromD = applied.fromDate ? stripTime(new Date(applied.fromDate)) : null;
-        const toD = applied.toDate ? stripTime(new Date(applied.toDate)) : null;
+        const fromD = applied.fromDate ? parseLocalDate(applied.fromDate) : null;
+        const toD = applied.toDate ? parseLocalDate(applied.toDate) : null;
         const map = new Map();
 
         const ensure = (itemId) => {

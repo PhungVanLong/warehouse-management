@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import hoshimoto.cdtn.dto.ApiResponse;
 import hoshimoto.cdtn.dto.InventoryAuditResponse;
 import hoshimoto.cdtn.dto.request.InventoryAuditRequest;
+import hoshimoto.cdtn.dto.request.RejectRequest;
 import hoshimoto.cdtn.service.InventoryAuditService;
 import jakarta.validation.Valid;
 
@@ -106,6 +107,16 @@ public class InventoryAuditController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(new ApiResponse<>(false, e.getMessage(), null));
         }
+    }
+
+    /** Từ chối duyệt phiếu kiểm kê */
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<ApiResponse<InventoryAuditResponse>> reject(
+            @PathVariable Long id,
+            @Valid @RequestBody RejectRequest request) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Từ chối phiếu kiểm kê thành công",
+                inventoryAuditService.reject(id, request)));
     }
 
     /** Hủy phiếu kiểm kê */

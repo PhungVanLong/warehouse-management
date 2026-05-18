@@ -31,6 +31,30 @@
     border: 1px solid #f48fb1;
 }
 
+.au-badge-in-progress {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1px solid #90caf9;
+}
+
+.au-badge-pending-process {
+    background: #ffe0b2;
+    color: #bf360c;
+    border: 1px solid #ff8a65;
+}
+
+.au-badge-processed {
+    background: #e0f2f1;
+    color: #00695c;
+    border: 1px solid #80cbc4;
+}
+
+.au-badge-rejected {
+    background: #fbe9e7;
+    color: #bf360c;
+    border: 1px solid #ff8a65;
+}
+
 /* ── Audit status pills (detail page) ────────────────── */
 .au-status-pill-draft {
     background: #eceff1;
@@ -60,6 +84,30 @@
     background: #fce4ec;
     color: #b71c1c;
     border: 1.5px solid #f48fb1;
+}
+
+.au-status-pill-in-progress {
+    background: #e3f2fd;
+    color: #1565c0;
+    border: 1.5px solid #90caf9;
+}
+
+.au-status-pill-pending-process {
+    background: #ffe0b2;
+    color: #bf360c;
+    border: 1.5px solid #ff8a65;
+}
+
+.au-status-pill-processed {
+    background: #e0f2f1;
+    color: #00695c;
+    border: 1.5px solid #80cbc4;
+}
+
+.au-status-pill-rejected {
+    background: #fbe9e7;
+    color: #bf360c;
+    border: 1.5px solid #ff8a65;
 }
 
 /* ── Diff quantity badges ─────────────────────────────── */

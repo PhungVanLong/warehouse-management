@@ -344,8 +344,8 @@
 
 .sp-search-wrap {
     position: relative;
-    width: 320px;
-    flex-shrink: 0;
+    flex: 1;
+    min-width: 180px;
 }
 
 .sp-search-icon {
@@ -375,7 +375,7 @@
 }
 
 .sp-toolbar-spacer {
-    flex: 1;
+    display: none;
 }
 
 .sp-btn-primary {
@@ -535,16 +535,25 @@
 }
 
 /* Sticky column hover/selected states */
-.sp-table tbody tr.sp-row-clickable:hover td.sp-td-sticky {
-    background: #eef8f2;
+.sp-table tbody tr.sp-row-clickable:hover td.sp-td-sticky,
+.sp-table tbody tr.sp-row-clickable:hover td.sp-td-cb {
+    background: #eef8f2 !important;
 }
 
 .sp-row-selected td {
-    background: #f0fbf5;
+    background: #d6f5e3;
+}
+
+.sp-row-selected td:first-child {
+    border-left: 3px solid #2DBE60;
 }
 
 .sp-row-selected td.sp-td-sticky {
-    background: #f0fbf5;
+    background: #d6f5e3 !important;
+}
+
+.sp-row-selected td.sp-td-cb {
+    background: #d6f5e3 !important;
 }
 
 .sp-status-row {
@@ -786,6 +795,47 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
+}
+
+.sd-pw-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.sd-pw-wrap .sd-input {
+    padding-right: 36px;
+    width: 100%;
+}
+
+.sd-pw-toggle {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6b8f7e;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.sd-pw-toggle:hover {
+    color: #277d4b;
+}
+
+/* Ẩn icon mặc định của trình duyệt trên trường password */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-strong-password-auto-fill-button {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .sd-input-wrap .sd-input {

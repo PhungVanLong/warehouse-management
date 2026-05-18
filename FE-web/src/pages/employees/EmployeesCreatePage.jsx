@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import DatePicker from "../../components/DatePicker";
-import { createEmployee } from "../../api/employeeApi";
+import { createEmployee, getAllEmployees } from "../../api/employeeApi";
 import TopbarRight from "../../components/TopbarRight";
 
 const EMPTY_FORM = {
@@ -48,6 +48,19 @@ export default function EmployeesCreatePage() {
     const [openSection, setOpenSection] = useState(true);
     const [openAccountSection, setOpenAccountSection] = useState(true);
     const [prefilledFromClone, setPrefilledFromClone] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    useEffect(() => {
+        getAllEmployees()
+            .then((data) => {
+                const maxId = data.reduce((max, e) => Math.max(max, Number(e.id) || 0), 0);
+                setForm((prev) => ({ ...prev, usercode: `NV${maxId + 1}` }));
+            })
+            .catch(() => {
+                setForm((prev) => ({ ...prev, usercode: "NV1" }));
+            });
+    }, []);
 
     useEffect(() => {
         const clone = location.state?.clone;
@@ -79,13 +92,32 @@ export default function EmployeesCreatePage() {
         if (fieldErrors[field]) setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
     };
 
+    const isBirthdateValid = (dateStr) => {
+        if (!dateStr) return true;
+        const birth = new Date(dateStr);
+        const threshold = new Date(birth.getFullYear() + 18, birth.getMonth(), birth.getDate());
+        return new Date() >= threshold;
+    };
+
+    const validatePassword = (value) => {
+        if (!value) return "Bắt buộc";
+        if (value.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự.";
+        if (/\s/.test(value)) return "Mật khẩu không được chứa khoảng trắng.";
+        if (!/[A-Z]/.test(value)) return "Mật khẩu phải có ít nhất 1 chữ cái viết hoa.";
+        if (!/[a-z]/.test(value)) return "Mật khẩu phải có ít nhất 1 chữ cái viết thường.";
+        if (!/[0-9]/.test(value)) return "Mật khẩu phải có ít nhất 1 chữ số (0-9).";
+        if (!/[^A-Za-z0-9]/.test(value)) return "Mật khẩu phải có ít nhất 1 ký tự đặc biệt.";
+        return "";
+    };
+
     const validate = () => {
         const errs = {};
         if (!form.usercode?.trim()) errs.usercode = "Bắt buộc";
         if (!form.fullname?.trim()) errs.fullname = "Bắt buộc";
         if (!form.username?.trim()) errs.username = "Bắt buộc";
-        if (!form.password) errs.password = "Bắt buộc";
-        else if (form.password.length < 6) errs.password = "Tối thiểu 6 ký tự";
+        if (form.birthdate && !isBirthdateValid(form.birthdate)) errs.birthdate = "Nhân viên phải đủ 18 tuổi.";
+        const pwdErr = validatePassword(form.password);
+        if (pwdErr) errs.password = pwdErr;
         if (form.password !== form.confirmPassword) errs.confirmPassword = "Mật khẩu không khớp";
         return errs;
     };
@@ -116,7 +148,22 @@ export default function EmployeesCreatePage() {
             setShowToast(true);
             setTimeout(() => navigate("/employees"), 2000);
         } catch (err) {
-            setError(err?.response?.data?.message || "Thêm mới thất bại. Vui lòng thử lại.");
+            const msg = err?.response?.data?.message || "";
+            const status = err?.response?.status;
+            if (status === 409 || status === 400) {
+                const lmsg = msg.toLowerCase();
+                if (/usercode|m[aã] nh[aâ]n vi[eê]n/i.test(lmsg)) {
+                    setFieldErrors((prev) => ({ ...prev, usercode: msg || "Mã nhân viên đã tồn tại." }));
+                } else if (/username|t[eê]n đ[aă]ng nh[aậ]p/i.test(lmsg)) {
+                    setFieldErrors((prev) => ({ ...prev, username: msg || "Tên đăng nhập đã tồn tại." }));
+                } else if (/email/i.test(lmsg)) {
+                    setFieldErrors((prev) => ({ ...prev, email: msg || "Email đã tồn tại." }));
+                } else {
+                    setError(msg || "Thêm mới thất bại. Vui lòng thử lại.");
+                }
+            } else {
+                setError(msg || "Thêm mới thất bại. Vui lòng thử lại.");
+            }
         } finally {
             setSaving(false);
         }
@@ -162,15 +209,15 @@ export default function EmployeesCreatePage() {
                                 {/* Row 1: Mã | Họ và Tên */}
                                 <div className="sd-field sd-field-row">
                                     <div className="sd-field-half">
-                                        <label className="sd-label">Mã <span className="sd-required">*</span></label>
+                                        <label className="sd-label">Mã nhân viên</label>
                                         <div className="sd-input-wrap">
                                             <input
-                                                className={`sd-input${fieldErrors.usercode ? " sd-input-error" : ""}`}
-                                                placeholder="Nhập mã"
+                                                className="sd-input"
                                                 value={form.usercode}
-                                                onChange={(e) => set("usercode", e.target.value)}
+                                                readOnly
+                                                disabled
+                                                placeholder="Đang tạo..."
                                             />
-                                            {fieldErrors.usercode && <span className="sd-error-msg">{fieldErrors.usercode}</span>}
                                         </div>
                                     </div>
                                     <div className="sd-field-half">
@@ -191,12 +238,15 @@ export default function EmployeesCreatePage() {
                                 <div className="sd-field sd-field-row">
                                     <div className="sd-field-half">
                                         <label className="sd-label">Email</label>
-                                        <input
-                                            className="sd-input"
-                                            placeholder="Nhập email"
-                                            value={form.email}
-                                            onChange={(e) => set("email", e.target.value)}
-                                        />
+                                        <div className="sd-input-wrap">
+                                            <input
+                                                className={`sd-input${fieldErrors.email ? " sd-input-error" : ""}`}
+                                                placeholder="Nhập email"
+                                                value={form.email}
+                                                onChange={(e) => set("email", e.target.value)}
+                                            />
+                                            {fieldErrors.email && <span className="sd-error-msg">{fieldErrors.email}</span>}
+                                        </div>
                                     </div>
                                     <div className="sd-field-half">
                                         <label className="sd-label">Số điện thoại</label>
@@ -242,6 +292,7 @@ export default function EmployeesCreatePage() {
                                             value={form.birthdate}
                                             onChange={(v) => set("birthdate", v)}
                                         />
+                                        {fieldErrors.birthdate && <span className="sd-error-msg">{fieldErrors.birthdate}</span>}
                                     </div>
                                     <div className="sd-field-half">
                                         <label className="sd-label">Giới tính</label>
@@ -279,15 +330,17 @@ export default function EmployeesCreatePage() {
                                 </div>
 
                                 {/* Row 7: Tên ngân hàng */}
-                                <div className="sd-field">
-                                    <label className="sd-label">Tên ngân hàng</label>
-                                    <input
-                                        className="sd-input"
-                                        style={{ maxWidth: 320 }}
-                                        placeholder="Nhập tên ngân hàng"
-                                        value={form.bankname}
-                                        onChange={(e) => set("bankname", e.target.value)}
-                                    />
+                                <div className="sd-field sd-field-row">
+                                    <div className="sd-field-half">
+                                        <label className="sd-label">Tên ngân hàng</label>
+                                        <input
+                                            className="sd-input"
+                                            placeholder="Nhập tên ngân hàng"
+                                            value={form.bankname}
+                                            onChange={(e) => set("bankname", e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="sd-field-half" />
                                 </div>
                             </div>
                         )}
@@ -334,26 +387,42 @@ export default function EmployeesCreatePage() {
                                     <div className="sd-field-half">
                                         <label className="sd-label">Mật khẩu <span className="sd-required">*</span></label>
                                         <div className="sd-input-wrap">
-                                            <input
-                                                type="password"
-                                                className={`sd-input${fieldErrors.password ? " sd-input-error" : ""}`}
-                                                placeholder="Tối thiểu 6 ký tự"
-                                                value={form.password}
-                                                onChange={(e) => set("password", e.target.value)}
-                                            />
+                                            <div className="sd-pw-wrap">
+                                                <input
+                                                    type={showPassword ? "text" : "password"}
+                                                    className={`sd-input${fieldErrors.password ? " sd-input-error" : ""}`}
+                                                    placeholder="Tối thiểu 6 ký tự"
+                                                    value={form.password}
+                                                    onChange={(e) => set("password", e.target.value)}
+                                                />
+                                                <button type="button" className="sd-pw-toggle" tabIndex={-1} onClick={() => setShowPassword((v) => !v)} style={{ visibility: form.password ? "visible" : "hidden" }}>
+                                                    {showPassword
+                                                        ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                                        : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                                                    }
+                                                </button>
+                                            </div>
                                             {fieldErrors.password && <span className="sd-error-msg">{fieldErrors.password}</span>}
                                         </div>
                                     </div>
                                     <div className="sd-field-half">
                                         <label className="sd-label">Xác nhận mật khẩu <span className="sd-required">*</span></label>
                                         <div className="sd-input-wrap">
-                                            <input
-                                                type="password"
-                                                className={`sd-input${fieldErrors.confirmPassword ? " sd-input-error" : ""}`}
-                                                placeholder="Nhập lại mật khẩu"
-                                                value={form.confirmPassword}
-                                                onChange={(e) => set("confirmPassword", e.target.value)}
-                                            />
+                                            <div className="sd-pw-wrap">
+                                                <input
+                                                    type={showConfirmPassword ? "text" : "password"}
+                                                    className={`sd-input${fieldErrors.confirmPassword ? " sd-input-error" : ""}`}
+                                                    placeholder="Nhập lại mật khẩu"
+                                                    value={form.confirmPassword}
+                                                    onChange={(e) => set("confirmPassword", e.target.value)}
+                                                />
+                                                <button type="button" className="sd-pw-toggle" tabIndex={-1} onClick={() => setShowConfirmPassword((v) => !v)} style={{ visibility: form.confirmPassword ? "visible" : "hidden" }}>
+                                                    {showConfirmPassword
+                                                        ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                                        : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                                                    }
+                                                </button>
+                                            </div>
                                             {fieldErrors.confirmPassword && <span className="sd-error-msg">{fieldErrors.confirmPassword}</span>}
                                         </div>
                                     </div>
@@ -366,7 +435,7 @@ export default function EmployeesCreatePage() {
                     <div className="sd-footer-actions">
                         <button className="sp-btn-outline" onClick={() => navigate("/employees")} disabled={saving}>Hủy bỏ</button>
                         <button className="sp-btn-primary" onClick={handleSave} disabled={saving}>
-                            {saving ? "Đang lưu..." : "Lưu"}
+                            {saving ? "Đang lưu..." : "Tạo tài khoản"}
                         </button>
                     </div>
                 </div>

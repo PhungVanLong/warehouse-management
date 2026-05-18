@@ -149,15 +149,22 @@ export default function ReceiptsPage() {
     const pageData = filtered.slice((safeP - 1) * rowsPerPage, safeP * rowsPerPage);
 
     const allChecked = pageData.length > 0 && pageData.every((r) => selected.has(r.id));
-    const toggleAll = () => {
-        const next = new Set();
-        if (!allChecked && pageData[0]) next.add(pageData[0].id);
-        setSelected(next);
+    const someChecked = pageData.some((r) => selected.has(r.id)) && !allChecked;
+    const toggleAll = (checked) => {
+        setSelected((prev) => {
+            const next = new Set(prev);
+            if (checked) pageData.forEach((r) => next.add(r.id));
+            else pageData.forEach((r) => next.delete(r.id));
+            return next;
+        });
     };
     const toggleOne = (id) => {
-        const next = new Set();
-        if (!selected.has(id)) next.add(id);
-        setSelected(next);
+        setSelected((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
     };
 
     const handleClone = () => {
@@ -169,6 +176,58 @@ export default function ReceiptsPage() {
         const item = receipts.find((r) => r.id === id);
         if (!item) return;
         navigate("/receipts/create", { state: { clone: item } });
+    };
+
+    const handleExportPdf = () => {
+        if (selected.size === 0) return;
+        const exportRows = filtered.filter((r) => selected.has(r.id));
+        const now = new Date();
+        const title = "DANH SÁCH PHIᯪU NHẬP KHO";
+        const rowsHtml = exportRows.map((r, idx) => `
+            <tr>
+                <td class="center">${idx + 1}</td>
+                <td>${r.docno || ""}</td>
+                <td>${formatDate(r.docDate)}</td>
+                <td>${r.customerName || r.supplierName || ""}</td>
+                <td class="right">${calcTotal(r.details) ? formatMoney(calcTotal(r.details)) : ""}</td>
+                <td>${r.createdByFullname || r.createdByName || ""}</td>
+                <td>${STATUS_LABELS[r.docstatus] || r.docstatus || ""}</td>
+            </tr>
+        `).join("");
+        const html = `
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  <style>
+    body { font-family: "Times New Roman", serif; margin: 24px 28px; color: #111; }
+    h1 { text-align: center; margin: 0 0 6px; font-size: 20px; }
+    .sub { text-align: center; margin-bottom: 12px; font-style: italic; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #000; padding: 6px; }
+    th { text-align: center; font-weight: 700; }
+    .center { text-align: center; } .right { text-align: right; }
+  </style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <div class="sub">Ngày ${now.toLocaleDateString("vi-VN")}</div>
+  <table>
+    <thead><tr>
+      <th>STT</th><th>Số phiếu</th><th>Ngày</th><th>Nhà cung cấp</th><th>Tổng tiền</th><th>Người lập</th><th>Trạng thái</th>
+    </tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+</body></html>`;
+        const win = window.open("", "_blank", "width=1000,height=1200");
+        if (!win) return;
+        win.document.write(html);
+        win.document.close();
+        let printed = false;
+        const trigger = () => { if (printed || win.closed) return; printed = true; win.focus(); win.print(); };
+        win.onload = trigger;
+        setTimeout(trigger, 600);
     };
 
     // Pagination pages
@@ -215,6 +274,14 @@ export default function ReceiptsPage() {
                     <button className="rc-btn-template" onClick={handleClone}>
                         <IconDoc /> Thêm bản sao mới
                     </button>
+                    <button
+                        className="rc-btn-template"
+                        onClick={handleExportPdf}
+                        disabled={selected.size === 0}
+                        title={selected.size === 0 ? "Chọn ít nhất 1 phiếu để export" : `Export ${selected.size} phiếu`}
+                    >
+                        <IconExport /> Export {selected.size > 0 ? `(${selected.size})` : ""}
+                    </button>
                 </div>
 
                 {/* Tabs */}
@@ -236,7 +303,9 @@ export default function ReceiptsPage() {
                         <thead>
                             <tr>
                                 <th className="sp-th-cb">
-                                    <input type="checkbox" checked={allChecked} onChange={toggleAll} />
+                                    <input type="checkbox" checked={allChecked}
+                                        ref={(el) => { if (el) el.indeterminate = someChecked; }}
+                                        onChange={(e) => toggleAll(e.target.checked)} />
                                 </th>
                                 <th>Số phiếu <IconSort /></th>
                                 <th>Ngày <IconSort /></th>

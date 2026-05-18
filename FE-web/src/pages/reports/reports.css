@@ -286,8 +286,22 @@
     font-weight: 800;
 }
 
+/* ── Print-only company header ───────────────────────── */
+.rpt-print-company {
+    display: none;
+}
+
+/* ── Print-only signature block ──────────────────────── */
+.rpt-print-signature {
+    display: none;
+}
+
 /* ── Print styles ────────────────────────────────────── */
 @media print {
+    @page {
+        size: A4 landscape;
+        margin: 12mm 14mm;
+    }
 
     .sp-sidebar,
     .sp-topbar,
@@ -307,5 +321,105 @@
 
     .sp-content {
         padding: 0 !important;
+    }
+
+    /* Table fits the page – remove scroll container and let table fill A4 */
+    .rpt-table-wrap {
+        overflow: visible !important;
+    }
+
+    .rpt-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        font-size: 7.5pt !important;
+        table-layout: auto !important;
+    }
+
+    /* Strip all inline pixel col widths so browser redistributes proportionally */
+    .rpt-table col {
+        width: auto !important;
+    }
+
+    .rpt-table th,
+    .rpt-table td {
+        font-size: 7.5pt !important;
+        padding: 2pt 4pt !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    /* Tighter columns that don't need wrapping */
+    .rpt-table th:first-child,
+    .rpt-table td:first-child,
+    .rpt-nowrap,
+    .rpt-num {
+        white-space: nowrap !important;
+    }
+
+    .rpt-table thead {
+        display: table-header-group;
+    }
+
+    /* Company header – visible in print */
+    .rpt-print-company {
+        display: block;
+        margin-bottom: 8pt;
+    }
+
+    .rpt-print-company-name {
+        font-size: 11pt;
+        font-weight: 700;
+        color: #000;
+    }
+
+    .rpt-print-company-address {
+        font-size: 9pt;
+        color: #333;
+    }
+
+    /* Signature block – visible in print */
+    .rpt-print-signature {
+        display: block;
+        margin-top: 24pt;
+        page-break-inside: avoid;
+    }
+
+    .rpt-print-sig-date {
+        text-align: right;
+        font-size: 9pt;
+        font-style: italic;
+        margin-bottom: 10pt;
+    }
+
+    .rpt-print-sig-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 40pt;
+    }
+
+    .rpt-print-sig-col {
+        text-align: center;
+        min-width: 120pt;
+    }
+
+    .rpt-print-sig-title {
+        font-size: 10pt;
+        font-weight: 700;
+    }
+
+    .rpt-print-sig-sub {
+        font-size: 9pt;
+        font-style: italic;
+        color: #555;
+        margin-top: 2pt;
+    }
+
+    .rpt-print-sig-name {
+        margin-top: 40pt;
+        font-size: 10pt;
+        font-weight: 600;
+        border-top: 1pt solid #333;
+        padding-top: 3pt;
     }
 }

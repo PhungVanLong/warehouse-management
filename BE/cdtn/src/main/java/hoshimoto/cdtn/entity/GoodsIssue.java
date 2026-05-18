@@ -71,4 +71,7 @@ public class GoodsIssue {
     @JoinColumn(name = "approverid")
     private User approver;
 
+    @Column(name = "inventory_audit_id")
+    private Long inventoryAuditId;
+
 }

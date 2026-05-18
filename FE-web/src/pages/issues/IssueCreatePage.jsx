@@ -38,12 +38,11 @@ function buildNextDocno(prefix, list) {
     return `${prefix}-${next}`;
 }
 
-/** Tính giá xuất dựa trên giá nhập */
+/** Giá xuất bằng giá nhập */
 function calcSalePrice(unitCost) {
     const cost = Number(unitCost);
     if (!cost) return "";
-    const multiplier = cost < 50000 ? 1.5 : cost <= 500000 ? 1.3 : 1.2;
-    return String(Math.round(cost * multiplier));
+    return String(cost);
 }
 
 function buildAllocations(entries, totalDiff) {
@@ -351,20 +350,31 @@ export default function IssueCreatePage() {
         if (!auditId || prefilledFromAudit) return;
         const fillFromAudit = async () => {
             try {
-                const data = await getAuditById(auditId);
+                const [data, batchList] = await Promise.all([getAuditById(auditId), getAllBatches()]);
+                // Build map: itemId -> best batch with remaining stock
+                const batchByItem = {};
+                (batchList || []).forEach((b) => {
+                    const key = String(b.itemId);
+                    if (!batchByItem[key] && Number(b.quantityRemaining) > 0) batchByItem[key] = b;
+                });
                 const rowsFromAudit = (data.details || [])
                     .filter((d) => Number(d.diffquantity) < 0)
                     .map((d) => {
                         const diff = Math.abs(Number(d.diffquantity || 0));
                         const entries = d.locationEntries || [];
                         const selectedLocations = entries.length > 0 ? buildAllocations(entries, diff) : [];
+                        const batch = batchByItem[String(d.itemId)];
                         return {
                             ...newRow(),
                             itemId: d.itemId,
                             itemcode: d.itemcode,
                             itemname: d.itemname,
                             unitof: d.unitof,
+                            batchId: batch?.id ?? "",
+                            batchCode: batch?.batchCode || "",
+                            unitCost: batch?.unitCost ? String(batch.unitCost) : "",
                             quantity: String(diff),
+                            price: calcSalePrice(batch?.unitCost),
                             selectedLocations,
                         };
                     });
@@ -485,11 +495,24 @@ export default function IssueCreatePage() {
             }))
         );
         setSaving(true);
+        const adjAuditId = searchParams.get("auditId");
         try {
-            const result = await createIssue({ docno: form.docno.trim(), docDate: form.date, description: form.description.trim(), customerId: Number(form.customerId), docType: form.docType, details });
+            const result = await createIssue({
+                docno: form.docno.trim(),
+                docDate: form.date,
+                description: form.description.trim(),
+                customerId: Number(form.customerId),
+                docType: form.docType,
+                ...(adjAuditId ? { inventoryAuditId: Number(adjAuditId) } : {}),
+                details,
+            });
             if (result?.success) {
                 showToast("success", "Tạo phiếu xuất kho thành công!");
+                // Lưu ID phiếu để AuditDetailPage kiểm tra status sau này
                 const newId = result?.data?.id;
+                if (adjAuditId && form.docType === "ADJUSTMENT" && newId) {
+                    localStorage.setItem(`audit_adj_issue_id_${adjAuditId}`, String(newId));
+                }
                 setTimeout(() => navigate(newId ? `/issues/${newId}` : "/issues"), 1200);
             } else {
                 showToast("error", result?.message || "Tạo phiếu thất bại.");
@@ -571,21 +594,20 @@ export default function IssueCreatePage() {
 
                         {/* ── Detail table ── */}
                         <div className="rc-detail-table-wrap">
-                            <table className="rc-detail-table">
+                            <table className="rc-detail-table" style={{ tableLayout: "fixed", width: "100%" }}>
                                 <thead>
                                     <tr>
-                                        <th className="rc-td-stt" style={{ width: 36 }}>STT</th>
+                                        <th className="rc-td-stt" style={{ width: "4%" }}>STT</th>
                                         <th style={{ width: "9%" }}>Mã hàng</th>
                                         <th style={{ width: "15%" }}>Tên vật tư hàng hóa</th>
                                         <th style={{ width: "14%" }}>Mã lô</th>
                                         <th style={{ width: "6%" }}>ĐVT</th>
                                         <th style={{ width: "6%" }}>SL</th>
                                         <th style={{ width: "9%" }}>Tồn hiện tại</th>
-                                        <th style={{ width: "10%" }}>Vị trí xuất</th>
-                                        <th style={{ width: "9%" }}>Giá nhập</th>
-                                        <th style={{ width: "9%" }}>Đơn giá xuất</th>
+                                        <th style={{ width: "11%" }}>Vị trí xuất</th>
+                                        <th style={{ width: "13%" }}>Đơn giá xuất</th>
                                         <th style={{ width: "9%" }}>Thành tiền</th>
-                                        <th style={{ width: 32 }}></th>
+                                        <th style={{ width: "4%" }}></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -668,9 +690,6 @@ export default function IssueCreatePage() {
                                                         : "Chọn vị trí"} <IconChevron />
                                                 </button>
                                             </td>
-                                            <td className="rc-td-num" style={{ color: "#4c6152", fontSize: "0.87rem" }}>
-                                                {row.unitCost ? formatMoney(row.unitCost) : "—"}
-                                            </td>
                                             <td>
                                                 <input
                                                     className="rc-td-input rc-td-num"
@@ -680,7 +699,6 @@ export default function IssueCreatePage() {
                                                     value={row.price}
                                                     onChange={(e) => handleRowChange(idx, "price", e.target.value)}
                                                     placeholder="0"
-                                                    title={row.unitCost ? `Giá nhập: ${formatMoney(row.unitCost)} → ×${Number(row.unitCost) < 50000 ? "1.5" : Number(row.unitCost) <= 500000 ? "1.3" : "1.2"}` : ""}
                                                 />
                                             </td>
                                             <td className="rc-td-num">
@@ -704,7 +722,7 @@ export default function IssueCreatePage() {
                                     </tr>
                                     {totalAmount > 0 && (
                                         <tr className="rc-total-row">
-                                            <td colSpan={10} style={{ textAlign: "right", paddingRight: 12 }}>Tổng cộng</td>
+                                            <td colSpan={9} style={{ textAlign: "right", paddingRight: 12 }}>Tổng cộng</td>
                                             <td className="rc-td-num" style={{ textAlign: "right" }}>{formatMoney(totalAmount)}</td>
                                             <td />
                                         </tr>

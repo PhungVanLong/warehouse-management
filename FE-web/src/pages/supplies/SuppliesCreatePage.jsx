@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../../styles/shared.css";
 import "./supplies.css";
-import { createItem } from "../../api/itemApi";
+import { createItem, getAllItems } from "../../api/itemApi";
 import TopbarRight from "../../components/TopbarRight";
 
 const EMPTY_FORM = {
@@ -24,6 +24,13 @@ export default function SuppliesCreatePage() {
     const [success, setSuccess] = useState(false);
     const [fieldErrors, setFieldErrors] = useState({});
     const [prefilledFromClone, setPrefilledFromClone] = useState(false);
+    const [allItemCodes, setAllItemCodes] = useState(new Set());
+
+    useEffect(() => {
+        getAllItems().then((data) => {
+            setAllItemCodes(new Set((data || []).map((it) => (it.itemcode || "").trim().toLowerCase())));
+        }).catch(() => { });
+    }, []);
 
     useEffect(() => {
         const clone = location.state?.clone;
@@ -43,7 +50,15 @@ export default function SuppliesCreatePage() {
 
     const handleChange = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
-        if (fieldErrors[field]) setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+        if (field === "itemcode") {
+            if (value.trim() && allItemCodes.has(value.trim().toLowerCase())) {
+                setFieldErrors((prev) => ({ ...prev, itemcode: "Mã vật tư đã tồn tại" }));
+            } else {
+                setFieldErrors((prev) => { const n = { ...prev }; delete n.itemcode; return n; });
+            }
+        } else if (fieldErrors[field]) {
+            setFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+        }
     };
 
     const validate = () => {
@@ -58,6 +73,7 @@ export default function SuppliesCreatePage() {
     const handleSave = async () => {
         const errs = validate();
         if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+        if (fieldErrors.itemcode) return;
         setSaving(true);
         setError(null);
         try {
@@ -73,8 +89,13 @@ export default function SuppliesCreatePage() {
             });
             setSuccess(true);
             setTimeout(() => navigate("/supplies"), 2000);
-        } catch {
-            setError("Tạo mới thất bại. Vui lòng thử lại.");
+        } catch (err) {
+            const status = err?.response?.status;
+            if (status === 409 || status === 400) {
+                setFieldErrors((prev) => ({ ...prev, itemcode: "Mã vật tư đã tồn tại" }));
+            } else {
+                setError("Đã xảy ra lỗi. Vui lòng thử lại.");
+            }
             setSaving(false);
         }
     };
@@ -127,60 +148,65 @@ export default function SuppliesCreatePage() {
 
                         {/* Form */}
                         <div className="sd-form">
-                            <div className="sd-field">
-                                <label className="sd-label">Mã vật tư <span className="sd-required">*</span></label>
-                                <div className="sd-input-wrap">
-                                    <input
-                                        className={`sd-input${fieldErrors.itemcode ? " sd-input-error" : ""}`}
-                                        placeholder="Nhập mã vật tư"
-                                        value={form.itemcode}
-                                        onChange={(e) => handleChange("itemcode", e.target.value)}
-                                    />
-                                    {fieldErrors.itemcode && <span className="sd-error-msg">{fieldErrors.itemcode}</span>}
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Mã vật tư <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.itemcode ? " sd-input-error" : ""}`}
+                                            placeholder="Nhập mã vật tư"
+                                            value={form.itemcode}
+                                            onChange={(e) => handleChange("itemcode", e.target.value)}
+                                        />
+                                        {fieldErrors.itemcode && <span className="sd-error-msg">{fieldErrors.itemcode}</span>}
+                                    </div>
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Tên vật tư hàng hóa <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.itemname ? " sd-input-error" : ""}`}
+                                            placeholder="Nhập tên vật tư hàng hóa"
+                                            value={form.itemname}
+                                            onChange={(e) => handleChange("itemname", e.target.value)}
+                                        />
+                                        {fieldErrors.itemname && <span className="sd-error-msg">{fieldErrors.itemname}</span>}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="sd-field">
-                                <label className="sd-label">Tên vật tư hàng hóa <span className="sd-required">*</span></label>
-                                <div className="sd-input-wrap">
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Tên trên hóa đơn</label>
                                     <input
-                                        className={`sd-input${fieldErrors.itemname ? " sd-input-error" : ""}`}
-                                        placeholder="Nhập tên vật tư hàng hóa"
-                                        value={form.itemname}
-                                        onChange={(e) => handleChange("itemname", e.target.value)}
+                                        className="sd-input"
+                                        placeholder="Nhập tên trên hóa đơn"
+                                        value={form.invoicename}
+                                        onChange={(e) => handleChange("invoicename", e.target.value)}
                                     />
-                                    {fieldErrors.itemname && <span className="sd-error-msg">{fieldErrors.itemname}</span>}
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Ngành hàng</label>
+                                    <input
+                                        className="sd-input"
+                                        placeholder="Nhập ngành hàng"
+                                        value={form.itemcatg}
+                                        onChange={(e) => handleChange("itemcatg", e.target.value)}
+                                    />
                                 </div>
                             </div>
 
-                            <div className="sd-field">
-                                <label className="sd-label">Tên trên hóa đơn</label>
-                                <input
-                                    className="sd-input"
-                                    placeholder="Nhập tên trên hóa đơn"
-                                    value={form.invoicename}
-                                    onChange={(e) => handleChange("invoicename", e.target.value)}
-                                />
-                            </div>
-
-                            <div className="sd-field">
-                                <label className="sd-label">Ngành hàng</label>
-                                <input
-                                    className="sd-input"
-                                    placeholder="Nhập ngành hàng"
-                                    value={form.itemcatg}
-                                    onChange={(e) => handleChange("itemcatg", e.target.value)}
-                                />
-                            </div>
-
-                            <div className="sd-field">
-                                <label className="sd-label">Mô tả / Thông số kỹ thuật</label>
-                                <input
-                                    className="sd-input"
-                                    placeholder="Nhập mô tả / thông số kỹ thuật"
-                                    value={form.description}
-                                    onChange={(e) => handleChange("description", e.target.value)}
-                                />
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Mô tả / Thông số kỹ thuật</label>
+                                    <input
+                                        className="sd-input"
+                                        placeholder="Nhập mô tả / thông số kỹ thuật"
+                                        value={form.description}
+                                        onChange={(e) => handleChange("description", e.target.value)}
+                                    />
+                                </div>
+                                <div className="sd-field-half" />
                             </div>
 
                             <div className="sd-field sd-field-row">

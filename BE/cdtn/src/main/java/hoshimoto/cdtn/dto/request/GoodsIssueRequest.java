@@ -17,6 +17,12 @@ public class GoodsIssueRequest {
 
     private Long customerId;
 
+    /** Optional: link this issue as an adjustment for an inventory audit */
+    private Long inventoryAuditId;
+
+    /** Optional: when creating an ADJUSTMENT issue, flags for the linked audit */
+    private java.util.List<Boolean> adjustmentFlags;
+
     @Valid
     private List<GoodsIssueDetailRequest> details;
 }

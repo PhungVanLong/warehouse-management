@@ -6,7 +6,7 @@ import { createReceipt, getAvailableLocations, getAllReceipts } from "../../api/
 import { getAuditById } from "../../api/auditApi";
 import { getAllCustomers } from "../../api/customerApi";
 import { getAllItems } from "../../api/itemApi";
-import { createBatch } from "../../api/batchApi";
+import { createBatch, getAllBatches } from "../../api/batchApi";
 import TopbarRight from "../../components/TopbarRight";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ function LocationModal({ open, onClose, onConfirm, loading, suggestions, quantit
                 onClick={isDisabled ? undefined : () => handleToggle(loc)}
                 style={{ cursor: isDisabled ? "not-allowed" : "pointer", opacity: isDisabled ? 0.32 : 1, transition: "opacity 0.15s" }}
             >
-                <td><input type="checkbox" checked={isSel} disabled={isDisabled} onChange={() => { }} onClick={(e) => e.stopPropagation()} /></td>
+                <td><input type="checkbox" checked={isSel} disabled={isDisabled} onChange={() => { }} onClick={(e) => { e.stopPropagation(); if (!isDisabled) handleToggle(loc); }} /></td>
                 {extraCol}
                 <td>{loc.locationcode}</td>
                 <td>{loc.capacity ?? "∞"}</td>
@@ -422,7 +422,13 @@ export default function ReceiptCreatePage() {
         if (!auditId || prefilledFromAudit) return;
         const fillFromAudit = async () => {
             try {
-                const data = await getAuditById(auditId);
+                const [data, batchList] = await Promise.all([getAuditById(auditId), getAllBatches()]);
+                // Build map: itemId -> unitCost from existing batches
+                const unitCostByItem = {};
+                (batchList || []).forEach((b) => {
+                    const key = String(b.itemId);
+                    if (!unitCostByItem[key] && b.unitCost) unitCostByItem[key] = String(b.unitCost);
+                });
                 const rowsFromAudit = (data.details || [])
                     .filter((d) => Number(d.diffquantity) > 0)
                     .map((d) => {
@@ -436,6 +442,7 @@ export default function ReceiptCreatePage() {
                             itemname: d.itemname,
                             unitof: d.unitof,
                             quantity: String(diff),
+                            price: unitCostByItem[String(d.itemId)] || "",
                             nameBatch: "L",
                             selectedLocations,
                         };
@@ -455,6 +462,9 @@ export default function ReceiptCreatePage() {
         };
         fillFromAudit();
     }, [searchParams, prefilledFromAudit]);
+
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const isManager = user?.role && user.role !== "STAFF";
 
     const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
 
@@ -530,6 +540,7 @@ export default function ReceiptCreatePage() {
             }))
         );
         setSaving(true);
+        const adjAuditId = searchParams.get("auditId");
         try {
             const result = await createReceipt({
                 docno: form.docno.trim(),
@@ -537,10 +548,12 @@ export default function ReceiptCreatePage() {
                 description: form.description.trim(),
                 customerId: Number(form.customerId),
                 docType: form.docType,
+                docstatus: isManager ? "CONFIRMED" : "DRAFT",
                 invoiceDate: invoice.date || undefined,
                 taxcode: invoice.taxcode || undefined,
-                invoiceNo: invoice.number || undefined,
+                invoiceNumber: invoice.number || undefined,
                 supplierId: invoice.supplierId ? Number(invoice.supplierId) : undefined,
+                ...(adjAuditId ? { inventoryAuditId: Number(adjAuditId) } : {}),
                 details,
             });
             if (result?.success) {
@@ -549,24 +562,30 @@ export default function ReceiptCreatePage() {
                 const batchPromises = [];
                 for (const row of rows) {
                     const nLocs = row.selectedLocations.length;
-                    for (let i = 0; i < nLocs; i++) {
-                        const detail = returnedDetails[detailOffset + i];
-                        const allocQty = row.selectedLocations[i]?.allocQty;
-                        if (detail?.id && allocQty) {
-                            batchPromises.push(
-                                createBatch({
-                                    itemId: Number(row.itemId),
-                                    receiptDetailId: detail.id,
-                                    unitCost: Number(row.price) || 0,
-                                    quantity: Number(allocQty),
-                                }).catch(() => { })
-                            );
-                        }
+                    // Mỗi dòng hàng (mã hàng) chỉ tạo 1 lô duy nhất,
+                    // dù số lượng vượt 1 ô và phải phân bổ qua nhiều vị trí.
+                    const firstDetail = returnedDetails[detailOffset];
+                    if (firstDetail?.id && nLocs > 0) {
+                        const totalQty = row.selectedLocations.reduce(
+                            (sum, loc) => sum + Number(loc.allocQty || 0), 0
+                        );
+                        batchPromises.push(
+                            createBatch({
+                                itemId: Number(row.itemId),
+                                receiptDetailId: firstDetail.id,
+                                unitCost: Number(row.price) || 0,
+                                quantity: totalQty,
+                            }).catch(() => { })
+                        );
                     }
                     detailOffset += nLocs;
                 }
                 if (batchPromises.length > 0) await Promise.all(batchPromises);
                 showToast("success", "Tạo phiếu nhập kho thành công!");
+                // Lưu ID phiếu để AuditDetailPage kiểm tra status sau này
+                if (adjAuditId && form.docType === "ADJUSTMENT" && result?.data?.id) {
+                    localStorage.setItem(`audit_adj_receipt_id_${adjAuditId}`, String(result.data.id));
+                }
                 setTimeout(() => navigate("/receipts"), 1200);
             } else {
                 showToast("error", result?.message || "Tạo phiếu thất bại.");

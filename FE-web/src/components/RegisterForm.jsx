@@ -9,12 +9,17 @@ export default function RegisterForm() {
     const [form, setForm] = useState({ usercode: "", fullname: "", username: "", email: "", password: "", department: "" });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [usernameError, setUsernameError] = useState("");
 
-    const set = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+    const set = (field, value) => {
+        if (field === "username") setUsernameError("");
+        setForm((prev) => ({ ...prev, [field]: value }));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
+        setUsernameError("");
         if (!form.usercode || !form.fullname || !form.username || !form.email || !form.password || !form.department) {
             setError("Vui lòng điền đầy đủ các trường bắt buộc");
             return;
@@ -27,8 +32,14 @@ export default function RegisterForm() {
             } else {
                 setError(res.message || "Đăng ký thất bại");
             }
-        } catch {
-            setError("Lỗi kết nối. Vui lòng thử lại.");
+        } catch (err) {
+            const msg = err?.response?.data?.message || "";
+            const status = err?.response?.status;
+            if (status === 409 || /username|t.n .*ng nh.p|\buser\b/i.test(msg)) {
+                setUsernameError(msg || "Tên đăng nhập đã tồn tại.");
+            } else {
+                setError(msg || "Lỗi kết nối. Vui lòng thử lại.");
+            }
         } finally {
             setLoading(false);
         }
@@ -63,6 +74,9 @@ export default function RegisterForm() {
                         </span>
                         <input type="text" placeholder="Tên đăng nhập *" value={form.username} onChange={(e) => set("username", e.target.value)} required />
                     </label>
+                    {usernameError && (
+                        <div style={{ color: "#d32f2f", fontSize: "0.82rem", marginTop: -8, marginBottom: 4, paddingLeft: 2 }}>{usernameError}</div>
+                    )}
                     <label className="input-field">
                         <span className="input-icon">
                             <svg viewBox="0 0 24 24"><path d="M21 8V7a5 5 0 0 0-10 0v1a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2Zm-5-3a3 3 0 0 1 3 3v1h-6V8a3 3 0 0 1 3-3Zm4 12a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1Z" /></svg>

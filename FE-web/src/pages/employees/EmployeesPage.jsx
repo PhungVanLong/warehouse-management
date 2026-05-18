@@ -18,7 +18,6 @@ function SortIcon() {
 export default function EmployeesPage() {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     const isStaff = user?.role === "STAFF";
-    const isManager = user?.role === "MANAGER";
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -52,9 +51,7 @@ export default function EmployeesPage() {
 
     const filtered = useMemo(() => {
         let sorted = [...items].sort((a, b) => (a.id || 0) - (b.id || 0));
-        if (isManager) {
-            sorted = sorted.filter((r) => r.role !== "ADMIN");
-        }
+        sorted = sorted.filter((r) => r.role !== "ADMIN");
         if (!search.trim()) return sorted;
         const q = search.toLowerCase();
         return sorted.filter((r) =>
@@ -75,15 +72,17 @@ export default function EmployeesPage() {
 
     const toggleRow = (id) =>
         setSelected((prev) => {
-            const next = new Set();
-            if (!prev.has(id)) next.add(id);
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
             return next;
         });
 
     const toggleAll = (checked) =>
-        setSelected(() => {
-            const next = new Set();
-            if (checked && rows[0]) next.add(rows[0].id);
+        setSelected((prev) => {
+            const next = new Set(prev);
+            if (checked) allIds.forEach((id) => next.add(id));
+            else allIds.forEach((id) => next.delete(id));
             return next;
         });
 
@@ -99,9 +98,11 @@ export default function EmployeesPage() {
     };
 
     const handleExportPdf = () => {
+        if (selected.size === 0) return;
         const now = new Date();
         const title = "DANH MỤC NHÂN VIÊN";
-        const rowsHtml = filtered.map((r, idx) => `
+        const exportRows = filtered.filter((r) => selected.has(r.id));
+        const rowsHtml = exportRows.map((r, idx) => `
             <tr>
                 <td class="center">${idx + 1}</td>
                 <td>${r.usercode || ""}</td>
@@ -223,11 +224,16 @@ export default function EmployeesPage() {
                         </svg>
                         Thêm bản sao mới
                     </button>
-                    <button className="sp-btn-outline" onClick={handleExportPdf}>
+                    <button
+                        className="sp-btn-outline"
+                        onClick={handleExportPdf}
+                        disabled={selected.size === 0}
+                        title={selected.size === 0 ? "Chọn ít nhất 1 nhân viên để export" : `Export ${selected.size} nhân viên`}
+                    >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
                         </svg>
-                        Export
+                        Export {selected.size > 0 ? `(${selected.size})` : ""}
                     </button>
                 </div>
 

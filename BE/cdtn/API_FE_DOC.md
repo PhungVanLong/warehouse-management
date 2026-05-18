@@ -65,8 +65,8 @@
 - Customer: nếu `iscustomer=false` thì phải có `issupplier=true`, và ngược lại.
 - User: `role` chỉ nhận `ADMIN`, `MANAGER` hoặc `STAFF`. Quy tắc tạo: **ADMIN** có thể tạo `MANAGER` hoặc `STAFF` (không tạo được `ADMIN`); **MANAGER** chỉ tạo được `STAFF`.
 - Phiếu nhập/xuất/kiểm kê: chỉ `DRAFT` mới được sửa hoặc hủy khi chưa gửi/đã xác nhận; không thể sửa sau khi `CONFIRMED` hoặc `CANCELLED`.
-- Quy trình kiểm kê (mới): Manager có thể **gán** phiếu cho một `STAFF` (gửi yêu cầu) — phiếu chuyển sang `REQUESTED`. `STAFF` nhận yêu cầu, cập nhật số lượng thực tế và **gửi** lại (`SUBMITTED`). Manager kiểm tra và `confirm` để áp điều chỉnh tồn kho (chuyển `CONFIRMED`) hoặc `cancel`.
-- Trạng thái phiếu (`docstatus`) (mở rộng): `DRAFT` → `REQUESTED` → `SUBMITTED` → `CONFIRMED` or `CANCELLED` (Manager có thể confirm trực tiếp từ `DRAFT` hoặc từ `SUBMITTED`).
+- Quy trình kiểm kê (mới): Manager **gán** phiếu cho `STAFF` → `REQUESTED`. Staff cập nhật lần đầu → `IN_PROGRESS`. Staff **gửi** → `SUBMITTED` (không chênh lệch) hoặc `PENDING_PROCESS` (có chênh lệch). Manager `confirm` → **`CONFIRMED`** (không chênh lệch) hoặc **`PROCESSED`** (có chênh lệch, đã cập nhật `InventoryBalance`); Manager `reject` → `REJECTED`; `cancel` → chỉ DRAFT.
+- Trạng thái phiếu kiểm kê (`docstatus`): `DRAFT` → `REQUESTED` → `IN_PROGRESS` → `SUBMITTED` / `PENDING_PROCESS` → `CONFIRMED` / `PROCESSED` / `REJECTED` / `CANCELLED`.
 
 ### Ngày giờ
 
@@ -445,6 +445,7 @@
 ```json
 {
   "docno": "PN-2026-001",
+  "invoiceNumber": "INV-20260505-01",
   "doctype": "NORMAL",
   "docDate": "2026-05-05",
   "description": "Nhập hàng tháng 5",
@@ -470,10 +471,16 @@
 
 | Trường | Bắt buộc | Mô tả |
 |--------|----------|-------|
+| `invoiceNumber` | ❌ | Số hóa đơn / chứng từ bán hàng từ nhà cung cấp (tách riêng với `docno`). |
 | `doctype` | ✅ | Loại phiếu nhập. Giá trị gợi ý: `NORMAL`, `ADJUSTMENT`. |
 
 > `locationId` có thể để `null` khi tạo DRAFT; phải gán trước khi confirm.
 > `batchId` / `batchCode` trong response chỉ có khi đã tạo lô gắn với `receiptDetailId`.
+>
+> **LƯU Ý QUAN TRỌNG VỀ LỘ TRÌNH SỐ LÔ (BATCH):**
+> - Nếu FE/USER tạo lô gắn với một `receiptDetail` trong khi phiếu đang ở trạng thái `DRAFT`, BE cho phép tạo tạm lô nhưng **lô đó có thể bị xóa** nếu phiếu không được duyệt (ví dụ: bị `CANCELLED`) hoặc khi chi tiết phiếu bị thay thế (PUT cập nhật DRAFT). Vì vậy FE không nên dựa vào lô được tạo trên phiếu chưa được confirm.
+> - API trả về `batchCode`/`batchId` ở các endpoint danh sách/chi tiết vị trí chỉ với những lô có parent `GoodsReceipt` ở trạng thái `CONFIRMED`. Lô thuộc phiếu chưa confirm sẽ không xuất hiện trong `available-locations`/`locations`/`batches/by-location`.
+> - Kết luận cho FE: **ưu tiên chỉ tạo/hiển thị lô sau khi phiếu nhập đã `CONFIRMED`**, hoặc chờ thông báo/refresh sau khi phiếu được duyệt.
 
 **Response:**
 ```json
@@ -483,6 +490,7 @@
   "data": {
     "id": 1,
     "docno": "PN-2026-001",
+    "invoiceNumber": "INV-20260505-01",
     "docDate": "2026-05-05",
     "description": "Nhập hàng tháng 5",
     "docstatus": "DRAFT",
@@ -564,6 +572,10 @@ Trả về danh sách sắp xếp: `EXISTING` → `EMPTY` → `PARTIAL`.
 ]
 ```
 
+
+---
+
+## 7. Goods Receipt – Nhập kho
 **`GET /suggest-locations?itemId={id}&quantity={qty}`** — Gợi ý vị trí đủ sức chứa `quantity`.
 
 **`GET /suggest-split?itemId={id}&quantity={qty}`** — Phân bổ tự động khi `quantity` > sức chứa 1 vị trí; trả thêm `suggestedQuantity`.
@@ -690,113 +702,112 @@ BE thực hiện:
 
 **Base path:** `/api/inventory-audits`
 
-**Luồng:** `DRAFT` → *(nhập số liệu thực tế)* → `confirm` → tồn kho được điều chỉnh theo chênh lệch  
-*(hoặc)* → `cancel` → phiếu bị hủy (tồn kho không đổi)
+### Luồng trạng thái
+
+```
+Manager tạo yêu cầu kiểm kê cho Staff (khuyến nghị):
+  REQUESTED (manager gán) ──(staff cập nhật)──► IN_PROGRESS
+  IN_PROGRESS ──(staff submit)──► SUBMITTED / PENDING_PROCESS
+  SUBMITTED / PENDING_PROCESS ──(manager confirm)──► CONFIRMED / PROCESSED
+  DRAFT ──(manager lưu nháp)──► CANCELLED
+```
+
+> **Ghi chú quan trọng:** Manager **không** thực hiện "tự kiểm" bằng cách gửi `actualquantity` khi tạo phiếu. BE sẽ chặn hành vi này. Quy trình chuẩn: manager gán yêu cầu cho staff → staff thực hiện kiểm kê và `submit` → manager `confirm`/`reject`.
+> **Quan trọng:** Khi `confirm`, nếu có `diffquantity ≠ 0` thì trạng thái là **`PROCESSED`** (đã xử lý chênh lệch); nếu toàn bộ diff = 0 thì là **`CONFIRMED`**. Cả hai trường hợp đều đã áp dụng chênh lệch vào `InventoryBalance` tổng kho.  
+> Khi `confirm`, chỉ `InventoryBalance` (tổng kho) được cập nhật — **không** cập nhật `ItemLocation` (tồn theo vị trí). Nếu cần điều chỉnh tồn theo vị trí sau kiểm kê, FE tạo phiếu nhập/xuất thông thường (xem mục 9.4).
+
+---
+
+### Bảng endpoint
 
 | Method | Endpoint | Mô tả | Quyền |
 |--------|----------|-------|-------|
-| GET | `/api/inventory-audits` | Danh sách phiếu kiểm kê | ADMIN, MANAGER, STAFF |
+| GET | `/api/inventory-audits` | Danh sách tất cả phiếu kiểm kê | ADMIN, MANAGER, STAFF |
 | GET | `/api/inventory-audits/{id}` | Chi tiết phiếu kiểm kê | ADMIN, MANAGER, STAFF |
-| POST | `/api/inventory-audits` | Tạo phiếu nháp (Manager/Admin có thể gán cho Staff) | ADMIN, MANAGER |
-| PUT | `/api/inventory-audits/{id}` | Sửa phiếu DRAFT | ADMIN, MANAGER, STAFF |
-| POST | `/api/inventory-audits/{id}/confirm` | Xác nhận → điều chỉnh tồn | ADMIN, MANAGER |
-| POST | `/api/inventory-audits/{id}/cancel` | Hủy phiếu DRAFT | ADMIN, MANAGER |
-| GET | `/api/inventory-audits/assigned` | Danh sách phiếu được gán cho `STAFF` đang đăng nhập | STAFF |
-| GET | `/api/inventory-audits/assigned/pending` | Danh sách phiếu kiểm kê chưa làm | STAFF |
-| GET | `/api/inventory-audits/assigned/done` | Danh sách phiếu kiểm kê đã làm | STAFF |
-| PUT | `/api/inventory-audits/{id}/assigned` | `STAFF` cập nhật chi tiết phiếu được gán (trạng thái REQUESTED) | STAFF |
-| POST | `/api/inventory-audits/{id}/submit` | `STAFF` gửi kết quả kiểm kê về Manager (chuyển sang SUBMITTED) | STAFF |
+| POST | `/api/inventory-audits` | Tạo phiếu kiểm kê | ADMIN, MANAGER |
+| PUT | `/api/inventory-audits/{id}` | Sửa phiếu DRAFT (chỉ DRAFT, phải có actualquantity) | ADMIN, MANAGER, STAFF |
+| POST | `/api/inventory-audits/{id}/confirm` | Xác nhận → cập nhật InventoryBalance | ADMIN, MANAGER |
+| POST | `/api/inventory-audits/{id}/reject` | Từ chối duyệt (kèm lý do) | ADMIN, MANAGER |
+| POST | `/api/inventory-audits/{id}/cancel` | Hủy phiếu (chỉ DRAFT) | ADMIN, MANAGER |
+| GET | `/api/inventory-audits/assigned` | Phiếu đang giao cho STAFF đăng nhập (REQUESTED, IN_PROGRESS) | STAFF |
+| GET | `/api/inventory-audits/assigned/pending` | Alias của `/assigned` | STAFF |
+| GET | `/api/inventory-audits/assigned/done` | Phiếu STAFF đã làm xong (SUBMITTED, PENDING_PROCESS, PROCESSED, CONFIRMED, CANCELLED, REJECTED) | STAFF |
+| PUT | `/api/inventory-audits/{id}/assigned` | STAFF cập nhật actualquantity (REQUESTED → IN_PROGRESS) | STAFF |
+| POST | `/api/inventory-audits/{id}/submit` | STAFF gửi kết quả cho Manager | STAFF |
 
-### 9.1 Tạo / Cập nhật phiếu kiểm kê (DRAFT)
+---
 
-**Request body (Manager tạo yêu cầu cho STAFF):**
+### 9.1 Tạo phiếu kiểm kê
+
+**Endpoint:** `POST /api/inventory-audits`
+
+Có hai chế độ tạo phiếu:
+
+#### Chế độ 1 – Manager gán cho STAFF (`sendToStaff = true`)
+
+FE **chỉ gửi `itemId`**, KHÔNG cần `actualquantity`. BE tự lấy `bookquantity` từ `InventoryBalance`.
+
 ```json
 {
-  "docno": "KK-2026-001",
+  "docno": "PKK-01",
   "docDate": "2026-05-05",
   "description": "Kiểm kê kho tháng 5",
-  "assignedUserId": 12,        
-  "sendToStaff": true,         
+  "assignedUserId": 12,
+  "sendToStaff": true,
   "details": [
-    {
-      "itemId": 5,
-      "description": "Kiểm kê toàn kho"
-    },
-    {
-      "itemId": 6,
-      "description": null
-    }
+    { "itemId": 5, "description": "Khu vực A" },
+    { "itemId": 6 }
   ]
 }
 ```
 
-**Các trường quản lý gửi khi yêu cầu kiểm kê:**
+→ Kết quả: `docstatus = REQUESTED`, `actualquantity = null`, `diffquantity = null`.
+
+#### Chế độ 2 – Manager tự nhập kết quả (`sendToStaff = false` hoặc bỏ trống)
+
+`actualquantity` là **bắt buộc** cho mọi dòng chi tiết. Phiếu sẽ ở trạng thái `DRAFT`.
+
+```json
+{
+  "docDate": "2026-05-05",
+  "description": "Kiểm kê nhanh",
+  "details": [
+    { "itemId": 5, "actualquantity": 95, "description": "Đếm thực tế" },
+    { "itemId": 6, "actualquantity": 30 }
+  ]
+}
+```
+
+→ Kết quả: `docstatus = DRAFT`, `bookquantity` và `diffquantity` đã được BE tính sẵn.
+
+#### Bảng trường request
+
 | Trường | Bắt buộc | Mô tả |
 |--------|----------|-------|
-| `docno` | ❌ | Mã phiếu kiểm kê (BE tự sinh nếu không gửi) |
-| `docDate` | ❌ | Ngày thực hiện kiểm kê (yyyy-MM-dd) |
-| `description` | ❌ | Ghi chú |
+| `docno` | ❌ | BE tự sinh `PKK-01`, `PKK-02`, ... nếu không gửi |
+| `docDate` | ❌ | Ngày kiểm kê (yyyy-MM-dd) |
+| `description` | ❌ | Ghi chú phiếu |
 | `assignedUserId` | ❌ | ID nhân viên được giao |
-| `sendToStaff` | ❌ | `true` để chuyển trạng thái sang `REQUESTED` |
-| `details` | ✅ | Danh sách dòng kiểm kê |
-| `details[].itemId` | ✅ | Hàng hóa |
-| `details[].actualquantity` | ❌ | Số đếm thực tế (STAFF cập nhật ở bước sau) |
+| `sendToStaff` | ❌ | `true` → gán Staff, `false`/null → Manager tự nhập |
+| `details[].itemId` | ✅ | ID hàng hóa |
+| `details[].actualquantity` | ✅ nếu không gán Staff | Số đếm thực tế |
 | `details[].description` | ❌ | Ghi chú dòng |
 
-> Khi Manager tạo yêu cầu, FE chỉ gửi danh sách `itemId`. BE tự lấy `bookquantity` từ `InventoryBalance` (tổng kho) và trả về cho FE. `actualquantity` sẽ do STAFF cập nhật sau.
-
-**Ghi chú cho FE (gán và nhận yêu cầu):**
-- Khi Manager muốn giao nhiệm vụ kiểm kê cho nhân viên: gửi `assignedUserId` (id của `STAFF`) và `sendToStaff=true` trong body của `POST /api/inventory-audits`. BE sẽ lưu phiếu và chuyển `docstatus` thành `REQUESTED`.
-- `STAFF` gọi `GET /api/inventory-audits/assigned` hoặc `GET /api/inventory-audits/assigned/pending` để lấy danh sách yêu cầu chưa làm. `STAFF` cập nhật số liệu qua `PUT /api/inventory-audits/{id}/assigned` (gửi `details` với `actualquantity`), rồi gọi `POST /api/inventory-audits/{id}/submit` để gửi kết quả về Manager (BE chuyển `docstatus` thành `SUBMITTED`).
-- `STAFF` gọi `GET /api/inventory-audits/assigned/done` để lấy danh sách đã làm (SUBMITTED, CONFIRMED, CANCELLED).
-- Manager có thể xem phiếu ở trạng thái `SUBMITTED` và gọi `POST /api/inventory-audits/{id}/confirm` để áp chênh lệch và chuyển `CONFIRMED`.
-
-**Lưu ý FE sau khi `CONFIRMED`:**
-- Ngày thực hiện: hiển thị từ `docDate`; nếu `docDate` null thì dùng `createdAt` (chỉ lấy phần ngày).
-- Hiển nút `Tạo phiếu nhập điều chỉnh` hoặc `Tạo phiếu xuất điều chỉnh` sau khi Admin/Manager duyệt (phiếu `CONFIRMED`). FE gắn nhãn loại phiếu là **điều chỉnh** (ví dụ: hiển thị badge/label), và đặt `description` dạng "Điều chỉnh từ kiểm kê {docno}" để dễ tra soát.
-- Bảng chi tiết thay cột "Ghi chú" thành 2 cột: **Chênh lệch** và **Đề xuất xử lý**.
-- **Chênh lệch:** `diffquantity`.
-- **Đề xuất xử lý:** `diffquantity > 0` → "Đề xuất nhập điều chỉnh"; `diffquantity < 0` → "Đề xuất xuất điều chỉnh"; `diffquantity = 0` → "Không cần điều chỉnh".
-
-**Request body (STAFF cập nhật kết quả kiểm kê):**
-```json
-{
-  "docno": "KK-2026-001",
-  "docDate": "2026-05-05",
-  "description": "Kiểm kê kho tháng 5",
-  "details": [
-    {
-      "itemId": 5,
-      "actualquantity": 95,
-      "description": "Đếm thực tế 95 cái"
-    },
-    {
-      "itemId": 6,
-      "actualquantity": 30,
-      "description": null
-    }
-  ]
-}
-```
-
-> `docno` có thể bỏ trống để BE tự sinh theo dạng `PKK-01`, `PKK-02`, ...
-
 **Response:**
-> Nếu gửi `sendToStaff=true` và có `assignedUserId`, BE sẽ trả `docstatus = REQUESTED` và đi kèm các trường `assignedToUserId`, `assignedToUsername`, `assignedToFullname`. Nếu không gửi yêu cầu cho nhân viên, `docstatus = DRAFT` và các trường gán sẽ là `null`. Khi vừa tạo yêu cầu, `actualquantity` và `diffquantity` sẽ là `null` cho đến khi STAFF cập nhật.
-> `auditor*` là người kiểm kê (nhân viên thực hiện); nếu không gán nhân viên thì `auditor*` là người tạo phiếu. `approver*` là người duyệt khi phiếu được confirm.
+
 ```json
 {
   "success": true,
   "message": "Tạo phiếu kiểm kê thành công",
   "data": {
     "id": 1,
-    "docno": "KK-2026-001",
+    "docno": "PKK-01",
     "docDate": "2026-05-05",
     "description": "Kiểm kê kho tháng 5",
     "docstatus": "REQUESTED",
     "createdAt": "2026-05-05T09:00:00",
-    "createdByUsername": "admin",
-    "createdByFullname": "Admin hệ thống",
+    "createdByUsername": "manager01",
+    "createdByFullname": "Trưởng kho",
     "assignedToUserId": 12,
     "assignedToUsername": "staff01",
     "assignedToFullname": "Nhân viên kho",
@@ -808,6 +819,7 @@ BE thực hiện:
     "approverFullname": null,
     "modifiedAt": null,
     "modifiedBy": null,
+    "rejectReason": null,
     "details": [
       {
         "id": 1,
@@ -818,29 +830,191 @@ BE thực hiện:
         "bookquantity": 100,
         "actualquantity": null,
         "diffquantity": null,
-        "description": "Kiểm kê toàn kho"
+        "description": "Khu vực A"
       }
     ]
   }
 }
 ```
 
-### 9.2 Xác nhận phiếu kiểm kê
+> `auditor*`: nhân viên thực hiện kiểm kê; nếu không gán Staff thì là người tạo phiếu.  
+> `approver*`: người duyệt, được ghi nhận sau khi confirm/reject.
+
+---
+
+### 9.2 STAFF cập nhật kết quả kiểm kê
+
+**Endpoint:** `PUT /api/inventory-audits/{id}/assigned`
+
+**Điều kiện:** Phiếu ở trạng thái `REQUESTED` hoặc `IN_PROGRESS`. Người gọi phải là `assignedUser` của phiếu.
+
+Khi STAFF cập nhật lần đầu, `REQUESTED` tự động chuyển sang `IN_PROGRESS`.
+
+`actualquantity` là **bắt buộc** cho mọi dòng.
+
+```json
+{
+  "details": [
+    { "itemId": 5, "actualquantity": 95, "description": "Đếm thực tế" },
+    { "itemId": 6, "actualquantity": 30 }
+  ]
+}
+```
+
+BE tính: `diffquantity = actualquantity - bookquantity` và trả về trong response.
+
+---
+
+### 9.3 STAFF gửi kết quả cho Manager
+
+**Endpoint:** `POST /api/inventory-audits/{id}/submit` — không cần body.
+
+**Điều kiện:** Phiếu ở `REQUESTED` hoặc `IN_PROGRESS`. Phải có đầy đủ `actualquantity` cho tất cả dòng.
+
+| Kết quả kiểm kê | `docstatus` sau submit |
+|-----------------|----------------------|
+| Toàn bộ `diffquantity = 0` | `SUBMITTED` |
+| Có ít nhất 1 `diffquantity ≠ 0` | `PENDING_PROCESS` |
+
+BE tự động gửi thông báo `APPROVAL_REQUIRED` đến Manager/người tạo phiếu.
+
+**Lỗi có thể trả về:**
+- `"Chưa nhập số lượng thực tế cho hàng hóa 'SP001'"`
+- `"Phiếu kiểm kê không có dòng chi tiết nào"`
+
+---
+
+### 9.4 Xác nhận phiếu kiểm kê
 
 **Endpoint:** `POST /api/inventory-audits/{id}/confirm` — không cần body.
 
-BE thực hiện:
-1. Kiểm tra phiếu có dòng chi tiết.
-2. Với mỗi dòng có `diffquantity ≠ 0`:
-  - Nếu `diff > 0` (thừa hàng): cộng tồn `InventoryBalance`.
-  - Nếu `diff < 0` (thiếu hàng): trừ tồn (validate không âm).
-3. Set `docstatus = CONFIRMED`.
+**Quyền:** ADMIN, MANAGER
+
+**Điều kiện:** Phiếu ở trạng thái `DRAFT`, `SUBMITTED` hoặc `PENDING_PROCESS`.
+
+**BE thực hiện:**
+1. Kiểm tra tất cả dòng đã có `actualquantity`.
+2. Với mỗi dòng có `diffquantity ≠ 0`, cập nhật `InventoryBalance` tổng kho:
+   - `diff > 0` (thừa): cộng tồn kho tổng.
+   - `diff < 0` (thiếu): trừ tồn kho tổng (lỗi nếu kết quả âm).
+3. Ghi nhận `approver` = user đang đăng nhập.
+
+| Kết quả sau confirm | `docstatus` |
+|---------------------|-------------|
+| Toàn bộ `diffquantity = 0` | `CONFIRMED` |
+| Có ít nhất 1 `diffquantity ≠ 0` | `PROCESSED` |
+
+> **⚠ Quan trọng cho FE:**  
+> - Chỉ `InventoryBalance` (tổng kho) được cập nhật khi confirm. `ItemLocation` (tồn theo vị trí) **KHÔNG thay đổi**.  
+> - Nếu phiếu trả về `PROCESSED` (có chênh lệch), FE nên hiển thị gợi ý tạo phiếu nhập/xuất điều chỉnh (xem bên dưới).  
+> - FE nên hiển thị bảng `diffquantity` trước khi confirm: `diff < 0` → đỏ (thiếu), `diff > 0` → xanh (thừa), `diff = 0` → xám.
 
 **Lỗi có thể trả về:**
+- `"Chỉ có thể xác nhận phiếu ở trạng thái DRAFT, SUBMITTED hoặc PENDING_PROCESS"`
 - `"Phiếu kiểm kê không có dòng chi tiết nào"`
-- `"Tồn kho tổng của 'SP001' không đủ sau kiểm kê"`
+- `"Chưa nhập số lượng thực tế cho hàng hóa 'SP001'"`
+- `"Tồn kho tổng của 'SP001' không đủ sau kiểm kê (tổng: X, chênh lệch: Y)"`
+ 
+**Ghi chú về phiếu điều chỉnh (Adjustment vouchers)**
 
-> **Lưu ý FE:** Nên hiển thị `diffquantity` khi preview để người dùng kiểm tra trước khi confirm. `diff < 0` (đỏ – thiếu hàng), `diff > 0` (xanh – thừa hàng), `diff = 0` (không đổi).
+- Khi FE muốn tạo phiếu điều chỉnh từ kết quả kiểm kê (`InventoryAudit`), FE tạo một `GoodsReceipt` với `inventoryAuditId` (liên kết tới `InventoryAudit`) — backend sẽ hiểu đây là một `ADJUSTMENT` voucher.
+- FE có thể gửi thêm trường `adjustmentFlags` trong payload `GoodsReceiptRequest` là một mảng boolean (JSON array). BE sẽ lưu mảng này vào `InventoryAudit.adjustmentFlags` và trả lại trong `InventoryAuditResponse.adjustmentFlags` để FE hiển thị/giải mã.
+- Lưu ý: `adjustmentFlags` chỉ được sử dụng/áp dụng cho phiếu điều chỉnh liên kết tới `InventoryAudit` và không ảnh hưởng đến phiếu nhập/xuất bình thường.
+
+---
+
+### 9.5 Từ chối duyệt phiếu kiểm kê
+
+**Endpoint:** `POST /api/inventory-audits/{id}/reject`
+
+**Quyền:** ADMIN, MANAGER
+
+**Điều kiện:** Phiếu ở trạng thái `SUBMITTED` hoặc `PENDING_PROCESS`.
+
+```json
+{
+  "reason": "Số liệu không khớp, cần kiểm tra lại khu vực A"
+}
+```
+
+| Trường | Bắt buộc | Mô tả |
+|--------|----------|-------|
+| `reason` | ✅ | Lý do từ chối (không được để trống) |
+
+Response trả về `docstatus = REJECTED` và `rejectReason` đã ghi nhận. BE tự động gửi thông báo `REJECTED` đến nhân viên được giao.
+
+**Lỗi có thể trả về:**
+- `"Chỉ có thể từ chối phiếu ở trạng thái SUBMITTED hoặc PENDING_PROCESS"`
+
+---
+
+### 9.6 Hủy phiếu kiểm kê
+
+**Endpoint:** `POST /api/inventory-audits/{id}/cancel` — không cần body.
+
+**Điều kiện:** Phiếu ở trạng thái `DRAFT`. Không hủy được phiếu đã gửi cho Staff.
+
+---
+
+### 9.7 Phiếu nhập / xuất điều chỉnh sau kiểm kê
+
+Sau khi phiếu kiểm kê được confirm (`CONFIRMED` hoặc `PROCESSED`):
+- `InventoryBalance` (tồn kho tổng) đã được cập nhật tự động.
+- `ItemLocation` (tồn theo từng vị trí) **chưa thay đổi** — nếu hệ thống cần đồng bộ tồn theo vị trí, FE tạo phiếu nhập/xuất thông thường.
+
+**Cách FE tạo phiếu điều chỉnh vị trí:**
+
+| `diffquantity` | Loại phiếu cần tạo | Endpoint |
+|----------------|-------------------|----------|
+| `> 0` (thừa hàng) | Phiếu nhập điều chỉnh | `POST /api/goods-receipts` |
+| `< 0` (thiếu hàng) | Phiếu xuất điều chỉnh | `POST /api/goods-issues` |
+| `= 0` | Không cần tạo phiếu | — |
+
+**Gợi ý FE hiển thị:**
+- Sau khi phiếu kiểm kê chuyển sang `PROCESSED`, hiển thị bảng chi tiết với cột **Chênh lệch** (`diffquantity`) và cột **Đề xuất**:
+  - `diff > 0` → "Nhập điều chỉnh +{diff}" (badge xanh)
+  - `diff < 0` → "Xuất điều chỉnh {diff}" (badge đỏ)
+  - `diff = 0` → "Không cần điều chỉnh" (xám)
+- Nút **"Tạo phiếu nhập/xuất điều chỉnh"** → điền sẵn:
+  - `description`: `"Điều chỉnh từ kiểm kê {docno}"`
+  - `details[].quantity`: `Math.abs(diffquantity)`
+
+**FE: localStorage flow để ẩn nút sau khi đã tạo điều chỉnh**
+
+- Khi tạo phiếu nhập điều chỉnh thành công (ReceiptCreatePage): nếu URL có `auditId` và `doctype=ADJUSTMENT`, FE lưu localStorage key `audit_adj_receipt_{auditId}` = "1".
+- Khi tạo phiếu xuất điều chỉnh thành công (IssueCreatePage): nếu URL có `auditId` và `doctype=ADJUSTMENT`, FE lưu localStorage key `audit_adj_issue_{auditId}` = "1".
+- Khi AuditDetailPage tải, FE đọc 2 flag này:
+  - nếu `audit_adj_receipt_{auditId}` === "1" → ẩn/disable nút tạo phiếu nhập điều chỉnh;
+  - nếu `audit_adj_issue_{auditId}` === "1" → ẩn/disable nút tạo phiếu xuất điều chỉnh.
+- Vì lưu trong `localStorage`, flag sẽ tồn tại qua session và phù hợp với yêu cầu ẩn vĩnh viễn sau khi đã tạo.
+
+Lưu ý quan trọng (khuyến nghị):
+
+- Backend trả thêm trường `adjustmentCreated` (boolean) trong `InventoryAuditResponse`. FE **nên ưu tiên** kiểm tra `adjustmentCreated === true` để ẩn/disable các nút tạo điều chỉnh — đây là nguồn tin cậy (server-side).
+- `localStorage` flow là phương án bổ trợ (offline/UX) để ẩn nút ngay khi người dùng vừa tạo phiếu, trước khi có cập nhật từ server hoặc refresh trang. Kết hợp cả hai đảm bảo UX mượt và tránh hiển thị nút trùng lặp.
+
+Ví dụ xử lý trên FE (tối giản):
+
+```javascript
+// Khi nhận response từ server sau khi tạo Receipt/Issue
+if (response.status === 201 && response.data?.inventoryAuditId) {
+  // set local flag để ẩn ngay
+  localStorage.setItem(`audit_adj_receipt_${response.data.inventoryAuditId}`, '1');
+}
+
+// Khi hiển thị AuditDetailPage
+const serverHidden = auditResponse?.adjustmentCreated === true;
+const clientHidden = localStorage.getItem(`audit_adj_receipt_${auditId}`) === '1' ||
+                     localStorage.getItem(`audit_adj_issue_${auditId}`) === '1';
+const hideAdjustButton = serverHidden || clientHidden;
+```
+
+Ghi chú:
+- `adjustmentFlags` (nếu FE gửi) được lưu trên `InventoryAudit.adjustmentFlags` và trả lại trong `InventoryAuditResponse`.
+- BE cũng trả `inventoryAuditId` trong response của `GoodsReceipt`/`GoodsIssue` khi phiếu được tạo kèm liên kết audit; FE có thể kiểm tra response để xác nhận liên kết và set localStorage ngay khi nhận `201`/`200` từ server.
+- FE vẫn phải cho người dùng chọn `locationId` cho từng dòng khi tạo phiếu điều chỉnh.
+
+> **Lưu ý:** Phiếu điều chỉnh này là phiếu nhập/xuất hoàn toàn độc lập trong BE — không có liên kết tự động với phiếu kiểm kê. FE chịu trách nhiệm ghi `description` rõ ràng để tra soát.
 
 ---
 
@@ -916,6 +1090,15 @@ BE thực hiện:
 
 > `quantityRemaining` được cập nhật khi xác nhận phiếu nhập; FE không gửi trường này.
 
+### 10.4 Lifecycle & FE guidance
+
+- Batch liên kết với một `receiptDetailId`. BE cho phép tạo lô khi FE gửi `POST /api/batches`, nhưng lưu ý sau:
+  - Lô được tạo trên một phiếu đang ở trạng thái `DRAFT` có thể bị xóa nếu phiếu đó **không được duyệt** (ví dụ: bị `CANCELLED`) hoặc nếu chi tiết phiếu bị thay thế (PUT cập nhật DRAFT).
+  - Các endpoint trả về danh sách lô (`/api/batches`, `/api/batches/by-location`, `available-locations` trong mục vị trí) **chỉ hiển thị lô có parent `GoodsReceipt` ở trạng thái `CONFIRMED`**.
+  - Nếu FE muốn đảm bảo lô tồn tại và hiển thị cho các chức năng chọn vị trí / FIFO, FE nên chờ phiếu nhập được `CONFIRMED` trước khi phụ thuộc vào `batchCode` vừa tạo.
+
+FE nên hiển thị cảnh báo hoặc refresh khi người dùng tạo lô trên DRAFT rằng lô có thể biến mất nếu phiếu không được duyệt.
+
 ### 10.2 Danh sách lô hàng
 
 **Endpoint:** `GET /api/batches`
@@ -980,12 +1163,35 @@ BE thực hiện:
 5. **`batchCode`:** FE không gửi; BE tự sinh và trả về trong response.
 6. **Phiếu CONFIRMED / CANCELLED:** Không gọi PUT để sửa; BE sẽ trả lỗi.
 7. **Xử lý lỗi:** Luôn kiểm tra `success === false` → hiển thị `message` cho người dùng, không tiếp tục thao tác.
-8. **`docstatus` mapping FE:**
+8. **Global Error Response (GlobalExceptionHandler):** BE xử lý tập trung các lỗi sau và trả về cấu trúc `ApiResponse` chuẩn:
+
+   | HTTP Status | Trường hợp | `message` ví dụ |
+   |-------------|-----------|-----------------|
+   | `409 Conflict` | Trùng `username` | `"Tên đăng nhập đã tồn tại"` |
+   | `409 Conflict` | Trùng `email` | `"Email đã tồn tại"` |
+   | `409 Conflict` | Trùng `usercode` | `"Mã nhân viên đã tồn tại"` |
+   | `409 Conflict` | Trùng ràng buộc unique khác | `"Dữ liệu đã tồn tại, vui lòng kiểm tra lại"` |
+   | `400 Bad Request` | Tham số không hợp lệ (`IllegalArgumentException`) | Nội dung lỗi cụ thể từ BE |
+   | `500 Internal Server Error` | Lỗi hệ thống không xác định | `"Lỗi hệ thống: <chi tiết>"` |
+
+   Response mẫu khi trùng username:
+   ```json
+   {
+     "success": false,
+     "message": "Tên đăng nhập đã tồn tại",
+     "data": null
+   }
+   ```
+
+9. **`docstatus` mapping FE:**
    - `DRAFT` → "Nháp" (badge xám)
    - `REQUESTED` → "Đã giao" (badge vàng) — chỉ phiếu kiểm kê
    - `SUBMITTED` → "Chờ duyệt" (badge cam) — chỉ phiếu kiểm kê
+   - `PENDING_PROCESS` → "Có chênh lệch" (badge cam đậm) — chỉ phiếu kiểm kê
    - `CONFIRMED` → "Đã xác nhận" (badge xanh)
+   - `PROCESSED` → "Đã xử lý chênh lệch" (badge xanh đậm) — chỉ phiếu kiểm kê, `InventoryBalance` đã được cập nhật
    - `CANCELLED` → "Đã hủy" (badge đỏ)
+   - `REJECTED` → "Bị từ chối" (badge đỏ đậm) — hiển thị kèm `rejectReason`
 
 ---
 

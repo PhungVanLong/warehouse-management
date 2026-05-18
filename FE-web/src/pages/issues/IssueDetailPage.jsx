@@ -83,6 +83,10 @@ export default function IssueDetailPage() {
                 await fetchIssue();
                 localStorage.setItem("batchesNeedsRefresh", String(Date.now()));
                 window.dispatchEvent(new Event("batches:refresh"));
+                // Nếu là phiếu điều chỉnh kiểm kê, set flag ẩn nút điều chỉnh
+                if (issue?.docType === "ADJUSTMENT" && issue?.inventoryAuditId) {
+                    localStorage.setItem(`audit_adj_issue_${issue.inventoryAuditId}`, "1");
+                }
             } else {
                 showToast("error", res?.message || "Xác nhận thất bại.");
             }
@@ -352,18 +356,18 @@ export default function IssueDetailPage() {
                             )}
 
                             <div className="rc-detail-table-wrap">
-                                <table className="rc-detail-table" style={{ tableLayout: "auto" }}>
+                                <table className="rc-detail-table" style={{ tableLayout: "fixed", width: "100%" }}>
                                     <thead>
                                         <tr>
-                                            <th className="rc-td-stt" style={{ width: "10%" }}>STT</th>
+                                            <th className="rc-td-stt" style={{ width: "5%" }}>STT</th>
                                             <th style={{ width: "11%" }}>Mã hàng</th>
                                             <th style={{ width: "22%" }}>Tên hàng hóa</th>
                                             <th style={{ width: "12%" }}>Mã lô</th>
-                                            <th style={{ width: "8%" }}>Đơn vị</th>
-                                            <th style={{ width: "9%", textAlign: "right" }}>Số lượng</th>
-                                            <th style={{ width: "16%" }}>Vị trí</th>
-                                            <th style={{ width: "13%", textAlign: "right" }}>Đơn giá</th>
-                                            <th style={{ width: "14%", textAlign: "right" }}>Thành tiền</th>
+                                            <th style={{ width: "7%" }}>Đơn vị</th>
+                                            <th style={{ width: "8%", textAlign: "right" }}>Số lượng</th>
+                                            <th style={{ width: "15%" }}>Vị trí</th>
+                                            <th style={{ width: "10%", textAlign: "right" }}>Đơn giá</th>
+                                            <th style={{ width: "10%", textAlign: "right" }}>Thành tiền</th>
                                         </tr>
                                     </thead>
                                     <tbody>

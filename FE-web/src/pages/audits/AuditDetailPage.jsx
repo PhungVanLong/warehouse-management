@@ -3,23 +3,32 @@ import { useNavigate, useParams } from "react-router-dom";
 import "../../styles/shared.css";
 import "../receipts/receipts.css";
 import "./audits.css";
-import { getAuditById, confirmAudit, cancelAudit } from "../../api/auditApi";
-import { getAvailableLocations } from "../../api/issueApi";
+import { getAuditById, confirmAudit, cancelAudit, rejectAudit } from "../../api/auditApi";
+import { getAvailableLocations, getAllIssues, getIssueById } from "../../api/issueApi";
+import { getAllReceipts, getReceiptById } from "../../api/receiptApi";
 import TopbarRight from "../../components/TopbarRight";
 
 const STATUS_LABELS = {
     DRAFT: "Nháp",
-    REQUESTED: "Chờ xử lý",
+    REQUESTED: "Chờ kiểm kê",
+    IN_PROGRESS: "Đang kiểm kê",
     SUBMITTED: "Chờ duyệt",
+    PENDING_PROCESS: "Chờ xử lý",
+    PROCESSED: "Đã xử lý",
     CONFIRMED: "Đã xác nhận",
     CANCELLED: "Đã hủy",
+    REJECTED: "Đã từ chối",
 };
 const STATUS_CLASS = {
     DRAFT: "rc-status-pill au-status-pill-draft",
     REQUESTED: "rc-status-pill au-status-pill-requested",
+    IN_PROGRESS: "rc-status-pill au-status-pill-in-progress",
     SUBMITTED: "rc-status-pill au-status-pill-submitted",
+    PENDING_PROCESS: "rc-status-pill au-status-pill-pending-process",
+    PROCESSED: "rc-status-pill au-status-pill-processed",
     CONFIRMED: "rc-status-pill au-status-pill-confirmed",
     CANCELLED: "rc-status-pill au-status-pill-cancelled",
+    REJECTED: "rc-status-pill au-status-pill-rejected",
 };
 
 function formatDate(str) {
@@ -69,14 +78,21 @@ export default function AuditDetailPage() {
     const [actionLoading, setActionLoading] = useState(false);
     const [statusMenuOpen, setStatusMenuOpen] = useState(false);
     const [confirmModal, setConfirmModal] = useState(false);
+    const [rejectModal, setRejectModal] = useState(false);
+    const [rejectReason, setRejectReason] = useState("");
     const [locationsByItem, setLocationsByItem] = useState({});
+    // Chỉ ẩn nút khi TẤT CẢ mặt hàng có chênh lệch đã được điều chỉnh và xác nhận
+    const [adjIssueDone, setAdjIssueDone] = useState(false);
+    const [adjReceiptDone, setAdjReceiptDone] = useState(false);
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     const isStaff = user?.role === "STAFF";
-    // Manager can confirm from DRAFT or SUBMITTED
-    const canConfirm = !isStaff && (audit?.docstatus === "DRAFT" || audit?.docstatus === "SUBMITTED");
+    // Theo API docs 9.4: Manager confirm từ DRAFT, SUBMITTED hoặc PENDING_PROCESS
+    const canConfirm = !isStaff && ["DRAFT", "SUBMITTED", "PENDING_PROCESS"].includes(audit?.docstatus);
+    const canReject = !isStaff && ["SUBMITTED", "PENDING_PROCESS"].includes(audit?.docstatus);
     const canCancel = !isStaff && audit?.docstatus === "DRAFT";
-    const canOpenMenu = canConfirm || canCancel;
-    const canCreateAdjustment = !isStaff && audit?.docstatus === "CONFIRMED";
+    const canOpenMenu = canConfirm || canReject || canCancel;
+    // Sau khi PROCESSED: hiện nút tạo phiếu điều chỉnh vị trí (ItemLocation) — tuỳ chọn
+    const canCreateAdjustment = !isStaff && audit?.docstatus === "PROCESSED";
 
     const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
 
@@ -94,6 +110,68 @@ export default function AuditDetailPage() {
     }, [id]);
 
     useEffect(() => { fetchAudit(); }, [fetchAudit]);
+
+    // Kiểm tra từng mã hàng: chỉ ẩn nút khi TẤT CẢ mặt hàng có chênh lệch đã được điều chỉnh và xác nhận
+    useEffect(() => {
+        if (!audit?.docno || !audit?.details || audit?.docstatus !== "PROCESSED") return;
+
+        const negDiffItemIds = audit.details
+            .filter((d) => (d.diffquantity || 0) < 0)
+            .map((d) => d.itemId)
+            .filter(Boolean);
+        const posDiffItemIds = audit.details
+            .filter((d) => (d.diffquantity || 0) > 0)
+            .map((d) => d.itemId)
+            .filter(Boolean);
+
+        // Tìm voucherId từ localStorage hoặc fallback tìm theo description/inventoryAuditId
+        const resolveVoucherId = async (fetchAll) => {
+            const found = (await fetchAll()).find((v) =>
+                v.docType === "ADJUSTMENT" &&
+                (v.inventoryAuditId === Number(id) || (v.description || "").includes(audit.docno))
+            );
+            return found ? String(found.id) : null;
+        };
+
+        // Kiểm tra phiếu xuất: confirmed VÀ bao phủ tất cả mặt hàng âm
+        const checkIssueDone = async () => {
+            if (negDiffItemIds.length === 0) { setAdjIssueDone(false); return; }
+            let issueId = localStorage.getItem(`audit_adj_issue_id_${id}`);
+            if (!issueId) {
+                try { issueId = await resolveVoucherId(getAllIssues); }
+                catch { /* bỏ qua */ }
+            }
+            if (!issueId) { setAdjIssueDone(false); return; }
+            try {
+                const issue = await getIssueById(Number(issueId));
+                localStorage.setItem(`audit_adj_issue_id_${id}`, String(issueId));
+                if (issue?.docstatus !== "CONFIRMED") { setAdjIssueDone(false); return; }
+                const issueItemIds = new Set((issue.details || []).map((d) => d.itemId).filter(Boolean));
+                setAdjIssueDone(negDiffItemIds.every((itemId) => issueItemIds.has(itemId)));
+            } catch { setAdjIssueDone(false); }
+        };
+
+        // Kiểm tra phiếu nhập: confirmed VÀ bao phủ tất cả mặt hàng dương
+        const checkReceiptDone = async () => {
+            if (posDiffItemIds.length === 0) { setAdjReceiptDone(false); return; }
+            let receiptId = localStorage.getItem(`audit_adj_receipt_id_${id}`);
+            if (!receiptId) {
+                try { receiptId = await resolveVoucherId(getAllReceipts); }
+                catch { /* bỏ qua */ }
+            }
+            if (!receiptId) { setAdjReceiptDone(false); return; }
+            try {
+                const receipt = await getReceiptById(Number(receiptId));
+                localStorage.setItem(`audit_adj_receipt_id_${id}`, String(receiptId));
+                if (receipt?.docstatus !== "CONFIRMED") { setAdjReceiptDone(false); return; }
+                const receiptItemIds = new Set((receipt.details || []).map((d) => d.itemId).filter(Boolean));
+                setAdjReceiptDone(posDiffItemIds.every((itemId) => receiptItemIds.has(itemId)));
+            } catch { setAdjReceiptDone(false); }
+        };
+
+        checkIssueDone();
+        checkReceiptDone();
+    }, [audit?.docno, audit?.docstatus, audit?.details, id]);
 
     useEffect(() => {
         const loadLocations = async () => {
@@ -156,6 +234,30 @@ export default function AuditDetailPage() {
         }
     };
 
+    const handleReject = async () => {
+        if (!rejectReason.trim()) {
+            showToast("error", "Vui lòng nhập lý do từ chối.");
+            return;
+        }
+        setRejectModal(false);
+        setActionLoading(true);
+        try {
+            const res = await rejectAudit(id, rejectReason.trim());
+            if (res?.success) {
+                showToast("success", "Đã từ chối phiếu kiểm kê.");
+                setRejectReason("");
+                await fetchAudit();
+            } else {
+                showToast("error", res?.message || "Từ chối thất bại.");
+            }
+        } catch (err) {
+            showToast("error", err?.response?.data?.message || "Có lỗi xảy ra.");
+        } finally {
+            setActionLoading(false);
+            setStatusMenuOpen(false);
+        }
+    };
+
     const summary = audit?.details ? audit.details.reduce(
         (acc, d) => {
             const diff = d.diffquantity ?? 0;
@@ -165,10 +267,43 @@ export default function AuditDetailPage() {
         },
         { plus: 0, minus: 0 }
     ) : null;
+    const hasPosDiff = (summary?.plus ?? 0) > 0;
+    const hasNegDiff = (summary?.minus ?? 0) < 0;
 
     return (
         <>
             {/* Confirm modal */}
+            {/* Reject modal */}
+            {rejectModal && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ background: "#fff", borderRadius: 12, padding: "32px 36px", minWidth: 360, maxWidth: 440, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", border: "1.5px solid #ffccbc", textAlign: "center" }}>
+                        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#fbe9e7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#bf360c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+                            </svg>
+                        </div>
+                        <h3 style={{ margin: "0 0 8px", color: "#bf360c", fontSize: "1.1rem", fontWeight: 700 }}>Từ chối phiếu kiểm kê</h3>
+                        <p style={{ margin: "0 0 12px", color: "#4c6152", fontSize: "0.92rem" }}>Vui lòng nhập lý do từ chối để thông báo cho nhân viên kiểm kê.</p>
+                        <textarea
+                            style={{ width: "100%", minHeight: 80, padding: 8, borderRadius: 6, border: "1.5px solid #ffb74d", fontSize: "0.9rem", resize: "vertical", outline: "none", boxSizing: "border-box" }}
+                            placeholder="Nhập lý do từ chối..."
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                        />
+                        <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 16 }}>
+                            <button className="sp-btn-outline" onClick={() => { setRejectModal(false); setRejectReason(""); }} disabled={actionLoading} style={{ minWidth: 100 }}>Hủy bỏ</button>
+                            <button
+                                style={{ minWidth: 120, background: "#bf360c", color: "#fff", border: "none", borderRadius: 6, padding: "8px 20px", fontWeight: 700, cursor: "pointer", fontSize: "0.9rem" }}
+                                onClick={handleReject}
+                                disabled={actionLoading || !rejectReason.trim()}
+                            >
+                                {actionLoading ? "Đang xử lý..." : "Từ chối"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {confirmModal && (
                 <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <div style={{ background: "#fff", borderRadius: 12, padding: "32px 36px", minWidth: 360, maxWidth: 440, boxShadow: "0 8px 32px rgba(30,133,74,0.15)", border: "1.5px solid #c6dfd0", textAlign: "center" }}>
@@ -180,16 +315,14 @@ export default function AuditDetailPage() {
                         </div>
                         <h3 style={{ margin: "0 0 8px", color: "#1E3A2F", fontSize: "1.1rem", fontWeight: 700 }}>Xác nhận phiếu kiểm kê</h3>
                         <p style={{ margin: "0 0 8px", color: "#4c6152", fontSize: "0.92rem" }}>
-                            Tồn kho sẽ được điều chỉnh theo chênh lệch thực tế. Hành động này không thể hoàn tác.
+                            {audit?.docstatus === "PENDING_PROCESS"
+                                ? "Tồn kho tổng sẽ được điều chỉnh theo chênh lệch thực tế. Hành động này không thể hoàn tác."
+                                : "Số liệu khớp sổ sách. Xác nhận để hoàn tất phiếu kiểm kê."}
                         </p>
-                        {summary && (summary.plus !== 0 || summary.minus !== 0) && (
-                            <div style={{ margin: "8px 0 20px", display: "flex", justifyContent: "center", gap: 24, fontSize: "0.9rem" }}>
-                                {summary.plus > 0 && (
-                                    <span style={{ color: "#1b5e20", fontWeight: 700 }}>+{summary.plus} thừa</span>
-                                )}
-                                {summary.minus < 0 && (
-                                    <span style={{ color: "#b71c1c", fontWeight: 700 }}>{summary.minus} thiếu</span>
-                                )}
+                        {audit?.docstatus === "PENDING_PROCESS" && summary && (summary.plus !== 0 || summary.minus !== 0) && (
+                            <div style={{ margin: "8px 0 16px", display: "flex", justifyContent: "center", gap: 24, fontSize: "0.9rem" }}>
+                                {summary.plus > 0 && <span style={{ color: "#1b5e20", fontWeight: 700 }}>+{summary.plus} thừa</span>}
+                                {summary.minus < 0 && <span style={{ color: "#b71c1c", fontWeight: 700 }}>{summary.minus} thiếu</span>}
                             </div>
                         )}
                         <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 16 }}>
@@ -256,7 +389,17 @@ export default function AuditDetailPage() {
                                                     onMouseLeave={(e) => e.currentTarget.style.background = ""}
                                                     onClick={() => { setStatusMenuOpen(false); setConfirmModal(true); }}
                                                 >
-                                                    ✓ Xác nhận kiểm kê
+                                                    ✓ {audit?.docstatus === "PENDING_PROCESS" ? "Xác nhận chênh lệch" : "Xác nhận kiểm kê"}
+                                                </div>
+                                            )}
+                                            {canReject && (
+                                                <div
+                                                    style={{ padding: "8px 16px", cursor: "pointer", fontSize: "0.88rem", color: "#bf360c" }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = "#fbe9e7"}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = ""}
+                                                    onClick={() => { setStatusMenuOpen(false); setRejectModal(true); }}
+                                                >
+                                                    ✕ Từ chối duyệt
                                                 </div>
                                             )}
                                             {canCancel && (
@@ -292,7 +435,11 @@ export default function AuditDetailPage() {
                                         readOnly
                                     />
                                     <span style={{ marginLeft: 10, fontSize: "0.82rem", color: "#f57f17", fontWeight: 600 }}>
-                                        {audit.docstatus === "REQUESTED" ? "Đang chờ nhân viên xử lý" : audit.docstatus === "SUBMITTED" ? "Nhân viên đã gửi kết quả" : ""}
+                                        {audit.docstatus === "REQUESTED" ? "Đang chờ nhân viên bắt đầu kiểm kê"
+                                            : audit.docstatus === "IN_PROGRESS" ? "Nhân viên đang thực hiện kiểm kê"
+                                                : audit.docstatus === "SUBMITTED" ? "Nhân viên đã gửi kết quả"
+                                                    : audit.docstatus === "PENDING_PROCESS" ? "Có chênh lệch, cần xử lý"
+                                                        : ""}
                                     </span>
                                 </div>
                             )}
@@ -352,12 +499,35 @@ export default function AuditDetailPage() {
                             )}
                             {audit.docstatus === "REQUESTED" && (
                                 <div style={{ background: "#fff9c4", border: "1px solid #ffd54f", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#5d4037" }}>
-                                    Phiếu đã <strong>giao cho nhân viên</strong>. Đang chờ nhân viên kiểm kê và gửi kết quả.
+                                    Phiếu đã <strong>giao cho nhân viên</strong>. Đang chờ nhân viên bắt đầu kiểm kê.
+                                </div>
+                            )}
+                            {audit.docstatus === "IN_PROGRESS" && (
+                                <div style={{ background: "#e3f2fd", border: "1px solid #90caf9", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#1565c0" }}>
+                                    Nhân viên đang <strong>thực hiện kiểm kê</strong>. Vui lòng chờ kết quả.
                                 </div>
                             )}
                             {audit.docstatus === "SUBMITTED" && !isStaff && (
-                                <div style={{ background: "#fff3e0", border: "1px solid #ffb74d", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#5d4037" }}>
-                                    Nhân viên đã <strong>gửi kết quả kiểm kê</strong>. Vui lòng xem xét và xác nhận hoặc hủy.
+                                <div style={{ background: "#e8f5e9", border: "1px solid #81c784", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#1b5e20" }}>
+                                    Nhân viên đã <strong>gửi kết quả kiểm kê</strong>. Số liệu <strong>khớp sổ sách</strong>, không có chênh lệch. Vui lòng xác nhận.
+                                </div>
+                            )}
+                            {audit.docstatus === "PENDING_PROCESS" && !isStaff && (
+                                <div style={{ background: "#ffe0b2", border: "1px solid #ff8a65", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#bf360c" }}>
+                                    Nhân viên đã gửi kết quả. <strong>Có chênh lệch tồn kho</strong> — xác nhận để hệ thống tự điều chỉnh tồn kho tổng theo số thực tế.
+                                </div>
+                            )}
+                            {audit.docstatus === "PROCESSED" && !isStaff && (
+                                <div style={{ background: "#f3e5f5", border: "1px solid #ce93d8", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#4a148c" }}>
+                                    Tồn kho tổng đã được <strong>điều chỉnh tự động</strong>. Nếu cần đồng bộ tồn theo vị trí, tạo phiếu nhập/xuất điều chỉnh bên dưới.
+                                </div>
+                            )}
+                            {audit.docstatus === "REJECTED" && (
+                                <div style={{ background: "#fbe9e7", border: "1px solid #ff8a65", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#bf360c" }}>
+                                    Phiếu kiểm kê đã bị <strong>từ chối</strong>.
+                                    {audit.rejectReason && (
+                                        <span> Lý do: <strong>{audit.rejectReason}</strong></span>
+                                    )}
                                 </div>
                             )}
 
@@ -439,27 +609,37 @@ export default function AuditDetailPage() {
                             {/* ── Actions ── */}
                             <div className="rc-form-actions">
                                 <button className="sp-btn-outline" onClick={() => navigate("/audits")}>Quay lại</button>
+
+                                {/* PROCESSED: đồng bộ tồn vị trí (tuỳ chọn) */}
                                 {canCreateAdjustment && (
                                     <>
-                                        <button
-                                            className="sp-btn-outline"
-                                            onClick={() => navigate(`/receipts/create?docType=ADJUSTMENT&auditId=${audit.id}`)}
-                                        >
-                                            Tạo phiếu nhập điều chỉnh
-                                        </button>
-                                        <button
-                                            className="sp-btn-outline"
-                                            onClick={() => navigate(`/issues/create?docType=ADJUSTMENT&auditId=${audit.id}`)}
-                                        >
-                                            Tạo phiếu xuất điều chỉnh
-                                        </button>
+                                        {hasPosDiff && !adjReceiptDone && (
+                                            <button
+                                                className="sp-btn-outline"
+                                                style={{ borderColor: "#1a7f4b", color: "#1a7f4b" }}
+                                                onClick={() => navigate(`/receipts/create?docType=ADJUSTMENT&auditId=${audit.id}`)}
+                                            >
+                                                + Tạo phiếu nhập điều chỉnh vị trí
+                                            </button>
+                                        )}
+                                        {hasNegDiff && !adjIssueDone && (
+                                            <button
+                                                className="sp-btn-outline"
+                                                style={{ borderColor: "#c62828", color: "#c62828" }}
+                                                onClick={() => navigate(`/issues/create?docType=ADJUSTMENT&auditId=${audit.id}`)}
+                                            >
+                                                − Tạo phiếu xuất điều chỉnh vị trí
+                                            </button>
+                                        )}
                                     </>
                                 )}
+
                                 {canConfirm && (
                                     <button className="sp-btn-primary" onClick={() => setConfirmModal(true)} disabled={actionLoading}>
-                                        {actionLoading ? "Đang xử lý..." : "Xác nhận kiểm kê"}
+                                        {actionLoading ? "Đang xử lý..." : audit?.docstatus === "PENDING_PROCESS" ? "Xác nhận chênh lệch" : "Xác nhận kiểm kê"}
                                     </button>
                                 )}
+
                                 {canCancel && (
                                     <button className="sp-btn-danger-outline" onClick={handleCancel} disabled={actionLoading}>
                                         {actionLoading ? "Đang xử lý..." : "Hủy phiếu"}

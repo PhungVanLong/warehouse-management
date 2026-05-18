@@ -8,18 +8,20 @@ import { getAllLocations, getItemsAtLocation } from "../../api/locationApi";
 import TopbarRight from "../../components/TopbarRight";
 
 const STATUS_LABELS = {
-    REQUESTED: "Đã giao",
+    REQUESTED: "Chờ kiểm kê",
+    IN_PROGRESS: "Đang kiểm kê",
     SUBMITTED: "Chờ duyệt",
     CONFIRMED: "Đã xác nhận",
     CANCELLED: "Đã hủy",
 };
 const STATUS_BADGE = {
     REQUESTED: "rc-badge au-badge-requested",
+    IN_PROGRESS: "rc-badge au-badge-in-progress",
     SUBMITTED: "rc-badge au-badge-submitted",
     CONFIRMED: "rc-badge au-badge-confirmed",
     CANCELLED: "rc-badge au-badge-cancelled",
 };
-const STATUS_FILTERS = ["ALL", "REQUESTED", "SUBMITTED", "CONFIRMED", "CANCELLED"];
+const STATUS_FILTERS = ["ALL", "REQUESTED", "IN_PROGRESS", "SUBMITTED", "CONFIRMED", "CANCELLED"];
 
 function formatDate(str) {
     if (!str) return "";
@@ -381,7 +383,8 @@ export default function AuditTasksPage() {
         }
     };
 
-    const canEdit = active && active.docstatus === "REQUESTED";
+    // Theo API docs: staff có thể cập nhật khi REQUESTED (chuyển sang IN_PROGRESS) hoặc đang IN_PROGRESS
+    const canEdit = active && ["REQUESTED", "IN_PROGRESS"].includes(active.docstatus);
 
     return (
         <>
@@ -452,6 +455,14 @@ export default function AuditTasksPage() {
                             {!canEdit && active.docstatus === "SUBMITTED" && (
                                 <div style={{ background: "#fff3e0", border: "1px solid #ffb74d", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#5d4037" }}>
                                     Đã gửi kết quả cho quản lý. Đang chờ xác nhận.
+                                </div>
+                            )}
+                            {active.docstatus === "REJECTED" && (
+                                <div style={{ background: "#fbe9e7", border: "1px solid #ff8a65", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: "0.85rem", color: "#bf360c" }}>
+                                    Phiếu kiểm kê đã bị <strong>từ chối</strong> bởi quản lý.
+                                    {active.rejectReason && (
+                                        <span> Lý do: <strong>{active.rejectReason}</strong></span>
+                                    )}
                                 </div>
                             )}
 

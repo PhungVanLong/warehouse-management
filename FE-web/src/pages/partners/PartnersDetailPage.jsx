@@ -155,31 +155,19 @@ export default function PartnersDetailPage() {
                                 </div>
                                 {openBasic && (
                                     <div className="sd-form">
-                                        <div className="sd-field">
-                                            <label className="sd-label">Mã đối tượng <span className="sd-required">*</span></label>
-                                            <div className="sd-input-wrap">
-                                                <input
-                                                    className={`sd-input sd-input-sm${fieldErrors.customercode ? " sd-input-error" : ""}`}
-                                                    value={form.customercode}
-                                                    disabled={!isEditing}
-                                                    onChange={(e) => set("customercode", e.target.value)}
-                                                />
-                                                {fieldErrors.customercode && <span className="sd-error-msg">{fieldErrors.customercode}</span>}
+                                        <div className="sd-field sd-field-row" style={{ alignItems: "flex-start" }}>
+                                            <div className="sd-field-half">
+                                                <label className="sd-label">Mã đối tượng <span className="sd-required">*</span></label>
+                                                <div className="sd-input-wrap">
+                                                    <input
+                                                        className={`sd-input${fieldErrors.customercode ? " sd-input-error" : ""}`}
+                                                        value={form.customercode}
+                                                        disabled={true}
+                                                    />
+                                                    {fieldErrors.customercode && <span className="sd-error-msg">{fieldErrors.customercode}</span>}
+                                                </div>
                                             </div>
-                                        </div>
-
-                                        <div className="sd-field">
-                                            <label className="sd-label">Tên doanh nghiệp <span className="sd-required">*</span></label>
-                                            <div className="sd-input-wrap">
-                                                <input
-                                                    className={`sd-input sd-input-name${fieldErrors.customername ? " sd-input-error" : ""}`}
-                                                    value={form.customername}
-                                                    disabled={!isEditing}
-                                                    onChange={(e) => set("customername", e.target.value)}
-                                                />
-                                                {fieldErrors.customername && <span className="sd-error-msg">{fieldErrors.customername}</span>}
-                                            </div>
-                                            <div className="sd-checkboxes" style={{ flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+                                            <div className="sd-field-half" style={{ flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
                                                 <div style={{ display: "flex", gap: 16 }}>
                                                     <label className="sd-check-label">
                                                         <input
@@ -204,14 +192,33 @@ export default function PartnersDetailPage() {
                                             </div>
                                         </div>
 
-                                        <div className="sd-field">
-                                            <label className="sd-label">Địa chỉ liên hệ</label>
-                                            <input
-                                                className="sd-input"
-                                                value={form.address}
-                                                disabled={!isEditing}
-                                                onChange={(e) => set("address", e.target.value)}
-                                            />
+                                        <div className="sd-field sd-field-row">
+                                            <div className="sd-field-half">
+                                                <label className="sd-label">Tên doanh nghiệp <span className="sd-required">*</span></label>
+                                                <div className="sd-input-wrap">
+                                                    <input
+                                                        className={`sd-input${fieldErrors.customername ? " sd-input-error" : ""}`}
+                                                        value={form.customername}
+                                                        disabled={!isEditing}
+                                                        onChange={(e) => set("customername", e.target.value)}
+                                                    />
+                                                    {fieldErrors.customername && <span className="sd-error-msg">{fieldErrors.customername}</span>}
+                                                </div>
+                                            </div>
+                                            <div className="sd-field-half" />
+                                        </div>
+
+                                        <div className="sd-field sd-field-row">
+                                            <div className="sd-field-half">
+                                                <label className="sd-label">Địa chỉ liên hệ</label>
+                                                <input
+                                                    className="sd-input"
+                                                    value={form.address}
+                                                    disabled={!isEditing}
+                                                    onChange={(e) => set("address", e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="sd-field-half" />
                                         </div>
 
                                         <div className="sd-field sd-field-row">
@@ -289,14 +296,17 @@ export default function PartnersDetailPage() {
                                 </div>
                                 {openDetail && (
                                     <div className="sd-form">
-                                        <div className="sd-field">
-                                            <label className="sd-label">Ngành hàng</label>
-                                            <input
-                                                className="sd-input"
-                                                value={form.itemcatg}
-                                                disabled={!isEditing}
-                                                onChange={(e) => set("itemcatg", e.target.value)}
-                                            />
+                                        <div className="sd-field sd-field-row">
+                                            <div className="sd-field-half">
+                                                <label className="sd-label">Ngành hàng</label>
+                                                <input
+                                                    className="sd-input"
+                                                    value={form.itemcatg}
+                                                    disabled={!isEditing}
+                                                    onChange={(e) => set("itemcatg", e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="sd-field-half" />
                                         </div>
 
                                         <div className="sd-field sd-field-row">

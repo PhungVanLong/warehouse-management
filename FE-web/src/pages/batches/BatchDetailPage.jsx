@@ -85,16 +85,32 @@ export default function BatchDetailPage() {
 
                         {/* Detail fields */}
                         <div className="sd-form">
-                            <ReadField label="Mã lô" value={batch.batchCode} />
-                            <ReadField label="Tên lô" value={batch.nameBatch || "—"} />
-                            <ReadField label="Mã vật tư" value={batch.itemcode || "—"} />
-                            <ReadField label="Tên vật tư / hàng hóa" value={batch.itemname || "—"} />
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Mã lô</label>
+                                    <div className="bt-read-value">{batch.batchCode}</div>
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Tên lô</label>
+                                    <div className="bt-read-value">{batch.nameBatch || "—"}</div>
+                                </div>
+                            </div>
 
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Mã vật tư</label>
+                                    <div className="bt-read-value">{batch.itemcode || "—"}</div>
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Tên vật tư / hàng hóa</label>
+                                    <div className="bt-read-value">{batch.itemname || "—"}</div>
+                                </div>
+                            </div>
 
                             <div className="sd-field sd-field-row">
                                 <div className="sd-field-half">
                                     <label className="sd-label">Số lượng ban đầu</label>
-                                    <div className="bt-read-value" >{formatNumber(batch.quantity)}</div>
+                                    <div className="bt-read-value">{formatNumber(batch.quantity)}</div>
                                 </div>
                                 <div className="sd-field-half">
                                     <label className="sd-label">Số lượng còn lại</label>
@@ -104,11 +120,16 @@ export default function BatchDetailPage() {
                                 </div>
                             </div>
 
-                            <ReadField label="Đơn giá nhập" value={formatNumber(batch.unitCost)} />
-
-                            <ReadField label="Ngày sản xuất" value={formatDate(batch.manufactureDate)} />
-
-                            <ReadField label="Ngày tạo" value={formatDateTime(batch.createdAt)} />
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Đơn giá nhập</label>
+                                    <div className="bt-read-value">{formatNumber(batch.unitCost)}</div>
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Ngày tạo</label>
+                                    <div className="bt-read-value">{formatDateTime(batch.createdAt)}</div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Footer */}

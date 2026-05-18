@@ -28,5 +28,8 @@ public class InventoryAuditResponse {
     private String approverFullname;
     private LocalDateTime modifiedAt;
     private String modifiedBy;
+    private String rejectReason;
+    private Boolean adjustmentCreated;
+    private java.util.List<Boolean> adjustmentFlags;
     private List<InventoryAuditDetailResponse> details;
 }

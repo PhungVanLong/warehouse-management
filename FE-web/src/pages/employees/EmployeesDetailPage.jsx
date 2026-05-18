@@ -185,7 +185,7 @@ export default function EmployeesDetailPage() {
                                                 <input
                                                     className={`sd-input${fieldErrors.usercode ? " sd-input-error" : ""}`}
                                                     value={form.usercode}
-                                                    disabled={!isEditing}
+                                                    disabled
                                                     onChange={(e) => set("usercode", e.target.value)}
                                                 />
                                                 {fieldErrors.usercode && <span className="sd-error-msg">{fieldErrors.usercode}</span>}
@@ -234,7 +234,7 @@ export default function EmployeesDetailPage() {
                                             <input
                                                 className="sd-input"
                                                 value={form.department}
-                                                disabled={!isEditing}
+                                                disabled
                                                 onChange={(e) => set("department", e.target.value)}
                                             />
                                         </div>
@@ -250,14 +250,17 @@ export default function EmployeesDetailPage() {
                                     </div>
 
                                     {/* Row 4: Địa chỉ */}
-                                    <div className="sd-field">
-                                        <label className="sd-label">Địa chỉ</label>
-                                        <input
-                                            className="sd-input"
-                                            value={form.address}
-                                            disabled={!isEditing}
-                                            onChange={(e) => set("address", e.target.value)}
-                                        />
+                                    <div className="sd-field sd-field-row">
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Địa chỉ</label>
+                                            <input
+                                                className="sd-input"
+                                                value={form.address}
+                                                disabled={!isEditing}
+                                                onChange={(e) => set("address", e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="sd-field-half" />
                                     </div>
 
                                     {/* Row 5: Ngày sinh | Giới tính */}
@@ -308,15 +311,17 @@ export default function EmployeesDetailPage() {
                                     </div>
 
                                     {/* Row 7: Tên ngân hàng */}
-                                    <div className="sd-field">
-                                        <label className="sd-label">Tên ngân hàng</label>
-                                        <input
-                                            className="sd-input"
-                                            style={{ maxWidth: 320 }}
-                                            value={form.bankname}
-                                            disabled={!isEditing}
-                                            onChange={(e) => set("bankname", e.target.value)}
-                                        />
+                                    <div className="sd-field sd-field-row">
+                                        <div className="sd-field-half">
+                                            <label className="sd-label">Tên ngân hàng</label>
+                                            <input
+                                                className="sd-input"
+                                                value={form.bankname}
+                                                disabled={!isEditing}
+                                                onChange={(e) => set("bankname", e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="sd-field-half" />
                                     </div>
                                 </div>
                             )}

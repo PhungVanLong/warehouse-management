@@ -84,15 +84,17 @@ export default function SuppliesPage() {
 
     const toggleRow = (id) =>
         setSelected((prev) => {
-            const next = new Set();
-            if (!prev.has(id)) next.add(id);
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
             return next;
         });
 
     const toggleAll = (checked) =>
-        setSelected(() => {
-            const next = new Set();
-            if (checked && rows[0]) next.add(rows[0].id);
+        setSelected((prev) => {
+            const next = new Set(prev);
+            if (checked) allIds.forEach((id) => next.add(id));
+            else allIds.forEach((id) => next.delete(id));
             return next;
         });
 
@@ -108,9 +110,11 @@ export default function SuppliesPage() {
     };
 
     const handleExportPdf = () => {
+        if (selected.size === 0) return;
         const now = new Date();
         const title = "DANH MỤC VẬT TƯ";
-        const rowsHtml = filtered.map((r, idx) => `
+        const exportRows = filtered.filter((r) => selected.has(r.id));
+        const rowsHtml = exportRows.map((r, idx) => `
             <tr>
                 <td class="center">${idx + 1}</td>
                 <td>${escapeHtml(r.itemcode || "")}</td>
@@ -226,11 +230,16 @@ export default function SuppliesPage() {
                         </svg>
                         Thêm bản sao mới
                     </button>
-                    <button className="sp-btn-outline" onClick={handleExportPdf}>
+                    <button
+                        className="sp-btn-outline"
+                        onClick={handleExportPdf}
+                        disabled={selected.size === 0}
+                        title={selected.size === 0 ? "Chọn ít nhất 1 vật tư để export" : `Export ${selected.size} vật tư`}
+                    >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
                         </svg>
-                        Export
+                        Export {selected.size > 0 ? `(${selected.size})` : ""}
                     </button>
                 </div>
 

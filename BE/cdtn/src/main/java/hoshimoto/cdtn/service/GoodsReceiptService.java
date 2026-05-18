@@ -34,6 +34,7 @@ import hoshimoto.cdtn.repository.BatchRepository;
 import hoshimoto.cdtn.repository.CustomerRepository;
 import hoshimoto.cdtn.repository.GoodsReceiptDetailRepository;
 import hoshimoto.cdtn.repository.GoodsReceiptRepository;
+import hoshimoto.cdtn.repository.InventoryAuditRepository;
 import hoshimoto.cdtn.repository.InventoryBalanceRepository;
 import hoshimoto.cdtn.repository.ItemLocationRepository;
 import hoshimoto.cdtn.repository.ItemRepository;
@@ -52,6 +53,7 @@ public class GoodsReceiptService {
     @Autowired private CustomerRepository customerRepository;
     @Autowired private BatchRepository batchRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private InventoryAuditRepository inventoryAuditRepository;
     @Autowired private NotificationService notificationService;
 
     // ───────────────────────── CRUD ─────────────────────────
@@ -99,6 +101,8 @@ public class GoodsReceiptService {
         receipt.setModifiedAt(LocalDateTime.now());
         receipt = receiptRepository.save(receipt);
 
+        // If any batches were created for existing details, delete them because details will be replaced.
+        deleteBatchesForReceipt(id);
         detailRepository.deleteByGoodsReceiptId(id);
         saveDetails(receipt, request.getDetails());
         return toResponse(receipt);
@@ -198,6 +202,8 @@ public class GoodsReceiptService {
     public GoodsReceiptResponse cancel(Long id) {
         GoodsReceipt receipt = findOrThrow(id);
         requireStatus(receipt, DocStatus.DRAFT, "Chỉ có thể hủy phiếu ở trạng thái DRAFT");
+        // Delete any batches created for this draft receipt — they should not exist if the receipt is not approved.
+        deleteBatchesForReceipt(id);
         receipt.setDocstatus(DocStatus.CANCELLED);
         receipt.setModifiedAt(LocalDateTime.now());
         getCurrentUser().ifPresent(u -> {
@@ -234,7 +240,10 @@ public class GoodsReceiptService {
                     il.getItem().getUnitof(),
                     il.getQuantity(),
                     batchRepository.findAllByReceiptDetailLocationIdAndItemId(loc.getId(), il.getItem().getId())
-                        .stream().map(b -> b.getBatchCode()).collect(Collectors.toList())
+                    .stream()
+                    .filter(b -> b.getReceiptDetail() != null && b.getReceiptDetail().getGoodsReceipt() != null
+                        && b.getReceiptDetail().getGoodsReceipt().getDocstatus() == DocStatus.CONFIRMED)
+                    .map(b -> b.getBatchCode()).collect(Collectors.toList())
             )).collect(Collectors.toList());
 
             // Phân loại vị trí
@@ -342,11 +351,28 @@ public class GoodsReceiptService {
         }
         receipt.setDocDate(request.getDocDate());
         receipt.setDescription(request.getDescription());
+        if (request.getInvoiceNumber() != null) {
+            receipt.setInvoiceNumber(request.getInvoiceNumber().trim());
+        }
         if (request.getCustomerId() != null) {
             Customer customer = customerRepository.findById(request.getCustomerId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng id: " + request.getCustomerId()));
             receipt.setCustomer(customer);
             receipt.setTaxcode(customer.getTaxcode());
+        }
+        // If this receipt is created as an adjustment for an inventory audit, mark the audit.
+        if (request.getInventoryAuditId() != null) {
+            receipt.setInventoryAuditId(request.getInventoryAuditId());
+            var optAudit = inventoryAuditRepository.findById(request.getInventoryAuditId());
+            if (optAudit.isPresent()) {
+                var audit = optAudit.get();
+                audit.setAdjustmentCreated(true);
+                // If FE provided adjustment flags with this ADJUSTMENT receipt, persist them.
+                if (request.getAdjustmentFlags() != null) {
+                    audit.setAdjustmentFlags(request.getAdjustmentFlags());
+                }
+                inventoryAuditRepository.save(audit);
+            }
         }
         // Gán người tạo từ JWT token (chỉ set khi tạo mới, không ghi đè khi update)
         if (receipt.getUser() == null) {
@@ -443,6 +469,18 @@ public class GoodsReceiptService {
         return Integer.parseInt(numeric);
     }
 
+    /**
+     * Delete any batches that are linked to receipt details of the given receipt.
+     * This is used when a DRAFT receipt is cancelled or its details are replaced.
+     */
+    private void deleteBatchesForReceipt(Long receiptId) {
+        List<GoodsReceiptDetail> existing = detailRepository.findByGoodsReceiptId(receiptId);
+        if (existing == null || existing.isEmpty()) return;
+        for (GoodsReceiptDetail d : existing) {
+            batchRepository.findByReceiptDetailId(d.getId()).ifPresent(batchRepository::delete);
+        }
+    }
+
     public GoodsReceiptResponse toResponse(GoodsReceipt receipt) {
         GoodsReceiptResponse res = new GoodsReceiptResponse();
         res.setId(receipt.getId());
@@ -469,6 +507,8 @@ public class GoodsReceiptService {
             res.setApprovedAt(receipt.getModifiedAt());
         }
         List<GoodsReceiptDetail> details = detailRepository.findByGoodsReceiptId(receipt.getId());
+        res.setInvoiceNumber(receipt.getInvoiceNumber());
+        res.setInventoryAuditId(receipt.getInventoryAuditId());
         res.setDetails(details.stream().map(d -> {
             GoodsReceiptDetailResponse dr = new GoodsReceiptDetailResponse();
             dr.setId(d.getId());
@@ -487,8 +527,11 @@ public class GoodsReceiptService {
                 dr.setLocationname(d.getLocation().getLocationname());
             }
             batchRepository.findByReceiptDetailId(d.getId()).ifPresent(batch -> {
-                dr.setBatchId(batch.getId());
-                dr.setBatchCode(batch.getBatchCode());
+                if (batch.getReceiptDetail() != null && batch.getReceiptDetail().getGoodsReceipt() != null
+                        && batch.getReceiptDetail().getGoodsReceipt().getDocstatus() == DocStatus.CONFIRMED) {
+                    dr.setBatchId(batch.getId());
+                    dr.setBatchCode(batch.getBatchCode());
+                }
             });
             return dr;
         }).collect(Collectors.toList()));

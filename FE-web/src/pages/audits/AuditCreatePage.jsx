@@ -7,6 +7,8 @@ import { createAudit, getAllAudits } from "../../api/auditApi";
 import { getAllItems } from "../../api/itemApi";
 import { getAllBatches } from "../../api/batchApi";
 import { getAllEmployees } from "../../api/employeeApi";
+import { getAllLocations } from "../../api/locationApi";
+import { getAvailableLocations } from "../../api/issueApi";
 import TopbarRight from "../../components/TopbarRight";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -66,10 +68,11 @@ export default function AuditCreatePage() {
     const [items, setItems] = useState([]);
     const [stockByItem, setStockByItem] = useState({});
     const [employees, setEmployees] = useState([]);
+    const [locations, setLocations] = useState([]);
+    const [locationsByRow, setLocationsByRow] = useState({});
     const [loadingData, setLoadingData] = useState(true);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
-    const showActual = !form.assigneeId;
     const selectedAssignee = useMemo(
         () => employees.find((e) => String(e.id) === String(form.assigneeId)),
         [employees, form.assigneeId]
@@ -78,9 +81,10 @@ export default function AuditCreatePage() {
     const loadData = useCallback(async () => {
         setLoadingData(true);
         try {
-            const [iList, eList, bList, aList] = await Promise.all([getAllItems(), getAllEmployees(), getAllBatches(), getAllAudits()]);
+            const [iList, eList, bList, aList, lList] = await Promise.all([getAllItems(), getAllEmployees(), getAllBatches(), getAllAudits(), getAllLocations()]);
             setItems(iList);
             setEmployees(eList);
+            setLocations(lList || []);
             const stockMap = (bList || []).reduce((acc, batch) => {
                 const key = String(batch.itemId ?? "");
                 if (!key) return acc;
@@ -130,6 +134,18 @@ export default function AuditCreatePage() {
                 next[idx].unitof = found?.unitof || "";
                 next[idx].bookquantity = value ? (stockByItem[String(value)] ?? 0) : null;
                 next[idx].loadingBook = false;
+                // Load locations containing this item
+                if (value) {
+                    const rowId = next[idx]._id;
+                    getAvailableLocations(value).then((locs) => {
+                        setLocationsByRow((prev) => ({ ...prev, [rowId]: locs || [] }));
+                    }).catch(() => {
+                        setLocationsByRow((prev) => ({ ...prev, [rowId]: [] }));
+                    });
+                } else {
+                    const rowId = next[idx]._id;
+                    setLocationsByRow((prev) => { const n = { ...prev }; delete n[rowId]; return n; });
+                }
             }
             return next;
         });
@@ -138,52 +154,65 @@ export default function AuditCreatePage() {
     const handleAddRow = () => setRows((prev) => [...prev, newRow()]);
     const handleRemoveRow = (idx) => setRows((prev) => prev.filter((_, i) => i !== idx));
 
-    const handleSave = async () => {
+    const handleSaveDraft = async () => {
         if (!form.date) { showToast("error", "Vui lòng chọn ngày kiểm kê."); return; }
-        if (!form.docno.trim()) { showToast("error", "Vui lòng nhập số chứng từ."); return; }
+        if (rows.length === 0 || !rows.some((r) => r.itemId)) {
+            showToast("error", "Vui lòng thêm ít nhất một dòng vật tư."); return;
+        }
+        const details = rows.filter((r) => r.itemId).map((r) => ({
+            itemId: Number(r.itemId),
+            actualquantity: r.actualquantity === "" || r.actualquantity === null || r.actualquantity === undefined ? null : Number(r.actualquantity),
+        }));
+        setSaving(true);
+        try {
+            const payload = { docDate: form.date, description: form.description.trim() || null, details };
+            const result = await createAudit(payload);
+            if (result?.success) {
+                showToast("success", "Đã lưu nháp phiếu kiểm kê.");
+                const newId = result?.data?.id;
+                setTimeout(() => navigate(newId ? `/audits/${newId}` : "/audits"), 1200);
+            } else {
+                showToast("error", result?.message || "Lưu nháp thất bại.");
+            }
+        } catch (err) {
+            showToast("error", err?.response?.data?.message || "Có lỗi xảy ra khi lưu phiếu.");
+        } finally { setSaving(false); }
+    };
+
+    const handleSendRequest = async () => {
+        if (!form.date) { showToast("error", "Vui lòng chọn ngày kiểm kê."); return; }
+        if (!form.assigneeId) { showToast("error", "Vui lòng chọn nhân viên để gửi yêu cầu."); return; }
         if (rows.length === 0) { showToast("error", "Vui lòng thêm ít nhất một dòng vật tư."); return; }
         for (let i = 0; i < rows.length; i++) {
-            const r = rows[i];
-            if (!r.itemId) { showToast("error", `Dòng ${i + 1}: Vui lòng chọn mặt hàng.`); return; }
-            if (!form.assigneeId) {
-                const missingQty = r.actualquantity === "" || r.actualquantity === null || r.actualquantity === undefined;
-                if (missingQty) { showToast("error", `Dòng ${i + 1}: Vui lòng nhập số lượng thực tế.`); return; }
-            }
+            if (!rows[i].itemId) { showToast("error", `Dòng ${i + 1}: Vui lòng chọn mặt hàng.`); return; }
         }
-        // Check duplicate items
         const itemIds = rows.map((r) => r.itemId);
         if (new Set(itemIds).size !== itemIds.length) {
             showToast("error", "Có mặt hàng bị trùng. Mỗi mặt hàng chỉ được nhập một lần."); return;
         }
-
         const details = rows.map((r) => ({
             itemId: Number(r.itemId),
-            actualquantity: r.actualquantity === "" || r.actualquantity === null || r.actualquantity === undefined ? null : Number(r.actualquantity),
+            actualquantity: null,
         }));
-
         setSaving(true);
         try {
-            // Build payload according to API: include assignedUserId + sendToStaff when assigning
             const payload = {
-                docno: form.docno.trim(),
                 docDate: form.date,
                 description: form.description.trim() || null,
                 details,
+                assignedUserId: Number(form.assigneeId),
+                sendToStaff: true,
             };
-            if (form.assigneeId) {
-                payload.assignedUserId = Number(form.assigneeId);
-                payload.sendToStaff = true;
-            }
             const result = await createAudit(payload);
             if (result?.success) {
-                showToast("success", form.assigneeId ? "Đã gửi yêu cầu kiểm kê cho nhân viên." : "Tạo phiếu kiểm kê thành công.");
+                showToast("success", "Đã gửi yêu cầu kiểm kê cho nhân viên.");
                 const newId = result?.data?.id;
                 setTimeout(() => navigate(newId ? `/audits/${newId}` : "/audits"), 1200);
             } else {
-                showToast("error", result?.message || "Tạo phiếu thất bại.");
+                showToast("error", result?.message || "Gửi yêu cầu thất bại.");
             }
         } catch (err) {
-            showToast("error", err?.response?.data?.message || "Có lỗi xảy ra khi tạo phiếu kiểm kê.");
+            showToast("error", err?.response?.data?.message || "Có lỗi xảy ra khi gửi yêu cầu.");
         } finally { setSaving(false); }
     };
 
@@ -222,24 +251,24 @@ export default function AuditCreatePage() {
                             <label className="rc-form-label" style={{ marginLeft: 16 }}>Số</label>
                             <input
                                 className="rc-form-input"
-                                style={{ minWidth: 200 }}
-                                placeholder="Nhập số chứng từ (VD: KK-2026-001)"
+                                style={{ minWidth: 200, background: "#f6fbf8", color: "#4c6152" }}
+                                placeholder="Tự động điền"
                                 value={form.docno}
-                                onChange={(e) => handleFormChange("docno", e.target.value)}
+                                readOnly
                             />
                         </div>
 
                         {/* ── Nhân viên kiểm kê ── */}
                         <div className="rc-form-2col">
                             <div className="rc-form-field">
-                                <label className="rc-form-label">Mã nhân viên</label>
+                                <label className="rc-form-label" style={{ minWidth: 110 }}>Mã nhân viên</label>
                                 <select
                                     className="rc-form-select"
                                     value={form.assigneeId}
                                     onChange={(e) => handleFormChange("assigneeId", e.target.value)}
                                     disabled={loadingData}
                                 >
-                                    <option value="">(Không giao, tự kiểm kê)</option>
+                                    <option value="">(Chọn nhân viên kiểm kê)</option>
                                     {employees.filter((e) => e.role === "STAFF").map((emp) => (
                                         <option key={emp.id} value={emp.id}>
                                             {emp.usercode || emp.username || emp.id}
@@ -248,7 +277,7 @@ export default function AuditCreatePage() {
                                 </select>
                             </div>
                             <div className="rc-form-field">
-                                <label className="rc-form-label">Tên nhân viên</label>
+                                <label className="rc-form-label" style={{ minWidth: 110 }}>Tên nhân viên</label>
                                 <input
                                     className="rc-form-input"
                                     value={selectedAssignee?.fullname || selectedAssignee?.username || ""}
@@ -271,7 +300,7 @@ export default function AuditCreatePage() {
 
                         {/* ── Detail table ── */}
                         <div style={{ marginTop: 8, marginBottom: 4, color: "#4c6152", fontSize: "0.84rem" }}>
-                            Chọn danh sách hàng hóa cần kiểm kê. Nếu không giao cho nhân viên, vui lòng nhập số lượng thực tế.
+                            Chọn danh sách hàng hóa và vị trí cần kiểm kê.
                         </div>
                         <div className="rc-detail-table-wrap">
                             <table className="rc-detail-table">
@@ -281,14 +310,13 @@ export default function AuditCreatePage() {
                                         <th style={{ width: "10%" }}>Mã hàng</th>
                                         <th>Tên vật tư hàng hóa</th>
                                         <th style={{ width: "7%" }}>ĐVT</th>
-                                        <th style={{ width: "14%", textAlign: "right" }}>SL hệ thống</th>
-                                        {showActual && <th style={{ width: "14%", textAlign: "right" }}>SL thực tế</th>}
+                                        <th style={{ width: "10%" }}>SL hệ thống</th>
+                                        <th style={{ width: "13%" }}>Vị trí</th>
                                         <th style={{ width: "4%" }}></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {rows.map((row, idx) => {
-                                        const bq = row.bookquantity;
                                         return (
                                             <tr key={row._id}>
                                                 <td className="rc-td-stt">{idx + 1}</td>
@@ -322,27 +350,29 @@ export default function AuditCreatePage() {
                                                         readOnly
                                                     />
                                                 </td>
-                                                <td className="rc-td-num au-book-qty" style={{ textAlign: "right" }}>
-                                                    {row.loadingBook
-                                                        ? <span style={{ color: "#8ba392", fontSize: "0.8rem" }}>...</span>
-                                                        : bq !== null
-                                                            ? <span style={{ fontWeight: 600, color: "#4c6152" }}>{bq}</span>
-                                                            : <span style={{ color: "#c5cdc9", fontSize: "0.85rem" }}>—</span>}
+                                                <td style={{ textAlign: "center", fontWeight: 600, color: "#1E3A2F" }}>
+                                                    {row.itemId
+                                                        ? (row.bookquantity ?? 0).toLocaleString()
+                                                        : <span style={{ color: "#c5cdc9" }}>—</span>}
                                                 </td>
-                                                {showActual && (
-                                                    <td>
-                                                        <input
-                                                            className="rc-td-input rc-td-num"
-                                                            type="number"
-                                                            min="0"
-                                                            step="1"
-                                                            value={row.actualquantity}
-                                                            onChange={(e) => handleRowChange(idx, "actualquantity", e.target.value)}
-                                                            disabled={loadingData}
-                                                            style={{ width: "90%" }}
-                                                        />
-                                                    </td>
-                                                )}
+                                                <td>
+                                                    {!row.itemId ? (
+                                                        <span style={{ color: "#c5cdc9", fontSize: "0.82rem" }}>—</span>
+                                                    ) : (locationsByRow[row._id] || []).length === 0 ? (
+                                                        <span style={{ color: "#8ba392", fontSize: "0.82rem" }}>Chưa có tồn</span>
+                                                    ) : (
+                                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                                            {(locationsByRow[row._id] || []).map((loc) => (
+                                                                <span
+                                                                    key={loc.locationId || loc.id}
+                                                                    style={{ background: "#e8f5e9", color: "#1E3A2F", border: "1px solid #a5d6a7", borderRadius: 4, padding: "1px 7px", fontSize: "0.8rem", fontWeight: 600, whiteSpace: "nowrap" }}
+                                                                >
+                                                                    {loc.locationcode || loc.locationname}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </td>
                                                 <td>
                                                     <button
                                                         className="rc-row-del-btn"
@@ -357,7 +387,7 @@ export default function AuditCreatePage() {
                                         );
                                     })}
                                     <tr className="rc-add-row" onClick={handleAddRow}>
-                                        <td colSpan={showActual ? 7 : 6}>
+                                        <td colSpan={7}>
                                             <span style={{ display: "flex", alignItems: "center", gap: 6, color: "#2DBE60", fontWeight: 500, fontSize: "0.87rem" }}>
                                                 <IconPlus /> Thêm dòng vật tư
                                             </span>
@@ -370,8 +400,11 @@ export default function AuditCreatePage() {
                         {/* ── Actions ── */}
                         <div className="rc-form-actions">
                             <button className="sp-btn-outline" onClick={() => navigate("/audits")}>Hủy bỏ</button>
-                            <button className="sp-btn-primary" onClick={handleSave} disabled={saving}>
-                                {saving ? "Đang lưu..." : "Gửi yêu cầu"}
+                            <button className="sp-btn-outline" onClick={handleSaveDraft} disabled={saving}>
+                                {saving ? "Đang lưu..." : "Lưu nháp"}
+                            </button>
+                            <button className="sp-btn-primary" onClick={handleSendRequest} disabled={saving}>
+                                {saving ? "Đang gửi..." : "Gửi yêu cầu"}
                             </button>
                         </div>
                     </div>

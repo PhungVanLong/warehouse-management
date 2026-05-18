@@ -121,81 +121,87 @@ export default function LocationsCreatePage() {
                         </div>
 
                         <div className="sd-form">
-                            <div className="sd-field">
-                                <label className="sd-label">Mã vị trí <span className="sd-required">*</span></label>
-                                <div className="sd-input-wrap">
-                                    <input
-                                        className={`sd-input${fieldErrors.locationcode ? " sd-input-error" : ""}`}
-                                        value={form.locationcode}
-                                        placeholder="A - 01 - 01"
-                                        onChange={(e) => set("locationcode", e.target.value)}
-                                    />
-                                    {fieldErrors.locationcode && <span className="sd-error-msg">{fieldErrors.locationcode}</span>}
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Mã vị trí <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.locationcode ? " sd-input-error" : ""}`}
+                                            value={form.locationcode}
+                                            placeholder="A - 01 - 01"
+                                            onChange={(e) => set("locationcode", e.target.value)}
+                                        />
+                                        {fieldErrors.locationcode && <span className="sd-error-msg">{fieldErrors.locationcode}</span>}
+                                    </div>
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Tên vị trí <span className="sd-required">*</span></label>
+                                    <div className="sd-input-wrap">
+                                        <input
+                                            className={`sd-input${fieldErrors.locationname ? " sd-input-error" : ""}`}
+                                            value={form.locationname}
+                                            placeholder="A - 01 - 01"
+                                            onChange={(e) => set("locationname", e.target.value)}
+                                        />
+                                        {fieldErrors.locationname && <span className="sd-error-msg">{fieldErrors.locationname}</span>}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="sd-field">
-                                <label className="sd-label">Tên vị trí <span className="sd-required">*</span></label>
-                                <div className="sd-input-wrap">
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Dãy</label>
                                     <input
-                                        className={`sd-input${fieldErrors.locationname ? " sd-input-error" : ""}`}
-                                        value={form.locationname}
-                                        placeholder="A - 01 - 01"
-                                        onChange={(e) => set("locationname", e.target.value)}
+                                        className="sd-input"
+                                        value={form.rackno}
+                                        placeholder="A"
+                                        onChange={(e) => set("rackno", e.target.value)}
                                     />
-                                    {fieldErrors.locationname && <span className="sd-error-msg">{fieldErrors.locationname}</span>}
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Kệ</label>
+                                    <input
+                                        className="sd-input"
+                                        value={form.floorno}
+                                        placeholder="01"
+                                        onChange={(e) => set("floorno", e.target.value)}
+                                    />
                                 </div>
                             </div>
 
-                            <div className="sd-field">
-                                <label className="sd-label">Dãy</label>
-                                <input
-                                    className="sd-input"
-                                    value={form.rackno}
-                                    placeholder="A"
-                                    onChange={(e) => set("rackno", e.target.value)}
-                                />
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Tầng</label>
+                                    <input
+                                        className="sd-input"
+                                        value={form.columnno}
+                                        placeholder="01"
+                                        onChange={(e) => set("columnno", e.target.value)}
+                                    />
+                                </div>
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Sức chứa</label>
+                                    <input
+                                        className="sd-input"
+                                        type="number"
+                                        value={form.capacity}
+                                        placeholder="50"
+                                        onChange={(e) => set("capacity", e.target.value)}
+                                    />
+                                </div>
                             </div>
 
-                            <div className="sd-field">
-                                <label className="sd-label">Kệ</label>
-                                <input
-                                    className="sd-input"
-                                    value={form.floorno}
-                                    placeholder="01"
-                                    onChange={(e) => set("floorno", e.target.value)}
-                                />
-                            </div>
-
-                            <div className="sd-field">
-                                <label className="sd-label">Tầng</label>
-                                <input
-                                    className="sd-input"
-                                    value={form.columnno}
-                                    placeholder="01"
-                                    onChange={(e) => set("columnno", e.target.value)}
-                                />
-                            </div>
-
-                            <div className="sd-field">
-                                <label className="sd-label">Sức chứa</label>
-                                <input
-                                    className="sd-input"
-                                    type="number"
-                                    value={form.capacity}
-                                    placeholder="50"
-                                    onChange={(e) => set("capacity", e.target.value)}
-                                />
-                            </div>
-
-                            <div className="sd-field">
-                                <label className="sd-label">Diễn giải</label>
-                                <input
-                                    className="sd-input"
-                                    value={form.description}
-                                    placeholder="Linh kiện máy sấy"
-                                    onChange={(e) => set("description", e.target.value)}
-                                />
+                            <div className="sd-field sd-field-row">
+                                <div className="sd-field-half">
+                                    <label className="sd-label">Diễn giải</label>
+                                    <input
+                                        className="sd-input"
+                                        value={form.description}
+                                        placeholder="Linh kiện máy sấy"
+                                        onChange={(e) => set("description", e.target.value)}
+                                    />
+                                </div>
+                                <div className="sd-field-half" />
                             </div>
                         </div>
                     </div>
